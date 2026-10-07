@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>Claude Bomb</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #111214; }
+      #unity-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #111214; outline: none; }
+      #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+                 color: #e8e6e0; font: 600 22px/1.4 system-ui, sans-serif; letter-spacing: 0.12em; }
+      #loading small { font-weight: 400; font-size: 14px; letter-spacing: 0; opacity: 0.7; }
+      #bar { width: 340px; height: 8px; background: #2a2b2f; border-radius: 4px; overflow: hidden; }
+      #fill { width: 0%; height: 100%; background: #e05a3c; transition: width 0.2s; }
+      #banner { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; font: 14px system-ui, sans-serif; color: #fff; background: #a33; display: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="loading">
+      CLAUDE BOMB
+      <div id="bar"><div id="fill"></div></div>
+      <small>Loading - the first time can take a minute</small>
+    </div>
+    <div id="banner"></div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      // Right-drag rotates the bomb, so the browser's right-click menu must stay closed.
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      function showBanner(msg, type) {
+        if (type !== "error") { console.warn(msg); return; }
+        var banner = document.querySelector("#banner");
+        banner.textContent = msg;
+        banner.style.display = "block";
+      }
+
+      var buildUrl = "Build";
+      var config = {
+        dataUrl: buildUrl + "/d46a39e8b8a05326c5b6414d0ceb2a79.data.unityweb",
+        frameworkUrl: buildUrl + "/6b70dc4798f3835935cbf25d8e8387ff.framework.js.unityweb",
+        codeUrl: buildUrl + "/62e2c390d84043f9fad97fe4d53af8ed.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Claude Bomb",
+        productVersion: "0.1.0",
+        showBanner: showBanner,
+      };
+
+      var script = document.createElement("script");
+      script.src = buildUrl + "/731850e5b87d50fcf4389bb0033a5537.loader.js";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          document.querySelector("#fill").style.width = (100 * progress) + "%";
+        }).then(function () {
+          document.querySelector("#loading").style.display = "none";
+          canvas.focus();
+        }).catch(function (message) {
+          showBanner(String(message), "error");
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
