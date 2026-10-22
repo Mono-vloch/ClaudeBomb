@@ -70,3 +70,11 @@ crashlytics-build.properties
 # OS files
 .DS_Store
 Thumbs.db
+
+# Shared Claude API key for playtests - never commit
+/[Aa]ssets/[Ss]treaming[Aa]ssets/claude_key.txt
+/[Aa]ssets/[Ss]treaming[Aa]ssets/claude_key.txt.meta
+
+# Web version: Unity's build output and Netlify's local link (both regenerated)
+/Web/public/
+/Web/.netlify/

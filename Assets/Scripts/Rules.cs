@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 
 // Pure functions: given a DeviceState, return the correct answer for a module.
-// Every rule here must match the manual text (ClaudeClient.systemPrompt) exactly —
-// change one, change the other, in the same commit.
+// Every rule here must match the current (Rev D) manual pages in
+// Resources/Papers/papers.json exactly — change one, change the other, in the
+// same commit.
 public static class Rules
 {
     public static int WireAnswer(DeviceState d)
@@ -17,6 +18,21 @@ public static class Rules
         if (n("blue") >= 2) return Array.LastIndexOf(d.wires, "blue") + 1;
         if (!d.casing.hold) return 2;
         return 3;
+    }
+
+    // The superseded Rev C wire page that still lies on the table. Never correct -
+    // DeviceState re-rolls the wires until it disagrees with WireAnswer, so
+    // sharing the old page always leads to a strike.
+    public static int WireAnswerRevC(DeviceState d)
+    {
+        int n(string c) => d.wires.Count(w => w == c);
+        char last = d.casing.stamp[d.casing.stamp.Length - 1];
+        if (n("white") == 0 && d.casing.cells >= 2) return 2;
+        if (d.wires[3] == "black" && char.IsDigit(last)) return 3;
+        if (n("red") == 1 && d.casing.sync) return Array.IndexOf(d.wires, "red") + 1;
+        if (n("blue") >= 2) return Array.IndexOf(d.wires, "blue") + 1;
+        if (!d.casing.hold) return 4;
+        return 1;
     }
 
     // Positions (1-4) to press, in order, so the glyphs land in the chosen set's order.

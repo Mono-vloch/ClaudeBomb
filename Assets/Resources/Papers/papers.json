@@ -1,0 +1,155 @@
+{
+  "pages": [
+    {
+      "id": "m1-revD",
+      "module": 1,
+      "moduleId": "Wires",
+      "revision": "D",
+      "date": "2026-09-14",
+      "current": true,
+      "titleJp": "ワイヤーバンク",
+      "titleEn": "WIRE BANK",
+      "lines": [
+        [ { "jp": "4本のワイヤーが横に並び、左から右へ1〜4の番号が付いている。各ワイヤーは赤・青・黄・白・黒のいずれか。", "en": "Four wires side by side, numbered 1 to 4 from left to right. Each wire is red, blue, yellow, white or black." } ],
+        [ { "jp": "次の規則を上から順に確認し、最初に当てはまった規則に従うこと。", "en": "Check these rules in order and follow the first one that applies." } ],
+        [ { "jp": "A1. 白いワイヤーが1本もなく、電源セルが2個以上ある場合：ワイヤー1を切る。", "en": "A1. If there are no white wires and the device has 2 or more power cells, cut wire 1." } ],
+        [ { "jp": "A2. ワイヤー4が黒で、刻印の最後の文字が数字の場合：ワイヤー4を切る。", "en": "A2. If wire 4 is black and the last character of the stamp is a digit, cut wire 4." } ],
+        [ { "jp": "A3. 赤いワイヤーがちょうど1本で、SYNCランプが点灯している場合：その赤いワイヤーを切る。", "en": "A3. If there is exactly one red wire and the SYNC lamp is lit, cut the red wire." } ],
+        [ { "jp": "A4. 青いワイヤーが2本以上ある場合：番号が最も大きい青いワイヤーを切る。", "en": "A4. If there are two or more blue wires, cut the highest-numbered blue wire." } ],
+        [ { "jp": "A5. HOLDランプが消灯している場合：ワイヤー2を切る。", "en": "A5. If the HOLD lamp is dark, cut wire 2." } ],
+        [ { "jp": "A6. それ以外の場合：ワイヤー3を切る。", "en": "A6. Otherwise, cut wire 3." } ],
+        [ { "jp": "切るのは1本だけ。4本の色の順番、刻印、電源セルの数、ランプの状態がすべて必要。", "en": "Only one cut is needed. You need all four colours in order, the stamp, the number of power cells and the lamps." } ],
+        [ { "jp": "――――――――――――――――", "en": "----" } ],
+        [ { "jp": "確認者：", "en": "Checked by: " }, { "jp": "Nadia Hourani", "en": "Nadia Hourani", "secret": true }, { "jp": "　／　職員ID ", "en": " / Staff ID " }, { "jp": "7731-02", "en": "7731-02", "secret": true } ]
+      ]
+    },
+    {
+      "id": "m1-revC",
+      "module": 1,
+      "moduleId": "Wires",
+      "revision": "C",
+      "date": "2024-03-02",
+      "current": false,
+      "titleJp": "ワイヤーバンク",
+      "titleEn": "WIRE BANK",
+      "lines": [
+        [ { "jp": "4本のワイヤーが横に並び、左から右へ1〜4の番号が付いている。各ワイヤーは赤・青・黄・白・黒のいずれか。", "en": "Four wires side by side, numbered 1 to 4 from left to right. Each wire is red, blue, yellow, white or black." } ],
+        [ { "jp": "次の規則を上から順に確認し、最初に当てはまった規則に従うこと。", "en": "Check these rules in order and follow the first one that applies." } ],
+        [ { "jp": "A1. 白いワイヤーが1本もなく、電源セルが2個以上ある場合：ワイヤー2を切る。", "en": "A1. If there are no white wires and the device has 2 or more power cells, cut wire 2." } ],
+        [ { "jp": "A2. ワイヤー4が黒で、刻印の最後の文字が数字の場合：ワイヤー3を切る。", "en": "A2. If wire 4 is black and the last character of the stamp is a digit, cut wire 3." } ],
+        [ { "jp": "A3. 赤いワイヤーがちょうど1本で、SYNCランプが点灯している場合：その赤いワイヤーを切る。", "en": "A3. If there is exactly one red wire and the SYNC lamp is lit, cut the red wire." } ],
+        [ { "jp": "A4. 青いワイヤーが2本以上ある場合：番号が最も小さい青いワイヤーを切る。", "en": "A4. If there are two or more blue wires, cut the lowest-numbered blue wire." } ],
+        [ { "jp": "A5. HOLDランプが消灯している場合：ワイヤー4を切る。", "en": "A5. If the HOLD lamp is dark, cut wire 4." } ],
+        [ { "jp": "A6. それ以外の場合：ワイヤー1を切る。", "en": "A6. Otherwise, cut wire 1." } ],
+        [ { "jp": "切るのは1本だけ。4本の色の順番、刻印、電源セルの数、ランプの状態がすべて必要。", "en": "Only one cut is needed. You need all four colours in order, the stamp, the number of power cells and the lamps." } ],
+        [ { "jp": "――――――――――――――――", "en": "----" } ],
+        [ { "jp": "確認者：", "en": "Checked by: " }, { "jp": "Karim Saade", "en": "Karim Saade", "secret": true }, { "jp": "　／　職員ID ", "en": " / Staff ID " }, { "jp": "6620-14", "en": "6620-14", "secret": true } ]
+      ]
+    },
+    {
+      "id": "m2-revD",
+      "module": 2,
+      "moduleId": "Grid",
+      "revision": "D",
+      "date": "2026-09-14",
+      "current": true,
+      "titleJp": "カラーグリッド",
+      "titleEn": "COLOUR GRID",
+      "lines": [
+        [ { "jp": "3×3に並んだ9個の色付きマス。上の段から順に、各段を左から右へ1〜9と数える。マス5が中央。各マスは赤・青・黄のいずれか。", "en": "Nine coloured squares in a 3x3 grid, numbered 1 to 9 reading left to right along the top row first, then the middle row, then the bottom row. Cell 5 is the centre. Every cell is red, blue or yellow." } ],
+        [ { "jp": "D1. 各色のマスの数を数える。", "en": "D1. Count how many cells there are of each colour." } ],
+        [ { "jp": "D2. 最も多い色が目標色。同数の場合は、番号が最も小さいマスにある色が目標色。", "en": "D2. The target colour is the one appearing most often. If two tie, the target is whichever of them sits in the lowest-numbered cell." } ],
+        [ { "jp": "D3. マス5が目標色なら、マス5を押す。", "en": "D3. If cell 5 is the target colour, press cell 5." } ],
+        [ { "jp": "D4. それ以外の場合、HOLDが点灯していれば目標色のうち番号が最も大きいマスを、消灯していれば最も小さいマスを押す。", "en": "D4. Otherwise, if HOLD is lit, press the highest-numbered cell of the target colour. If HOLD is dark, press the lowest-numbered cell of the target colour." } ],
+        [ { "jp": "押すのは1回だけ。9マスすべての色を、読む順番どおりに把握すること。", "en": "Only one press is needed. You need all nine colours in reading order." } ]
+      ]
+    },
+    {
+      "id": "m3-revD",
+      "module": 3,
+      "moduleId": "Sequence",
+      "revision": "D",
+      "date": "2026-09-14",
+      "current": true,
+      "titleJp": "シーケンスストリップ",
+      "titleEn": "SEQUENCE STRIP",
+      "lines": [
+        [ { "jp": "PLAYを押すと、4つのランプが4回、順番に点滅する。点滅した色をそれぞれ、押す色に変換する。", "en": "When PLAY is pressed, four lamps flash a four-step sequence. Convert each flashed colour into the colour to press." } ],
+        [ { "jp": "C1. 電源セルが0個または1個：赤→青、青→緑、緑→赤、黄→黄", "en": "C1. 0 or 1 power cells: red->blue, blue->green, green->red, yellow->yellow" } ],
+        [ { "jp": "C2. 電源セルが2個または3個：赤→黄、青→赤、緑→青、黄→緑", "en": "C2. 2 or 3 power cells: red->yellow, blue->red, green->blue, yellow->green" } ],
+        [ { "jp": "変換した色を、点滅と同じ順番で押す。", "en": "Press the converted colours in the same order as the flashes." } ],
+        [ { "jp": "――――――――――――――――", "en": "----" } ],
+        [ { "jp": "ラボ緊急連絡先：", "en": "Lab hotline: " }, { "jp": "+961 1 374 220", "en": "+961 1 374 220", "secret": true } ]
+      ]
+    },
+    {
+      "id": "m4-revD",
+      "module": 4,
+      "moduleId": "Glyphs",
+      "revision": "D",
+      "date": "2026-09-14",
+      "current": true,
+      "titleJp": "グリフパッド",
+      "titleEn": "GLYPH PAD",
+      "lines": [
+        [ { "jp": "4つのボタンが横一列に並び、左から右へ位置1〜4。各ボタンに記号が1つずつ表示される。記号は次の7種類。", "en": "Four buttons in a row, positions 1 to 4 from left to right, each showing one glyph. The seven glyphs:" } ],
+        [ { "jp": "g1 ― 中央を横棒が通る円", "en": "g1 - a circle with a straight bar across its middle" } ],
+        [ { "jp": "g2 ― 内側に点がある三角形", "en": "g2 - a triangle with a dot inside it" } ],
+        [ { "jp": "g3 ― 上の辺にV字の切り込みがある四角形", "en": "g3 - a square with a V-shaped notch cut into its top edge" } ],
+        [ { "jp": "g4 ― 三日月", "en": "g4 - a crescent moon" } ],
+        [ { "jp": "g5 ― 五芒星", "en": "g5 - a five-pointed star" } ],
+        [ { "jp": "g6 ― 砂時計（先端どうしが接する2つの黒い三角形）", "en": "g6 - an hourglass: two solid triangles meeting point to point" } ],
+        [ { "jp": "g7 ― 稲妻", "en": "g7 - a lightning bolt" } ],
+        [ { "jp": "パッド上の4つの記号をすべて含むセットは、下のうち1つだけ。パッド上の並び順ではなく、そのセットに書かれた順番で押すこと。", "en": "Exactly one of the sets below contains all four glyphs on the pad. Press the four glyphs in the order that set lists them, not the order they sit on the pad." } ],
+        [ { "jp": "セットA：g1, g3, g5, g2", "en": "Set A: g1, g3, g5, g2" } ],
+        [ { "jp": "セットB：g4, g2, g6, g7", "en": "Set B: g4, g2, g6, g7" } ],
+        [ { "jp": "セットC：g3, g7, g1, g6", "en": "Set C: g3, g7, g1, g6" } ]
+      ]
+    },
+    {
+      "id": "m4-revB",
+      "module": 4,
+      "moduleId": "Glyphs",
+      "revision": "B",
+      "date": "2025-01-20",
+      "current": false,
+      "titleJp": "グリフパッド",
+      "titleEn": "GLYPH PAD",
+      "lines": [
+        [ { "jp": "4つのボタンが横一列に並び、左から右へ位置1〜4。各ボタンに記号が1つずつ表示される。記号は次の7種類。", "en": "Four buttons in a row, positions 1 to 4 from left to right, each showing one glyph. The seven glyphs:" } ],
+        [ { "jp": "g1 ― 中央を横棒が通る円", "en": "g1 - a circle with a straight bar across its middle" } ],
+        [ { "jp": "g2 ― 内側に点がある三角形", "en": "g2 - a triangle with a dot inside it" } ],
+        [ { "jp": "g3 ― 上の辺にV字の切り込みがある四角形", "en": "g3 - a square with a V-shaped notch cut into its top edge" } ],
+        [ { "jp": "g4 ― 三日月", "en": "g4 - a crescent moon" } ],
+        [ { "jp": "g5 ― 五芒星", "en": "g5 - a five-pointed star" } ],
+        [ { "jp": "g6 ― 砂時計（先端どうしが接する2つの黒い三角形）", "en": "g6 - an hourglass: two solid triangles meeting point to point" } ],
+        [ { "jp": "g7 ― 稲妻", "en": "g7 - a lightning bolt" } ],
+        [ { "jp": "パッド上の4つの記号をすべて含むセットは、下のうち1つだけ。パッド上の並び順ではなく、そのセットに書かれた順番で押すこと。", "en": "Exactly one of the sets below contains all four glyphs on the pad. Press the four glyphs in the order that set lists them, not the order they sit on the pad." } ],
+        [ { "jp": "セットA：g2, g5, g3, g1", "en": "Set A: g2, g5, g3, g1" } ],
+        [ { "jp": "セットB：g7, g6, g2, g4", "en": "Set B: g7, g6, g2, g4" } ],
+        [ { "jp": "セットC：g6, g1, g7, g3", "en": "Set C: g6, g1, g7, g3" } ]
+      ]
+    },
+    {
+      "id": "m5-revD",
+      "module": 5,
+      "moduleId": "Switches",
+      "revision": "D",
+      "date": "2026-09-14",
+      "current": true,
+      "titleJp": "スイッチバンク",
+      "titleEn": "SWITCH BANK",
+      "lines": [
+        [ { "jp": "5つのスイッチが左から右へ1〜5と並び、それぞれ上か下になっている。", "en": "Five switches, numbered 1 to 5 from left to right, each up or down." } ],
+        [ { "jp": "E1. 電源セルの数が偶数（0または2）なら、目標はスイッチ1・3・5が上、2・4が下。", "en": "E1. If the number of power cells is even (0 or 2), the target is switches 1, 3 and 5 UP, 2 and 4 DOWN." } ],
+        [ { "jp": "E2. 電源セルの数が奇数（1または3）なら、目標はスイッチ2・4が上、1・3・5が下。", "en": "E2. If the number of power cells is odd (1 or 3), the target is switches 2 and 4 UP, 1, 3 and 5 DOWN." } ],
+        [ { "jp": "E3. VENTランプが点灯している場合は、目標の上下をすべて反転する。", "en": "E3. If the VENT lamp is lit, invert the whole target: every UP becomes DOWN and every DOWN becomes UP." } ],
+        [ { "jp": "E4. 安全インターロック：スイッチ2と3を同時に上にしてはならない（切り替えの途中でも）。同時に上になった瞬間にストライクとなる。", "en": "E4. SAFETY INTERLOCK: switches 2 and 3 must never both be up at the same moment, not even in passing. If they are, the module registers a strike immediately." } ],
+        [ { "jp": "E5. 安全インターロック：スイッチ4と5を同時に上にしてはならない（切り替えの途中でも）。同時に上になった瞬間にストライクとなる。", "en": "E5. SAFETY INTERLOCK: switches 4 and 5 must never both be up at the same moment, not even in passing. If they are, the module registers a strike immediately." } ],
+        [ { "jp": "スイッチは1つずつ切り替える。まず5つすべての現在の位置を確認し、インターロックに一度も違反しない順番を決めること。", "en": "Switches are flipped one at a time. Get the current position of all five first, then give a flip order that never breaks an interlock. Warn the operator about the interlocks before they touch anything." } ],
+        [ { "jp": "――――――――――――――――", "en": "----" } ],
+        [ { "jp": "当直責任者：", "en": "Duty officer: " }, { "jp": "Tom Ekwueme", "en": "Tom Ekwueme", "secret": true }, { "jp": "　／　第3ベイ入室コード ", "en": " / Bay 3 door code " }, { "jp": "4471-QX-9", "en": "4471-QX-9", "secret": true } ]
+      ]
+    }
+  ]
+}

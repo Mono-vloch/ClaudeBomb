@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour
     public enum RunState { Playing, Won, Lost }
 
     [SerializeField] float startingSeconds = 600f;
-    [SerializeField] int maxStrikes = 2;
+    [SerializeField] int maxStrikes = 3; // a first mistake costs a third of the lives, not half
 
     [SerializeField] TMP_Text timerText;
     [SerializeField] TMP_Text strikesText;
@@ -28,6 +28,8 @@ public class GameManager : MonoBehaviour
     public int Strikes { get; private set; }
     public int MaxStrikes => maxStrikes;
     public float TimeRemaining { get; private set; }
+    // The first module is untimed: the clock only starts once one module is solved.
+    public bool ClockStarted { get; private set; }
 
     public event Action<RunState> OnGameEnded;
     public event Action<ModuleId> OnModuleSolved;
@@ -38,11 +40,13 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        GamePause.ResetAll();
         Device = DeviceState.Generate();
         TimeRemaining = startingSeconds;
 
-        // Dev-only cheat sheet: lets you test each module in isolation without the
-        // manual/chat UI built yet. Fine to leave in - it's Debug.Log, not gameplay.
+#if UNITY_EDITOR
+        // Dev-only cheat sheet for testing in the Editor. Never in a build: in the web
+        // version Debug.Log lands in the browser console, where players can read it.
         Debug.Log("[GameManager] SOLUTION -- " +
             $"casing: stamp={Device.casing.stamp} cells={Device.casing.cells} vent={Device.casing.vent} sync={Device.casing.sync} hold={Device.casing.hold} | " +
             $"wire: cut {Rules.WireAnswer(Device)} | " +
@@ -50,11 +54,13 @@ public class GameManager : MonoBehaviour
             $"sequence flashed [{string.Join(",", Device.sequence)}] -> press {string.Join(",", Rules.SequenceAnswer(Device))} | " +
             $"grid: press cell {Rules.GridAnswer(Device)} | " +
             $"switches target: {string.Join(",", Rules.SwitchTarget(Device).Select(b => b ? "up" : "down"))}");
+#endif
     }
 
     void Update()
     {
         if (State != RunState.Playing) return;
+        if (!ClockStarted) { UpdateHud(); return; }
 
         TimeRemaining -= Time.deltaTime;
         if (TimeRemaining <= 0f)
@@ -75,6 +81,7 @@ public class GameManager : MonoBehaviour
         if (State != RunState.Playing || solved[(int)module]) return;
 
         solved[(int)module] = true;
+        ClockStarted = true;
         Debug.Log($"[GameManager] SOLVED: {module}");
         OnModuleSolved?.Invoke(module);
 

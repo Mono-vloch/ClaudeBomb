@@ -35,6 +35,9 @@ public class LoseSequence : MonoBehaviour
 
         restartButton.onClick.AddListener(OnRestartClicked);
         quitButton.onClick.AddListener(OnQuitClicked);
+#if UNITY_WEBGL && !UNITY_EDITOR
+        quitButton.gameObject.SetActive(false); // a web page can't close its own browser tab
+#endif
     }
 
     void OnDestroy()

@@ -1,0 +1,13 @@
+# Claude Bomb - web version on Netlify.
+#
+# Unity writes the web build into public/ (menu: Claude Bomb > Build Web Version).
+# Deploy from this folder:   npx netlify-cli deploy --prod
+#
+# Two settings live in the Netlify dashboard, never in these files
+# (Site configuration > Environment variables):
+#   ANTHROPIC_API_KEY   the Anthropic key the key keeper uses
+#   ACCESS_CODE         the code players type at the start of the game
+
+[build]
+  publish = "public"
+  edge_functions = "netlify/edge-functions"

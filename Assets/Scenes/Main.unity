@@ -2798,13 +2798,13 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 840233999}
-        m_TargetAssemblyTypeName: KeyPanel, Assembly-CSharp
+      - m_Target: {fileID: 1204198065}
+        m_TargetAssemblyTypeName: HelpPanel, Assembly-CSharp
         m_MethodName: Show
-        m_Mode: 1
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_ObjectArgumentAssemblyTypeName: 
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -3008,6 +3008,10 @@ MonoBehaviour:
   keyboardZoomSpeed: 2
   keyboardPanSpeed: 1
   maxPanDistance: 1
+  keyboardRotateSpeed: 90
+  stepYaw: 45
+  stepPitch: 30
+  stepSpeed: 240
 --- !u!1 &342596698
 GameObject:
   m_ObjectHideFlags: 0
@@ -6311,7 +6315,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &840233996
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6390,6 +6394,8 @@ MonoBehaviour:
   keyInputField: {fileID: 307578067}
   submitButton: {fileID: 685941032}
   errorText: {fileID: 2102122532}
+  titleText: {fileID: 1505460768}
+  promptText: {fileID: 1831604370}
 --- !u!1 &855796157
 GameObject:
   m_ObjectHideFlags: 0
@@ -6449,7 +6455,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: bfffe48337a0a2248a894dca3cc4a6cf, type: 3}
+  - {fileID: 2100000, guid: 3a0c6a9d129c55e4aaa9dd1d1e201d0c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -6790,7 +6796,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 0.13, g: 0.14, b: 0.17, a: 0.95}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6874,7 +6880,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 73a3c5e3380eba84b8d1d56cbe989247, type: 3}
+  - {fileID: 2100000, guid: fa597780669f1394a9820a830697096d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7174,6 +7180,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 960082696}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &962177673
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 962177675}
+  - component: {fileID: 962177674}
+  m_Layer: 0
+  m_Name: ViewButtons
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &962177674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 962177673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 168ba1df034929f4386a283de6223e7d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ViewButtons
+  cameraController: {fileID: 330585548}
+  arrowFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
+  labelFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
+  chatArea: {fileID: 1094259271}
+--- !u!4 &962177675
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 962177673}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &986693934
 GameObject:
   m_ObjectHideFlags: 0
@@ -7988,7 +8042,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 0.08, g: 0.09, b: 0.11, a: 0.94}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -8202,14 +8256,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f6cb76f0b98dc049bc21e1602ac1c42, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChatPanel
-  advisorSource: {fileID: 834467080}
+  advisorSource: {fileID: 1952763233}
   inputField: {fileID: 1218687744}
   sendButton: {fileID: 1356777487}
   scrollRect: {fileID: 918697061}
   contentParent: {fileID: 184336861}
   messagePrefab: {fileID: 8835792286154017513, guid: 3329980e6da8ae142976beed2243ab79, type: 3}
-  playerTextColor: {r: 0, g: 0, b: 0, a: 1}
-  claudeTextColor: {r: 0, g: 0, b: 1, a: 1}
+  playerTextColor: {r: 0.93, g: 0.93, b: 0.93, a: 1}
+  claudeTextColor: {r: 0.55, g: 0.9, b: 0.62, a: 1}
 --- !u!1 &1102787012
 GameObject:
   m_ObjectHideFlags: 0
@@ -8553,6 +8607,52 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1179108875}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1204198064
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1204198066}
+  - component: {fileID: 1204198065}
+  m_Layer: 0
+  m_Name: HelpPanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1204198065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204198064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8fcd687b8f05bc4c9a0702fe9f7a684, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HelpPanel
+  titleFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
+  bodyFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
+--- !u!4 &1204198066
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204198064}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1205134545
 GameObject:
   m_ObjectHideFlags: 0
@@ -8699,6 +8799,55 @@ Transform:
   - {fileID: 1302247554}
   - {fileID: 223692676}
   m_Father: {fileID: 92376294}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1218441456
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1218441458}
+  - component: {fileID: 1218441457}
+  m_Layer: 0
+  m_Name: Looma
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1218441457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1218441456}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1a941769d6cf344ea39ad175429f03b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LoomaCoach
+  portrait: {fileID: 0}
+  titleFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
+  bodyFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
+  chatArea: {fileID: 1094259271}
+  stuckHintSeconds: 120
+--- !u!4 &1218441458
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1218441456}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1218687742
 GameObject:
@@ -10656,6 +10805,57 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1425939135}
   m_Mesh: {fileID: 1050908021570271116, guid: ec38f6b2a38ab08439e7e241472110ae, type: 3}
+--- !u!1 &1429162011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1429162013}
+  - component: {fileID: 1429162012}
+  m_Layer: 0
+  m_Name: PaperDesk
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1429162012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1429162011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4228694bc0cf63f4abacc16995745aa4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PaperDesk
+  claude: {fileID: 1952763233}
+  uiFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
+  paperFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
+  chatArea: {fileID: 1094259271}
+  chatInput: {fileID: 1218687743}
+  chatScroll: {fileID: 918697060}
+  openAtStart: 0
+--- !u!4 &1429162013
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1429162011}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1460571804 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 77193816167423952, guid: ef0fc2a7cf61ef7408baec2277276c05, type: 3}
@@ -11166,7 +11366,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 73a3c5e3380eba84b8d1d56cbe989247, type: 3}
+  - {fileID: 2100000, guid: fa597780669f1394a9820a830697096d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -12367,7 +12567,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 73a3c5e3380eba84b8d1d56cbe989247, type: 3}
+  - {fileID: 2100000, guid: fa597780669f1394a9820a830697096d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -13359,140 +13559,57 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e3058151ee5ee14eb081aeefa93c232, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClaudeClient
-  systemPrompt: 'You are reading a disposal manual over a radio to an operator standing
-    at a live device with five modules on it. You have the manual. You CANNOT see
-    the device - not one wire, not one glyph, not one switch. The operator sees everything
-    and has never read the manual.
-
-    sress them in the order that set lists them,
-    NOT the order they sit on the pad:
-
-    Set A: g1, g3, g5, g2
-
-    Set B: g4,
-    g2, g6, g7
-
-    Set C: g3, g7, g1, g6
-
-    You need both the glyphs AND which
-    position each sits in, or you cannot turn the set order into presses.
-
-
-
-    MODULE
-    C - SEQUENCE STRIP (four lamps flash a four-step sequence)
-
-    The operator
-    reports the flashed colours in order. Convert each to the colour they must press:
-
-    0
-    or 1 power cells: red->blue, blue->green, green->red, yellow->yellow
-
-    2 or
-    3 power cells: red->yellow, blue->red, green->blue, yellow->green
-
-    They press
-    the converted colours in the same order as the flashes.
-
-
-
-    MODULE D - COLOUR
-    GRID (nine coloured squares in a 3x3 grid)
-
-    Cells are numbered 1 to 9 reading
-    LEFT TO RIGHT along the top row first, then the middle row, then the bottom row.
-    Cell 5 is the centre. Every cell is red, blue or yellow.
-
-    D1. Count how many
-    cells there are of each colour.
-
-    D2. The target colour is the one appearing
-    most often. If two tie, the target is whichever of them sits in the lowest-numbered
-    cell.
-
-    D3. If cell 5 is the target colour, press cell 5.
-
-    D4. Otherwise,
-    if HOLD is lit, press the highest-numbered cell of the target colour. If HOLD
-    is dark, press the lowest-numbered cell of the target colour.
-
-    Only one press
-    is needed. You must have all nine colours in reading order or the counts are
-    worthless.
-
-
-
-    MODULE E - SWITCH BANK (five switches, numbered 1 to 5 left
-    to right, each up or down)
-
-    Target pattern:
-
-    E1. If the number of power
-    cells is even (0 or 2), the target is switches 1, 3 and 5 UP, 2 and 4 DOWN.
-
-    E2.
-    If the number of power cells is odd (1 or 3), the target is switches 2 and 4
-    UP, 1, 3 and 5 DOWN.
-
-    E3. If the VENT lamp is lit, invert the whole target:
-    every switch that was UP is now DOWN and every switch that was DOWN is now UP.
-
-    SAFETY
-    INTERLOCKS - this is critical and the operator does not know it:
-
-    E4. Switches
-    2 and 3 must NEVER both be up at the same moment, not even in passing between
-    positions. If they are, the module registers a strike immediately.
-
-    E5. Switches
-    4 and 5 must NEVER both be up at the same moment, not even in passing between
-    positions. If they are, the module registers a strike immediately.
-
-    Switches
-    are flipped one at a time. Ask the operator for the current position of all five,
-    then give them a flip order that reaches the target without ever putting 2-and-3
-    or 4-and-5 up together.
-
-
-
-    CASING: every device has a stamp like R4-TQ9,
-    between zero and three power cells, and three status lamps named VENT, SYNC and
-    HOLD, each either lit or dark.
-
-
-
-    How to work:
-
-
-
-    Five modules exist.
-    If the operator has not said which one they mean, ask before anything else.
-
-    Ask
-    for exactly what the relevant rules need, several things at once. The operator
-    is on a clock.
-
-    Position and order matter everywhere. If you are given colours,
-    glyphs or switch states without positions, ask which is which.
-
-    On the glyph
-    pad the operator describes shapes in their own words. Match to the closest glyph
-    in your list, and if a description could fit two, say so and ask what would separate
-    them.
-
-    On the switch bank, warn the operator about both interlocks (switches
-    2&3, and switches 4&5) BEFORE they touch anything, and give the flips one at
-    a time or as an explicit ordered list. Check each intermediate state yourself.
-
-    Never
+  systemPrompt: "You are the disposal expert on a radio, talking to an operator who
+    is standing at a live device with five modules on it. You CANNOT see the device
+    - not one wire, not one glyph, not one switch. The operator sees everything.\n\nREPLY
+    TAG: start EVERY reply with exactly one tag, which the game removes before the
+    operator sees it:\n[ACT] you give an instruction they can carry out now\n[ASK]
+    you need more information from them before any rule resolves\n[PAGE] you need
+    a manual page that has not been shared yet\n[INFO] anything else (answering \"where
+    does it say that?\", confirming, small talk)\nExample: \"[ACT] Cut wire 1. (Module
+    1 Rev D, A1)\"\n\nBE BRIEF. The operator is on a ten-minute clock. Every reply
+    is at most two short sentences: no greetings, no filler, no restating what they
+    said, no explanations unless they ask for one.\n- To give an instruction, say
+    only the action, then the page and rule in brackets. Example: \"Cut wire 1. (Module
+    1 Rev D, A1)\"\n- To ask for information, list only what is missing, in one line.
+    Example: \"Need: wire colours left to right, stamp, power cells, SYNC and HOLD.\"\n-
+    If the operator asks \"are you sure?\" (or anything like it), re-check the page
+    and repeat your answer in one short sentence. Change it only if you find a real
+    mistake, and then say what the mistake was.\n- If the operator asks where it
+    says that (or for the rule or the source), quote the rule from the page word
+    for word, with its page and rule number, and nothing else. Example: Module 1
+    Rev D, A6: \"Otherwise, cut wire 3.\"\n\nTHE MANUAL PAGES: the operator has the
+    paper manual pages on a table in front of them. The pages are written in Japanese,
+    which the operator cannot read, so they share them with you through the chat.
+    Shared pages appear at the end of these instructions under SHARED PAGES, as English
+    text. You know a module's rules ONLY from a shared page.\n- If the operator asks
+    about a module and no page for it has been shared, do not guess and do not invent
+    rules. Say in one sentence that you need that module's page and how to share
+    it: drag it from the table into the chat, or open it and press ATTACH TO CHAT.
+    The game does not tell them this - you do.\n- If no pages have been shared at
+    all and the operator starts describing the device, remind them in one sentence
+    that you need the manual pages on their table.\n- Follow a shared page exactly
+    as written. If two versions of the same module's page have been shared, use the
+    one with the latest date.\n- Parts of a page may be blacked out (shown as \u2588\u2588\u2588\u2588\u2588\u2588):
+    the operator hid private information. Ignore it, unless a rule you need is blacked
+    out - then ask them to share the page again without blacking out that rule.\n\nEach
+    module has a numbered plate on the device: MODULE 1 wire bank, MODULE 2 colour
+    grid, MODULE 3 sequence strip, MODULE 4 glyph pad, MODULE 5 switch bank.\n\nCASING:
+    every device has a stamp like R4-TQ9, between zero and three power cells, and
+    three status lamps named VENT, SYNC and HOLD, each either lit or dark. Most rules
+    depend on the casing.\n\nHow to work:\nIf the operator has not said which module
+    they mean, ask.\nAsk for everything the relevant rules need in one go.\nPosition
+    and order matter everywhere. If you are given colours, glyphs or switch states
+    without positions, ask which is which.\nOn the glyph pad the operator describes
+    shapes in their own words. Match each to the closest glyph on the page; if a
+    description could fit two, ask what separates them.\nOn the switch bank, give
+    the flips as one short ordered list that never breaks an interlock, with a few
+    words of warning about the interlocks. Check each intermediate state yourself.\nNever
     assume anything you were not told. Never guess. Only give an instruction once
-    the rules resolve on information the operator actually gave you.
-
-    When you
-    give an instruction, say it plainly with a one-line reason.
-
-    Never read the
-    manual out wholesale.'
+    the rules resolve on information the operator actually gave you.\nAs soon as
+    the operator has given everything the rules need, answer at once. Do not ask
+    them to confirm what they already told you - a complete list (for example all
+    four wire colours) also tells you what is not there.\nNever read a page out wholesale."
 --- !u!1 &1969944646
 GameObject:
   m_ObjectHideFlags: 0
@@ -13634,7 +13751,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   startingSeconds: 600
-  maxStrikes: 2
+  maxStrikes: 3
   timerText: {fileID: 324986884}
   strikesText: {fileID: 401845137}
   timerSafeColor: {r: 0, g: 1, b: 0, a: 1}
@@ -14313,7 +14430,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 73a3c5e3380eba84b8d1d56cbe989247, type: 3}
+  - {fileID: 2100000, guid: fa597780669f1394a9820a830697096d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15312,11 +15429,11 @@ PrefabInstance:
     - target: {fileID: 77193816167423952, guid: ef0fc2a7cf61ef7408baec2277276c05, type: 3}
       propertyPath: m_fontAsset
       value: 
-      objectReference: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
+      objectReference: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
     - target: {fileID: 77193816167423952, guid: ef0fc2a7cf61ef7408baec2277276c05, type: 3}
       propertyPath: m_sharedMaterial
       value: 
-      objectReference: {fileID: -6332447961141742951, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
+      objectReference: {fileID: 2305437271270639319, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
     - target: {fileID: 77193816167423952, guid: ef0fc2a7cf61ef7408baec2277276c05, type: 3}
       propertyPath: m_hasFontAssetChanged
       value: 0
@@ -15411,7 +15528,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 73a3c5e3380eba84b8d1d56cbe989247, type: 3}
+  - {fileID: 2100000, guid: fa597780669f1394a9820a830697096d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15460,7 +15577,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 02a46d222a13ecb43b71ae5a3c6f22a0, type: 3}
+  - {fileID: 2100000, guid: c8b0749a69786b0468bd4edaf91ae54e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15533,7 +15650,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 747f92eb22ca5304aa04ff9e20d439eb, type: 3}
+  - {fileID: 2100000, guid: 5f43e4357e85dcb4580fa9461a7d10d6, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15631,7 +15748,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: bfffe48337a0a2248a894dca3cc4a6cf, type: 3}
+  - {fileID: 2100000, guid: 3a0c6a9d129c55e4aaa9dd1d1e201d0c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15680,7 +15797,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: b7930c874f3883c4e90d59d536821554, type: 3}
+  - {fileID: 2100000, guid: 99df416e179d60f42b6b601f7b687aca, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15729,7 +15846,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 0baaeffc1c258ba4392a5975e4c86790, type: 3}
+  - {fileID: 2100000, guid: 25c77d7822bc6b34a9959a3a972e5058, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15827,7 +15944,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 89ec2cfa11bbbd94780f8cab2d71f326, type: 3}
+  - {fileID: 2100000, guid: b090892ce16ce584e8f27303d0631ec2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15876,7 +15993,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 3263931781923126087, guid: 23e57998b137c9a4e9f927fc8e24fc71, type: 3}
+  - {fileID: 2100000, guid: 79392f7ae2321ed4d82a08584df81fcb, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -15973,3 +16090,7 @@ SceneRoots:
   - {fileID: 726516289}
   - {fileID: 1155091430}
   - {fileID: 232623760}
+  - {fileID: 1429162013}
+  - {fileID: 1204198066}
+  - {fileID: 1218441458}
+  - {fileID: 962177675}

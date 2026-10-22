@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-// Four wires, numbered 1-4 top down (wireObjects[0] = wire 1, ...).
+// Four wires side by side, numbered 1-4 left to right (wireObjects[0] = wire 1, ...).
 // Cut with a horizontal or diagonal mouse drag across the wire (not a plain click) -
 // cutting the correct wire (Rules.WireAnswer) solves the module; any other cut strikes.
 public class ModuleA_Wires : MonoBehaviour

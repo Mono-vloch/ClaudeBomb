@@ -54,13 +54,22 @@ public class DeviceState
         casing.hold = UnityEngine.Random.value < 0.5f;
     }
 
-    static char RandLetter() => (char)('A' + UnityEngine.Random.Range(0, 26));
+    // No letters that read like digits or like each other on the stamp (S/5, O/0,
+    // I/1, Z/2, B/8, A/R): one wire rule turns on whether the last character is a digit.
+    const string StampLetters = "CDEFGHJKLMNPQTUVWXY";
+    static char RandLetter() => StampLetters[UnityEngine.Random.Range(0, StampLetters.Length)];
     static char RandDigit() => (char)('0' + UnityEngine.Random.Range(0, 10));
 
     void GenerateWires()
     {
-        for (int i = 0; i < wires.Length; i++)
-            wires[i] = WireColors[UnityEngine.Random.Range(0, WireColors.Length)];
+        // Re-roll until the superseded Rev C page names a different wire, so
+        // following the old page is always a strike (the lesson of the old copy).
+        int guard = 0;
+        do
+        {
+            for (int i = 0; i < wires.Length; i++)
+                wires[i] = WireColors[UnityEngine.Random.Range(0, WireColors.Length)];
+        } while (++guard < 1000 && Rules.WireAnswer(this) == Rules.WireAnswerRevC(this));
     }
 
     void GenerateGlyphs()

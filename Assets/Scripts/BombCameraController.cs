@@ -7,7 +7,8 @@ using UnityEngine.InputSystem;
 // no clamp - full 360 both ways so the player can inspect every side). Mouse
 // scroll and W/S both control distance (closer/farther). A/D pan the look-at
 // point left/right (screen-relative) instead of rotating, so the player can
-// shift focus onto a specific module without doing a full orbit.
+// shift focus onto a specific module without doing a full orbit. Arrow keys and
+// the on-screen arrows (ViewButtons) rotate too, for players without a right button.
 // All keyboard/scroll camera input is suppressed while the chat input field is
 // focused, so typing "wasd" into a message doesn't also move the camera.
 public class BombCameraController : MonoBehaviour
@@ -24,11 +25,20 @@ public class BombCameraController : MonoBehaviour
     [SerializeField] float keyboardPanSpeed = 1f;   // units per second, A/D
     [SerializeField] float maxPanDistance = 1f;     // how far left/right the look-at point can shift
 
+    // Rotation without a right mouse button (laptop trackpads): arrow keys turn
+    // continuously, the on-screen arrows (ViewButtons) turn in smooth steps.
+    [SerializeField] float keyboardRotateSpeed = 90f; // degrees per second, arrow keys
+    [SerializeField] float stepYaw = 45f;             // per click of a left/right arrow
+    [SerializeField] float stepPitch = 30f;           // per click of an up/down arrow
+    [SerializeField] float stepSpeed = 240f;          // degrees per second while a step plays out
+
     float yaw;
     float pitch;
     bool dragging;
     Vector2 lastMousePosition;
     Vector3 panOffset;
+    float pendingYaw, pendingPitch;
+    float startYaw, startPitch, startDistance;
 
     void Start()
     {
@@ -39,8 +49,27 @@ public class BombCameraController : MonoBehaviour
         Vector3 euler = Quaternion.LookRotation(-offset.normalized).eulerAngles;
         yaw = euler.y;
         pitch = NormalizePitch(euler.x);
+        startYaw = yaw;
+        startPitch = pitch;
+        startDistance = distance;
 
         UpdateCameraTransform();
+    }
+
+    // One step of an on-screen arrow: -1/0/1 per axis. Positive pitch looks from above.
+    public void Step(int yawDirection, int pitchDirection)
+    {
+        pendingYaw += yawDirection * stepYaw;
+        pendingPitch += pitchDirection * stepPitch;
+    }
+
+    // Back to the starting front view.
+    public void ResetView()
+    {
+        pendingYaw = Mathf.DeltaAngle(yaw + pendingYaw, startYaw) + pendingYaw;
+        pendingPitch = Mathf.DeltaAngle(pitch + pendingPitch, startPitch) + pendingPitch;
+        panOffset = Vector3.zero;
+        distance = startDistance;
     }
 
     void Update()
@@ -58,7 +87,19 @@ public class BombCameraController : MonoBehaviour
         if (Keyboard.current != null && !typing)
             HandleKeyboardMovement();
 
+        PlayPendingSteps();
         UpdateCameraTransform();
+    }
+
+    void PlayPendingSteps()
+    {
+        float max = stepSpeed * Time.deltaTime;
+        float y = Mathf.Clamp(pendingYaw, -max, max);
+        float p = Mathf.Clamp(pendingPitch, -max, max);
+        yaw += y;
+        pitch += p;
+        pendingYaw -= y;
+        pendingPitch -= p;
     }
 
     static bool IsTypingInInputField()
@@ -109,6 +150,14 @@ public class BombCameraController : MonoBehaviour
         if (Keyboard.current.sKey.isPressed) distanceInput += 1f;
         if (distanceInput != 0f)
             distance = Mathf.Clamp(distance + distanceInput * keyboardZoomSpeed * Time.deltaTime, minDistance, maxDistance);
+
+        float yawInput = 0f, pitchInput = 0f;
+        if (Keyboard.current.leftArrowKey.isPressed) yawInput += 1f;
+        if (Keyboard.current.rightArrowKey.isPressed) yawInput -= 1f;
+        if (Keyboard.current.upArrowKey.isPressed) pitchInput += 1f;
+        if (Keyboard.current.downArrowKey.isPressed) pitchInput -= 1f;
+        yaw += yawInput * keyboardRotateSpeed * Time.deltaTime;
+        pitch += pitchInput * keyboardRotateSpeed * Time.deltaTime;
 
         float panInput = 0f;
         if (Keyboard.current.dKey.isPressed) panInput += 1f;

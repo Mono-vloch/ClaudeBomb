@@ -1,0 +1,7 @@
+<!-- Web builds strip code that is never called directly. The manual pages
+     (Paper.cs) and Claude's replies are read with Newtonsoft.Json through
+     reflection, so keep those types and the JSON library whole. -->
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all"/>
+  <assembly fullname="Newtonsoft.Json" preserve="all"/>
+</linker>
