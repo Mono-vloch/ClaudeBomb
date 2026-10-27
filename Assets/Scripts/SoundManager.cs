@@ -29,6 +29,7 @@ public class SoundManager : MonoBehaviour
 
     [Header("Startup music")]
     [SerializeField] AudioClip startupMusic;
+    [SerializeField] float startupMusicVolume = 0.5f; // half volume, so LUMA's voice stays clear over it
     [SerializeField] float musicFadeDuration = 30f;
     [SerializeField] float musicFadeStepInterval = 3f; // drop 10% every 3s -> 0% at 30s
 
@@ -127,7 +128,7 @@ public class SoundManager : MonoBehaviour
     {
         if (startupMusic == null) return;
         musicSource.clip = startupMusic;
-        musicSource.volume = 1f;
+        musicSource.volume = startupMusicVolume;
         musicSource.Play();
         StartCoroutine(FadeMusicOut());
     }
@@ -138,7 +139,7 @@ public class SoundManager : MonoBehaviour
         for (int i = 1; i <= steps; i++)
         {
             yield return new WaitForSeconds(musicFadeStepInterval);
-            musicSource.volume = Mathf.Max(0f, 1f - i * 0.1f);
+            musicSource.volume = startupMusicVolume * Mathf.Max(0f, 1f - i / (float)steps);
         }
         musicSource.Stop();
     }

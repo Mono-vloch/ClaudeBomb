@@ -28,8 +28,15 @@ public class GameManager : MonoBehaviour
     public int Strikes { get; private set; }
     public int MaxStrikes => maxStrikes;
     public float TimeRemaining { get; private set; }
-    // The first module is untimed: the clock only starts once one module is solved.
+    // The clock waits until LUMA's introduction is over (LoomaCoach calls StartClock).
     public bool ClockStarted { get; private set; }
+    public void StartClock() => ClockStarted = true;
+
+    // Stops only the countdown - the bomb stays playable - e.g. while LUMA is talking,
+    // so listening to the coach never costs the player time.
+    readonly System.Collections.Generic.HashSet<object> clockHolds = new System.Collections.Generic.HashSet<object>();
+    public void HoldClock(object owner) => clockHolds.Add(owner);
+    public void ReleaseClock(object owner) => clockHolds.Remove(owner);
 
     public event Action<RunState> OnGameEnded;
     public event Action<ModuleId> OnModuleSolved;
@@ -57,10 +64,15 @@ public class GameManager : MonoBehaviour
 #endif
     }
 
+    void Start()
+    {
+        if (LoomaCoach.Instance == null) StartClock(); // no coach in the scene: nothing to wait for
+    }
+
     void Update()
     {
         if (State != RunState.Playing) return;
-        if (!ClockStarted) { UpdateHud(); return; }
+        if (!ClockStarted || clockHolds.Count > 0) { UpdateHud(); return; }
 
         TimeRemaining -= Time.deltaTime;
         if (TimeRemaining <= 0f)
@@ -81,7 +93,6 @@ public class GameManager : MonoBehaviour
         if (State != RunState.Playing || solved[(int)module]) return;
 
         solved[(int)module] = true;
-        ClockStarted = true;
         Debug.Log($"[GameManager] SOLVED: {module}");
         OnModuleSolved?.Invoke(module);
 

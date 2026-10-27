@@ -78,3 +78,8 @@ Thumbs.db
 # Web version: Unity's build output and Netlify's local link (both regenerated)
 /Web/public/
 /Web/.netlify/
+
+# Unity's crash-recovery scene copies and generated voice-line lists
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta
+/Tools/LumaVoice/lines.json

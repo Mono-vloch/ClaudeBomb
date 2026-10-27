@@ -15,7 +15,7 @@ public class HelpPanel : MonoBehaviour
         "<size=28><b>THE SITUATION</b></size>\n" +
         "A live bomb with five modules is in front of you. You can see it, but you don't know how to defuse it. " +
         "Claude knows how, but it can't see the bomb. Talk to Claude in the chat on the right.\n" +
-        "You have 10 minutes, and the clock only starts after your first module. Three mistakes and the bomb explodes. Solve all five modules to win.\n\n" +
+        "You have 10 minutes, and the clock starts when LUMA's introduction is over. Three mistakes and the bomb explodes. Solve all five modules to win.\n\n" +
         "<size=28><b>LOOK AT THE BOMB</b></size>\n" +
         "Rotate: the arrow buttons at the bottom, the arrow keys, or hold the right mouse button and drag\n" +
         "Zoom: mouse wheel, or W and S\n" +

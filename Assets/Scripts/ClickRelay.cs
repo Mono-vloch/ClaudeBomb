@@ -27,6 +27,13 @@ public class ClickRelay : MonoBehaviour
     // logging every relay at once (there are ~20 in this game) is unreadable.
     public static ClickRelay Attach(GameObject target, int index, Action<int> onClick, bool debugLog = false)
     {
+        // A button with its own mesh gets a collider of exactly that shape. Fitted
+        // boxes are deeper than the buttons' faces, and on tightly packed buttons
+        // (the colour grid, the sequence strip) seen at an angle they reached over
+        // the face of the neighbour - a click on one cell could register another.
+        var meshFilter = target.GetComponent<MeshFilter>();
+        if (target.GetComponentInChildren<Collider>() == null && meshFilter != null && meshFilter.sharedMesh != null)
+            target.AddComponent<MeshCollider>().sharedMesh = meshFilter.sharedMesh;
         EnsureCollider(target);
 
         var relay = target.GetComponent<ClickRelay>();
