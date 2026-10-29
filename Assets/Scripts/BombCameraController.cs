@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -11,6 +12,9 @@ using UnityEngine.InputSystem;
 // the on-screen arrows (ViewButtons) rotate too, for players without a right button.
 // All keyboard/scroll camera input is suppressed while the chat input field is
 // focused, so typing "wasd" into a message doesn't also move the camera.
+// Scripted moves - the title screen's slow turn, the tour's glides - take over from
+// the player while Scripted is on. They run on unscaled time, like the screens that
+// use them.
 public class BombCameraController : MonoBehaviour
 {
     [SerializeField] Transform target; // empty object at the bomb's visual center to orbit around
@@ -39,6 +43,21 @@ public class BombCameraController : MonoBehaviour
     Vector3 panOffset;
     float pendingYaw, pendingPitch;
     float startYaw, startPitch, startDistance;
+    float orbitSpeed;
+    Coroutine glide;
+    float shakeStrength, shakeTime, shakeLength;
+
+    public bool Scripted { get; set; }
+    public Transform Target => target;
+    // The lowest the camera goes (the lab's floor); null: no limit.
+    public float? MinHeight { get; set; }
+
+    // The device is framed in the part of the screen left of this panel (the chat), so
+    // it sits in the middle of what the player can see - or in a set share of the
+    // screen's width from the left (the title screen). Changes glide.
+    public RectTransform FrameBeside { get; set; }
+    public float? FrameWidth { get; set; }
+    Camera view;
 
     void Start()
     {
@@ -72,9 +91,72 @@ public class BombCameraController : MonoBehaviour
         distance = startDistance;
     }
 
+    // Keeps turning around the device, degrees per second (0 stops).
+    public void Orbit(float degreesPerSecond) => orbitSpeed = degreesPerSecond;
+
+    // Glides to a view: yaw and pitch relative to the front view, a distance, and the
+    // point to look at (null: the device's centre).
+    public void Glide(float yawOffset, float pitchOffset, float toDistance, Vector3? focus, float seconds)
+    {
+        GlideTo(startYaw + yawOffset, startPitch + pitchOffset, toDistance, focus, seconds);
+    }
+
+    // Glides round to look at the device from one side: direction points from the
+    // device toward the camera, e.g. toward the casing's lamps.
+    public void GlideFrom(Vector3 direction, float toDistance, float seconds)
+    {
+        Vector3 euler = Quaternion.LookRotation(-direction.normalized).eulerAngles;
+        GlideTo(euler.y, NormalizePitch(euler.x), toDistance, null, seconds);
+    }
+
+    // Back to the front view the game started with.
+    public void GlideHome(float seconds) => GlideTo(startYaw, startPitch, startDistance, null, seconds);
+
+    public void Shake(float strength = 0.012f, float seconds = 0.35f)
+    {
+        shakeStrength = strength;
+        shakeLength = shakeTime = seconds;
+    }
+
+    void GlideTo(float toYaw, float toPitch, float toDistance, Vector3? focus, float seconds)
+    {
+        if (glide != null) StopCoroutine(glide);
+        pendingYaw = pendingPitch = 0f;
+        glide = StartCoroutine(Gliding(toYaw, toPitch, toDistance, focus.HasValue ? focus.Value - target.position : Vector3.zero, seconds));
+    }
+
+    IEnumerator Gliding(float toYaw, float toPitch, float toDistance, Vector3 toPan, float seconds)
+    {
+        float fromYaw = yaw, fromPitch = pitch, fromDistance = distance;
+        Vector3 fromPan = panOffset;
+        float dYaw = Mathf.DeltaAngle(fromYaw, toYaw), dPitch = Mathf.DeltaAngle(fromPitch, toPitch);
+        for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+        {
+            float k = Ui.EaseInOut(t / seconds);
+            yaw = fromYaw + dYaw * k;
+            pitch = fromPitch + dPitch * k;
+            distance = Mathf.Lerp(fromDistance, toDistance, k);
+            panOffset = Vector3.Lerp(fromPan, toPan, k);
+            yield return null;
+        }
+        yaw = fromYaw + dYaw;
+        pitch = fromPitch + dPitch;
+        distance = toDistance;
+        panOffset = toPan;
+        glide = null;
+    }
+
     void Update()
     {
         if (target == null) return;
+
+        if (Scripted)
+        {
+            yaw += orbitSpeed * Time.unscaledDeltaTime;
+            dragging = false;
+            UpdateCameraTransform();
+            return;
+        }
 
         bool typing = IsTypingInInputField();
 
@@ -169,11 +251,32 @@ public class BombCameraController : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        if (view == null) view = GetComponent<Camera>();
+        if (view == null || (FrameBeside == null && FrameWidth == null)) return;
+        float goal = FrameWidth ?? Mathf.Clamp(Ui.ScreenRect(FrameBeside).xMin / Screen.width, 0.3f, 1f);
+        var r = view.rect;
+        r.width = Mathf.Abs(r.width - goal) < 0.001f ? goal : Mathf.Lerp(r.width, goal, 1f - Mathf.Exp(-3f * Time.unscaledDeltaTime));
+        view.rect = r;
+    }
+
     void UpdateCameraTransform()
     {
         Vector3 pivot = target.position + panOffset;
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 position = pivot - rotation * Vector3.forward * distance;
+        if (MinHeight.HasValue && position.y < MinHeight.Value)
+        {
+            // Looking from below: stay above the floor and keep the device in view.
+            position.y = MinHeight.Value;
+            rotation = Quaternion.LookRotation(pivot - position, rotation * Vector3.up);
+        }
+        if (shakeTime > 0f)
+        {
+            shakeTime -= Time.unscaledDeltaTime;
+            position += Random.insideUnitSphere * shakeStrength * Mathf.Clamp01(shakeTime / shakeLength);
+        }
         transform.SetPositionAndRotation(position, rotation);
     }
 

@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // LUMA, the learning coach. Claude stays the teammate inside the story; LUMA
@@ -15,11 +13,12 @@ using UnityEngine.UI;
 //
 // LUMA lives in the chat: the 3D character is always visible in the chat header,
 // and when it has something to say it animates, reads the line aloud and posts it
-// in the chat in blue (the player is white, Claude green). Each tip is said once,
-// and the clock is held while LUMA talks, so listening never costs time. Lines
-// play one after another; their voices are recorded files in Resources/LumaVoice,
-// one per line id (regenerate with Claude Bomb > Generate LUMA Voice).
-// The game clock starts when LUMA's introduction is over or skipped.
+// in the chat (in cyan; the player's messages are slate, Claude's terracotta).
+// Each tip is said once, and the clock is held while LUMA talks, so listening never
+// costs time. Lines play one after another; their voices are recorded files in
+// Resources/LumaVoice, one per line id (regenerate with Claude Bomb > Generate LUMA
+// Voice). Before the clock starts, LUMA gives the guided tour (Tour, which uses
+// Speak); at the end it reads the recap on the debrief screen (LoseSequence).
 public class LoomaCoach : MonoBehaviour
 {
     public static LoomaCoach Instance { get; private set; }
@@ -28,21 +27,21 @@ public class LoomaCoach : MonoBehaviour
     [SerializeField] Camera lumaCamera;          // films the 3D LUMA on its stage
     [SerializeField] LumaRig luma;
     [SerializeField] RectTransform lumaView;     // where LUMA appears in the chat header
-    [SerializeField] TMP_FontAsset titleFont;
-    [SerializeField] TMP_FontAsset bodyFont;
-    [SerializeField] Color lumaColor = new Color(0.42f, 0.70f, 1f);
     [SerializeField] float stuckHintSeconds = 120f;
-
-    static readonly Color Accent = new Color(0.30f, 0.80f, 0.75f);
-    const float RecapWidth = 900f;
 
     // Everything LUMA says, by id. The id names the line's voice file. {0} is a
     // value filled in at the time (a date); it's left out of the spoken version.
     public static readonly Dictionary<string, string> Lines = new Dictionary<string, string>
     {
-        ["intro-mission"] = "<b>Mission:</b> defuse the bomb in front of you. Only Claude, in the chat, knows how - but it can't see the bomb. It only knows what you tell it.",
-        ["intro-goal"] = "<b>Goal:</b> solve all five modules. You have three lives, and the 10-minute clock starts as soon as I'm done talking.",
-        ["intro-howto"] = "<b>How to play:</b> turn the bomb with the arrows (bottom right) and find the pages under MANUALS (bottom left). Full help: the gear icon.",
+        ["tour-hello"] = "Hi, I'm LUMA, your coach. Before the clock starts, let me show you around.",
+        ["tour-device"] = "This is the device. Five numbered modules, each with a light: red while it's live, green once it's safe.",
+        ["tour-casing"] = "Look at every side. The back and the bottom carry the stamp, the power cells and three lamps. Most rules depend on them.",
+        ["tour-claude"] = "This is Claude, the expert on the radio. It knows how to defuse the device, but it can't see it. Describe exactly what you see.",
+        ["tour-manuals"] = "The device's manual pages are on the table. They're in Japanese: you can't read them, but Claude can.",
+        ["tour-clock"] = "Here are the clock and your three strikes. I stop the clock whenever I talk, so listening never costs you time.",
+        ["tour-controls"] = "Turn the device with these arrows, or drag with the right mouse button. Press Esc any time for the menu and the help.",
+        ["tour-go"] = "That's everything. The clock starts now. Good luck!",
+        ["tour-skipped"] = "Tour skipped. Press Esc any time for the menu, the help and the tour, and I'm here if you get stuck.",
         ["stuck-1"] = "Stuck? Pick one module, give Claude what it needs, and describe exactly what you see.",
         ["stuck-2"] = "Not sure what Claude needs? Ask it: \"What do you need from me?\"",
         ["stuck-3"] = "Unsure about an answer? Ask Claude \"Where does it say that?\" and find that rule number on your page.",
@@ -59,8 +58,8 @@ public class LoomaCoach : MonoBehaviour
         ["strike-no-manual"] = "You acted before Claude had this module's manual. Get the page to Claude first, then follow its instruction.",
         ["strike-old-manual"] = "Claude followed an old version of the page ({0}). Check the dates and share the newest page.",
         ["strike-description"] = "Claude's answer is only as good as your description. Re-check what you reported, or ask: \"Where does it say that?\"",
-        ["recap-win"] = "<b>Bomb defused!</b> Here's what you practised:",
-        ["recap-lose"] = "<b>The bomb went off.</b> Here's what you practised:",
+        ["recap-win"] = "Device defused! Here's what you practised.",
+        ["recap-lose"] = "The device went off. Here's what you practised, and what to try next time.",
     };
 
     // What the voice says for a line: the text without formatting or filled-in values.
@@ -76,14 +75,16 @@ public class LoomaCoach : MonoBehaviour
     readonly List<string> strikeCauses = new List<string>();
     readonly Queue<(string id, string text, LumaRig.Mood mood)> queue = new Queue<(string, string, LumaRig.Mood)>();
     const LumaRig.Mood Talk = LumaRig.Mood.Talk, Cheer = LumaRig.Mood.Cheer, Concern = LumaRig.Mood.Concern;
-    bool claudeAsked, awaitingAnswer, sharedOldManual, introRunning;
+    bool claudeAsked, awaitingAnswer, sharedOldManual;
     float sinceProgress;
     int stuckHints;
 
     AudioSource voice;
     Coroutine speaker;
-    GameObject skipButton, recap;
-    TMP_Text recapText;
+
+    // The live 3D LUMA, for the tour and the debrief to show too.
+    public Texture View => lumaCamera != null ? lumaCamera.targetTexture : null;
+    public RectTransform ViewSlot => lumaView;
 
     void Awake()
     {
@@ -96,7 +97,6 @@ public class LoomaCoach : MonoBehaviour
         voice.playOnAwake = false;
         voice.spatialBlend = 0f; // LUMA speaks to the player, not from somewhere in the scene
         BuildLumaView();
-        BuildRecap();
         var gm = GameManager.Instance;
         gm.OnStrike += HandleStrike;
         gm.OnModuleSolved += HandleModuleSolved;
@@ -106,7 +106,6 @@ public class LoomaCoach : MonoBehaviour
             PaperDesk.Instance.PageShared += HandlePageShared;
             PaperDesk.Instance.ShareBlocked += HandleShareBlocked;
         }
-        StartCoroutine(Intro());
     }
 
     void OnDestroy()
@@ -127,9 +126,6 @@ public class LoomaCoach : MonoBehaviour
 
     void Update()
     {
-        var kb = Keyboard.current;
-        if (introRunning && kb != null && kb.escapeKey.wasPressedThisFrame) SkipIntro();
-
         // Stuck: no progress (solve, share, or an instruction from Claude) for a while.
         var gm = GameManager.Instance;
         if (gm.State != GameManager.RunState.Playing || !gm.ClockStarted || GamePause.IsPaused || speaker != null) return;
@@ -140,41 +136,6 @@ public class LoomaCoach : MonoBehaviour
     }
 
     // ---- What happens in the game ----
-
-    IEnumerator Intro()
-    {
-        yield return null;
-        while (!ClaudeClient.Ready) yield return null; // after the access code, if one is needed
-        if (!shownTips.Add("intro"))
-        {
-            GameManager.Instance.StartClock(); // heard it already (Restart): straight to the game
-            yield break;
-        }
-        introRunning = true;
-        skipButton.SetActive(true);
-        Say("intro-mission", LumaRig.Mood.Wave);
-        Say("intro-goal");
-        Say("intro-howto");
-    }
-
-    // The introduction is over (or skipped): the countdown begins.
-    void EndIntro()
-    {
-        if (!introRunning) return;
-        introRunning = false;
-        skipButton.SetActive(false);
-        GameManager.Instance.StartClock();
-    }
-
-    // Stops the voice and puts the rest of the introduction in the chat at once,
-    // so it can still be read - then the game starts.
-    void SkipIntro()
-    {
-        if (!introRunning) return;
-        StopSpeaking();
-        while (queue.Count > 0) chat.AddNote("<b>LUMA:</b> " + queue.Dequeue().text, lumaColor);
-        EndIntro();
-    }
 
     // Claude's hidden reply tag (see ChatPanel): what the last exchange achieved.
     public void OnClaudeReply(string tag)
@@ -257,34 +218,37 @@ public class LoomaCoach : MonoBehaviour
     void HandleGameEnded(GameManager.RunState state)
     {
         StopSpeaking();
-        StartCoroutine(Recap(state));
     }
 
-    IEnumerator Recap(GameManager.RunState state)
+    // ---- The recap, shown on the debrief screen ----
+
+    public enum Practised { Yes, Missed, NotNeeded }
+
+    public List<(Practised result, string label)> Recap()
     {
-        if (state == GameManager.RunState.Lost) yield return new WaitForSeconds(3.2f); // after explosion + smoke
-
-        string Line(Outcome o, string label) =>
-            (achieved.Contains(o) ? "<color=#5BD08B>YES</color>" : "<color=#E36A4D>MISSED</color>") + "    " + label;
-
-        string id = state == GameManager.RunState.Won ? "recap-win" : "recap-lose";
-        var lines = new List<string>
+        Practised Of(Outcome o) => achieved.Contains(o) ? Practised.Yes : Practised.Missed;
+        return new List<(Practised, string)>
         {
-            Lines[id],
-            Line(Outcome.ClearDescription, "Described a module so Claude could act right away"),
+            (Of(Outcome.ClearDescription), "Described a module so Claude could act right away"),
             claudeAsked || achieved.Contains(Outcome.AnsweredFollowUp)
-                ? Line(Outcome.AnsweredFollowUp, "Answered Claude's follow-up question")
-                : "<color=#9A9A9A>-</color>         Claude never needed to ask a follow-up",
-            Line(Outcome.CleanBlackout, "Blacked out private information correctly"),
-            Line(Outcome.NewestManual, sharedOldManual ? "Chose the newest manual (an old one was shared)" : "Chose the newest manual version"),
-            strikeCauses.Count == 0 ? "No strikes."
-                : $"Strikes: {strikeCauses.Count} (" + string.Join(", ", strikeCauses.GroupBy(c => c)
-                      .Select(g => g.Count() > 1 ? $"{g.Key} x{g.Count()}" : g.Key)) + ")",
+                ? (Of(Outcome.AnsweredFollowUp), "Answered Claude's follow-up question")
+                : (Practised.NotNeeded, "Claude never needed to ask a follow-up"),
+            (Of(Outcome.CleanBlackout), "Blacked out private information correctly"),
+            (Of(Outcome.NewestManual), sharedOldManual ? "Chose the newest manual (an old one was shared)" : "Chose the newest manual version"),
         };
-        recapText.text = "<size=30><b>LUMA'S RECAP</b></size>\n" + string.Join("\n", lines);
-        recap.SetActive(true);
+    }
+
+    public string StrikeSummary() => strikeCauses.Count == 0 ? "No strikes."
+        : $"Strikes: {strikeCauses.Count} (" + string.Join(", ", strikeCauses.GroupBy(c => c)
+              .Select(g => g.Count() > 1 ? $"{g.Key} x{g.Count()}" : g.Key)) + ")";
+
+    // LUMA's line over the recap, with the matching mood.
+    public string ReadRecap(GameManager.RunState state)
+    {
+        string id = state == GameManager.RunState.Won ? "recap-win" : "recap-lose";
         if (luma != null) luma.SetMood(state == GameManager.RunState.Won ? Cheer : Concern);
         PlayVoice(id);
+        return Lines[id];
     }
 
     // ---- Talking ----
@@ -295,7 +259,7 @@ public class LoomaCoach : MonoBehaviour
     }
 
     // Lines are said one at a time, in order.
-    void Say(string id, LumaRig.Mood mood = Talk, string value = null)
+    public void Say(string id, LumaRig.Mood mood = Talk, string value = null)
     {
         if (GameManager.Instance.State != GameManager.RunState.Playing) return;
         queue.Enqueue((id, string.Format(Lines[id], value), mood));
@@ -308,7 +272,7 @@ public class LoomaCoach : MonoBehaviour
         while (queue.Count > 0)
         {
             var line = queue.Dequeue();
-            chat.AddNote("<b>LUMA:</b> " + line.text, lumaColor);
+            chat.AddLumaNote(line.text);
             if (luma != null) luma.SetMood(line.mood);
             gm.HoldClock(this);
 
@@ -321,7 +285,27 @@ public class LoomaCoach : MonoBehaviour
             yield return new WaitForSecondsRealtime(0.35f);
         }
         speaker = null;
-        EndIntro();
+    }
+
+    // For the tour: says one line aloud with a mood, without posting it in the chat.
+    public IEnumerator Speak(string id, LumaRig.Mood mood)
+    {
+        if (luma != null) luma.SetMood(mood);
+        if (PlayVoice(id)) while (voice.isPlaying) yield return null;
+        else yield return new WaitForSecondsRealtime(1.5f + Lines[id].Length * 0.03f);
+        if (luma != null) luma.SetMood(LumaRig.Mood.Idle);
+    }
+
+    // Stops a line said with Speak (the player moved on).
+    public void Hush()
+    {
+        if (voice != null) voice.Stop();
+        if (luma != null) luma.SetMood(LumaRig.Mood.Idle);
+    }
+
+    public void SetMood(LumaRig.Mood mood)
+    {
+        if (luma != null) luma.SetMood(mood);
     }
 
     void StopSpeaking()
@@ -336,6 +320,7 @@ public class LoomaCoach : MonoBehaviour
     bool PlayVoice(string id)
     {
         voice.Stop();
+        if (!Settings.LumaVoice) return false; // the menu turned her voice off: the line shows, on a timer
         var clip = Resources.Load<AudioClip>("LumaVoice/" + id);
         if (clip == null) return false; // no recording for this line yet: the text still shows
         voice.clip = clip;
@@ -345,112 +330,20 @@ public class LoomaCoach : MonoBehaviour
 
     // ---- UI construction ----
 
-    // The live 3D LUMA in the chat header, plus the intro's SKIP button beside it.
+    // The live 3D LUMA in the chat header, on a teal-tinted card.
     void BuildLumaView()
     {
-        if (lumaCamera != null && lumaView != null)
-        {
-            var rt = new RenderTexture(440, 500, 24, RenderTextureFormat.ARGB32) { name = "LumaView", antiAliasing = 4 };
-            lumaCamera.targetTexture = rt;
-            lumaCamera.enabled = true; // always on: LUMA idles in the chat the whole game
-            var view = new GameObject("Luma3D", typeof(RectTransform)).AddComponent<RawImage>();
-            view.transform.SetParent(lumaView, false);
-            view.texture = rt;
-            view.raycastTarget = false;
-            Stretch(view.rectTransform);
-        }
+        if (lumaCamera == null || lumaView == null) return;
+        var rt = new RenderTexture(440, 500, 24, RenderTextureFormat.ARGB32) { name = "LumaView", antiAliasing = 4 };
+        lumaCamera.targetTexture = rt;
+        lumaCamera.enabled = true; // always on: LUMA idles in the chat the whole game
 
-        var parent = lumaView != null ? lumaView.parent : chat.transform;
-        var button = NewImage("SkipIntro", parent, new Color(0.32f, 0.34f, 0.38f));
-        var brt = button.rectTransform;
-        brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 1f);
-        brt.anchoredPosition = new Vector2(-16f, -160f);
-        brt.sizeDelta = new Vector2(200f, 44f);
-        button.gameObject.AddComponent<Button>().onClick.AddListener(() =>
-        {
-            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
-            SkipIntro();
-        });
-        var label = NewText("Label", button.transform, "SKIP INTRO", titleFont, 18, TextAlignmentOptions.Center);
-        label.color = new Color(0.93f, 0.93f, 0.9f);
-        Stretch(label.rectTransform);
-        skipButton = button.gameObject;
-        skipButton.SetActive(false);
-    }
-
-    // The end-of-game recap, under the result and the Restart button.
-    void BuildRecap()
-    {
-        var canvasGo = new GameObject("LumaRecapCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvasGo.transform.SetParent(transform, false);
-        var canvas = canvasGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 25; // over the end screen
-        var scaler = canvasGo.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
-
-        var card = NewImage("Recap", canvasGo.transform, new Color(0.11f, 0.12f, 0.15f, 0.97f));
-        var rt = card.rectTransform;
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
-        rt.anchoredPosition = new Vector2(0f, 12f);
-        rt.sizeDelta = new Vector2(RecapWidth, 440f);
-        var outline = card.gameObject.AddComponent<Outline>();
-        outline.effectColor = Accent;
-        outline.effectDistance = new Vector2(2f, -2f);
-        recap = card.gameObject;
-
-        recapText = NewText("Text", recap.transform, "", bodyFont, 24, TextAlignmentOptions.TopLeft);
-        recapText.color = new Color(0.93f, 0.93f, 0.9f);
-        var trt = recapText.rectTransform;
-        trt.anchorMin = Vector2.zero;
-        trt.anchorMax = Vector2.one;
-        trt.offsetMin = new Vector2(40f, 70f);
-        trt.offsetMax = new Vector2(-40f, -30f);
-        recapText.enableAutoSizing = true;
-        recapText.fontSizeMin = 16;
-        recapText.fontSizeMax = 24;
-
-        var button = NewImage("Close", recap.transform, new Color(0.95f, 0.94f, 0.9f));
-        var brt = button.rectTransform;
-        brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 0f);
-        brt.anchoredPosition = new Vector2(-24f, 18f);
-        brt.sizeDelta = new Vector2(200f, 46f);
-        button.gameObject.AddComponent<Button>().onClick.AddListener(() => { voice.Stop(); recap.SetActive(false); });
-        var label = NewText("Label", button.transform, "GOT IT", titleFont, 20, TextAlignmentOptions.Center);
-        label.color = new Color(0.13f, 0.13f, 0.15f);
-        Stretch(label.rectTransform);
-
-        recap.SetActive(false);
-    }
-
-    static Image NewImage(string name, Transform parent, Color color)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var img = go.AddComponent<Image>();
-        img.color = color;
-        return img;
-    }
-
-    static TMP_Text NewText(string name, Transform parent, string text, TMP_FontAsset font, float size, TextAlignmentOptions alignment)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var t = go.AddComponent<TextMeshProUGUI>();
-        if (font != null) t.font = font;
-        t.fontSize = size;
-        t.alignment = alignment;
-        t.raycastTarget = false;
-        t.text = text;
-        return t;
-    }
-
-    static void Stretch(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        var card = Ui.NewPanel("LumaCard", lumaView, Ui.Surface2, 10);
+        card.raycastTarget = false;
+        Ui.Stretch(card.rectTransform);
+        var view = Ui.NewRect("Luma3D", lumaView).gameObject.AddComponent<RawImage>();
+        view.texture = rt;
+        view.raycastTarget = false;
+        Ui.Stretch(view.rectTransform);
     }
 }

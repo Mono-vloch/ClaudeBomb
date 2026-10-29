@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -11,9 +12,12 @@ using Newtonsoft.Json;
 // the Inspector; the module rules only arrive as manual pages the player shares
 // from the PaperDesk, which ride along in the system prompt of every call.
 //
-// Two ways to reach Claude:
-// - Editor / desktop: straight to the API, with a key from a local file that is
-//   never shipped (UserSettings/claude_key.txt, gitignored) or typed into the panel.
+// Ways to reach Claude:
+// - Editor / desktop with a key file (UserSettings/claude_key.txt, gitignored, never
+//   shipped): straight to the API.
+// - Editor / desktop without one, when Claude Code is installed: through `claude -p`,
+//   which uses the Claude subscription it is signed in with. No key needed.
+// - Otherwise straight to the API with a key typed into the panel.
 // - Web build: through the key keeper on Netlify (PROXY_URL, see Web/netlify), which
 //   holds the key on the server. The browser only ever sends an access code.
 public class ClaudeClient : MonoBehaviour, IAdvisor
@@ -22,6 +26,12 @@ public class ClaudeClient : MonoBehaviour, IAdvisor
     // The key keeper lives on Netlify; the game page itself is served from GitHub
     // Pages, so this must be a full address, not a path on the page's own site.
     const string PROXY_URL = "https://claude-bomb.netlify.app/api/claude";
+    // A build played on this computer (Web/serve-local.mjs) has its own key keeper on
+    // the page's address; the Netlify one only accepts the published sites.
+    static string ProxyUrl =>
+        Uri.TryCreate(Application.absoluteURL, UriKind.Absolute, out var page) && page.IsLoopback
+            ? new Uri(page, "/api/claude").ToString()
+            : PROXY_URL;
     const string MODEL = "claude-sonnet-5";
     const string PREF_KEY = "anthropic_key";
     const string PREF_CODE = "access_code";
@@ -55,7 +65,41 @@ public class ClaudeClient : MonoBehaviour, IAdvisor
         set { PlayerPrefs.SetString(PREF_CODE, value.Trim()); PlayerPrefs.Save(); }
     }
 
-    public static bool Ready => UsesProxy ? !string.IsNullOrEmpty(AccessCode) : !string.IsNullOrEmpty(ApiKey);
+    // A key file wins, so the setup in the README keeps working; a typed key is the
+    // last resort.
+    public static bool UsesClaudeCode => !UsesProxy && string.IsNullOrEmpty(LocalKey) && ClaudeCodePath != null;
+
+    public static bool Ready => UsesProxy ? !string.IsNullOrEmpty(AccessCode)
+                              : UsesClaudeCode || !string.IsNullOrEmpty(ApiKey);
+
+    // Claude Code's program: on the PATH, in a usual install folder, or the copy inside
+    // the VS Code extension (newest first). An Editor started from the Dock or the Hub
+    // doesn't get the shell's PATH, hence the fixed folders.
+    static string claudeCodePath;
+    static bool claudeCodeSearched;
+    static string ClaudeCodePath
+    {
+        get
+        {
+            if (claudeCodeSearched) return claudeCodePath;
+            claudeCodeSearched = true;
+
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var dirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
+                .Split(System.IO.Path.PathSeparator).Where(d => d != "").ToList();
+            dirs.AddRange(new[] { System.IO.Path.Combine(home, ".local/bin"), System.IO.Path.Combine(home, ".claude/local"),
+                                  "/opt/homebrew/bin", "/usr/local/bin" });
+            string extensions = System.IO.Path.Combine(home, ".vscode/extensions");
+            if (System.IO.Directory.Exists(extensions))
+                dirs.AddRange(System.IO.Directory.GetDirectories(extensions, "anthropic.claude-code-*")
+                    .OrderByDescending(System.IO.Directory.GetLastWriteTimeUtc)
+                    .Select(d => System.IO.Path.Combine(d, "resources/native-binary")));
+
+            claudeCodePath = dirs.SelectMany(d => new[] { "claude", "claude.exe" }, System.IO.Path.Combine)
+                                 .FirstOrDefault(System.IO.File.Exists);
+            return claudeCodePath;
+        }
+    }
 
     // Re-read on every access (it's tiny) so a key pasted into the file while the
     // Editor is open is picked up on the next message.
@@ -101,6 +145,19 @@ public class ClaudeClient : MonoBehaviour, IAdvisor
             history.RemoveAt(0);
 
         string system = SystemWithPages();
+
+        if (UsesClaudeCode)
+        {
+            string prompt = Transcript(history); // built here: history is only touched on this thread
+            var run = System.Threading.Tasks.Task.Run(() => AskClaudeCode(system, prompt));
+            yield return new WaitUntil(() => run.IsCompleted);
+            var (ok, text) = run.Result;
+            if (ok) history.Add(new Msg { role = "assistant", content = text });
+            else history.RemoveAt(history.Count - 1); // never keep a turn that did not land
+            onReply?.Invoke(text);
+            yield break;
+        }
+
         // The key keeper sets the model and limits itself; only the conversation goes up.
         string body = UsesProxy
             ? JsonConvert.SerializeObject(new { system, messages = history })
@@ -121,7 +178,7 @@ public class ClaudeClient : MonoBehaviour, IAdvisor
                 cache_control = new { type = "ephemeral" }
             });
 
-        using (var req = new UnityWebRequest(UsesProxy ? PROXY_URL : API_URL, "POST"))
+        using (var req = new UnityWebRequest(UsesProxy ? ProxyUrl : API_URL, "POST"))
         {
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
             req.downloadHandler = new DownloadHandlerBuffer();
@@ -163,7 +220,7 @@ public class ClaudeClient : MonoBehaviour, IAdvisor
     // Asks the key keeper whether an access code is valid, without calling Claude.
     public static IEnumerator CheckAccessCode(string code, Action<bool> done)
     {
-        using (var req = new UnityWebRequest(PROXY_URL, "POST"))
+        using (var req = new UnityWebRequest(ProxyUrl, "POST"))
         {
             req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{\"check\":true}"));
             req.downloadHandler = new DownloadHandlerBuffer();
@@ -172,6 +229,77 @@ public class ClaudeClient : MonoBehaviour, IAdvisor
             req.timeout = 20;
             yield return req.SendWebRequest();
             done?.Invoke(req.result == UnityWebRequest.Result.Success);
+        }
+    }
+
+    // `claude -p` takes one prompt, so the earlier turns go in as a transcript before
+    // the new one. Web/serve-local.mjs builds the same text for the browser version.
+    static string Transcript(List<Msg> turns)
+    {
+        string latest = turns[turns.Count - 1].content;
+        if (turns.Count == 1) return latest;
+        var sb = new StringBuilder("Earlier in this conversation:\n\n");
+        for (int i = 0; i < turns.Count - 1; i++)
+            sb.Append(turns[i].role == "user" ? "Player: " : "You: ").Append(turns[i].content).Append("\n\n");
+        return sb.Append("---\n\nThe player now says:\n\n").Append(latest).ToString();
+    }
+
+    // Runs on a worker thread. Same model and effort as the API call; no tools, no saved
+    // session, none of the user's Claude Code settings, and the system prompt from a file
+    // (the conversation goes in on stdin) so nothing needs quoting.
+    static (bool ok, string reply) AskClaudeCode(string system, string prompt)
+    {
+        string systemFile = System.IO.Path.GetTempFileName();
+        try
+        {
+            System.IO.File.WriteAllText(systemFile, system);
+            var psi = new System.Diagnostics.ProcessStartInfo(ClaudeCodePath,
+                $"-p --system-prompt-file \"{systemFile}\" --tools \"\" --output-format json " +
+                $"--model {MODEL} --effort low --no-session-persistence --setting-sources \"\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                WorkingDirectory = System.IO.Path.GetTempPath(), // away from any project CLAUDE.md
+            };
+            psi.EnvironmentVariables.Remove("ANTHROPIC_API_KEY"); // the subscription, never a key
+
+            using (var p = System.Diagnostics.Process.Start(psi))
+            {
+                byte[] input = Encoding.UTF8.GetBytes(prompt);
+                p.StandardInput.BaseStream.Write(input, 0, input.Length);
+                p.StandardInput.Close();
+                var output = p.StandardOutput.ReadToEndAsync();
+                var errors = p.StandardError.ReadToEndAsync();
+                if (!p.WaitForExit(90_000))
+                {
+                    p.Kill();
+                    Debug.LogWarning("Claude Code took longer than 90 seconds.");
+                    return (false, "Radio's cutting out. Say again.");
+                }
+
+                var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(output.Result);
+                string text = result != null && result.TryGetValue("result", out var r) ? (r as string ?? "").Trim() : "";
+                bool failed = result == null || (result.TryGetValue("is_error", out var e) && e is bool b && b);
+                if (!failed && text != "") return (true, text);
+
+                Debug.LogWarning($"Claude Code: {output.Result} {errors.Result}");
+                return (false, text.Contains("limit") ? "Radio's out of power - the Claude subscription has hit its usage limit."
+                             : text.Contains("login") ? "Radio's off - Claude Code isn't signed in. Run claude, then /login."
+                             : "Radio's cutting out. Say again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"Claude Code: {ex.Message}");
+            return (false, "Radio's cutting out. Say again.");
+        }
+        finally
+        {
+            System.IO.File.Delete(systemFile);
         }
     }
 

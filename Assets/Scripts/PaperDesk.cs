@@ -19,7 +19,6 @@ public class PaperDesk : MonoBehaviour
     public static PaperDesk Instance { get; private set; }
 
     [SerializeField] ClaudeClient claude;
-    [SerializeField] TMP_FontAsset uiFont;      // titles and buttons
     [SerializeField] TMP_FontAsset paperFont;   // page text - must cover Japanese (Noto Sans JP)
     [SerializeField] RectTransform chatArea;    // dropping a page anywhere on this attaches it
     [SerializeField] RectTransform chatInput;   // the attachment bar sits just above this
@@ -54,6 +53,10 @@ public class PaperDesk : MonoBehaviour
     bool markerPaint; // what a marker stroke paints: true = black out, false = remove the black
 
     public bool HasAttachments => attached.Count > 0;
+    // A page is open up close (the HUD steps aside for it).
+    public bool ReaderOpen => reader != null && reader.activeInHierarchy;
+    // The MANUALS button on the device view, for the tour to point at.
+    public RectTransform ManualsButton => manualsButton != null ? (RectTransform)manualsButton.transform : null;
     public IReadOnlyList<Paper> SharedPages => shared;
 
     // Whether the table also holds a superseded copy of this page's module.
@@ -74,8 +77,9 @@ public class PaperDesk : MonoBehaviour
         BuildTable();
         BuildReader();
         BuildAttachBar();
-        manualsButton = NewButton("ManualsButton", deskCanvas.transform, "MANUALS",
-            Vector2.zero, new Vector2(30, 30), new Vector2(260, 70), () => SetTableOpen(true)).gameObject;
+        manualsButton = NewButton("ManualsButton", deskCanvas.transform, "Manuals",
+            Vector2.zero, new Vector2(30, 30), new Vector2(240, 64), () => SetTableOpen(true)).gameObject;
+        manualsButton.GetComponent<Image>().color = Color.white;
 
         GameManager.Instance.OnGameEnded += HandleGameEnded;
         SetTableOpen(openAtStart);
@@ -137,7 +141,7 @@ public class PaperDesk : MonoBehaviour
         bool any = attached.Count > 0;
         attachBar.SetActive(any);
         if (chatScroll != null) chatScroll.offsetMin = any ? scrollMinWithBar : scrollMinDefault;
-        if (any) attachText.text = "ATTACHED:  " + string.Join(",  ", attached.Select(p => p.Label));
+        if (any) attachText.text = "<color=#0E7A6E><b>Attached</b></color>   " + string.Join(",  ", attached.Select(p => p.Label));
     }
 
     void HandleGameEnded(GameManager.RunState state)
@@ -289,9 +293,15 @@ public class PaperDesk : MonoBehaviour
         var bg = NewImage("Table", deskCanvas.transform, DeskColor);
         Stretch(bg.rectTransform, Vector2.zero, new Vector2(-chatWidth, 0));
         table = bg.gameObject;
+        // The desk lamp: warm light in the middle of the table, dark toward the edges.
+        var lamp = Ui.NewGlow("Lamp", table.transform, HintColor.WithAlpha(0.12f), Vector2.zero);
+        Stretch(lamp.rectTransform, new Vector2(-200, -300), new Vector2(200, 200));
+        var edges = Ui.NewImage("Vignette", table.transform, Ui.Ink.WithAlpha(0.7f), Ui.Vignette);
+        edges.raycastTarget = false;
+        Stretch(edges.rectTransform, Vector2.zero, Vector2.zero);
 
-        var title = NewText("Title", table.transform, "MANUALS", uiFont, 46, Color.white, TextAlignmentOptions.TopLeft);
-        Place(title.rectTransform, new Vector2(0, 1), new Vector2(48, -30), new Vector2(600, 60));
+        var title = NewText("Title", table.transform, "Manuals", Ui.Display, 42, Color.white, TextAlignmentOptions.TopLeft);
+        Place(title.rectTransform, new Vector2(0, 1), new Vector2(48, -34), new Vector2(600, 60));
 
         var hint = NewText("Hint", table.transform,
             "These pages are in Japanese: you can't read them, but Claude can.\n" +
@@ -304,7 +314,7 @@ public class PaperDesk : MonoBehaviour
         hr.offsetMin = new Vector2(48, -210);
         hr.offsetMax = new Vector2(-430, -100);
 
-        NewButton("Back", table.transform, "BACK TO THE DEVICE", new Vector2(1, 1), new Vector2(-40, -36), new Vector2(360, 64), () => SetTableOpen(false));
+        NewButton("Back", table.transform, "Back to the device", new Vector2(1, 1), new Vector2(-40, -36), new Vector2(300, 58), () => SetTableOpen(false), Ui.ButtonStyle.GhostOnDark);
 
         Vector2[] slots =
         {
@@ -335,14 +345,14 @@ public class PaperDesk : MonoBehaviour
     void RefreshCard(Paper p)
     {
         string preview = string.Join("\n", p.lines.Take(4).Select(line => string.Concat(line.Select(s => s.jp))));
-        string tag = shared.Contains(p) ? "<size=17><color=#2E7D32><b>SHARED WITH CLAUDE</b></color></size>\n" : "";
+        string tag = shared.Contains(p) ? "<size=17><color=#0E7A6E><b>Shared with Claude</b></color></size>\n" : "";
         cardTexts[p].text = $"{tag}<size=34><b>MODULE {p.module}</b></size>\n<size=21>Rev {p.revision}  ·  {p.date}</size>\n" +
                             $"<size=26>{p.titleJp}</size>\n\n<size=13><color=#555555>{preview}</color></size>";
     }
 
     void BuildReader()
     {
-        var dim = NewImage("Reader", table.transform, new Color(0f, 0f, 0f, 0.88f));
+        var dim = NewImage("Reader", table.transform, Ui.Ink.WithAlpha(0.98f));
         Stretch(dim.rectTransform, Vector2.zero, Vector2.zero);
         reader = dim.gameObject;
 
@@ -367,17 +377,22 @@ public class PaperDesk : MonoBehaviour
         readerBody.raycastTarget = true; // the black marker needs pointer events
         readerBody.gameObject.AddComponent<RedactableText>().Init(this);
 
-        NewButton("Back", reader.transform, "BACK TO THE TABLE", new Vector2(0.5f, 0.5f), new Vector2(420, 400), new Vector2(340, 64), CloseReader);
-        NewButton("Attach", reader.transform, "ATTACH TO CHAT", new Vector2(0.5f, 0.5f), new Vector2(420, 316), new Vector2(340, 64), () =>
+        // Beside the page: what to do with it, and how the marker works.
+        var tools = Ui.NewCard("Tools", reader.transform, Color.white, out var toolsBackground, 20);
+        Place(tools, new Vector2(0.5f, 0.5f), new Vector2(420, 40), new Vector2(380, 620));
+        NewButton("Attach", tools, "Attach to chat", new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(320, 64), () =>
         {
             if (Attach(reading)) CloseReader();
-        });
-
-        var hint = NewText("Hint", reader.transform,
-            "<b>BLACK MARKER</b>\nPress on any text to black it out, or drag across several lines. Press again to remove the black.\n\n" +
+        }, Ui.ButtonStyle.Primary);
+        NewButton("Back", tools, "Back to the table", new Vector2(0.5f, 1f), new Vector2(0, -110), new Vector2(320, 60), CloseReader);
+        var markerTitle = Ui.NewHeading("MarkerTitle", tools, "Black marker", 20f, Ui.Ink);
+        Place(markerTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0, -204), new Vector2(320, 26));
+        var hint = NewText("Hint", tools,
+            "Press on any text to black it out, or drag across several lines. Press again to remove the black.\n\n" +
             "Before you share a page, black out private information: names, ID numbers, phone numbers and codes.",
-            paperFont, 22, HintColor, TextAlignmentOptions.TopLeft);
-        Place(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(420, 60), new Vector2(340, 440));
+            paperFont, 20, Ui.Text2, TextAlignmentOptions.TopLeft);
+        hint.lineSpacing = 6;
+        Place(hint.rectTransform, new Vector2(0.5f, 1f), new Vector2(0, -240), new Vector2(320, 360));
 
         reader.SetActive(false);
     }
@@ -397,7 +412,7 @@ public class PaperDesk : MonoBehaviour
         chatInput.GetWorldCorners(corners);
         float inputTop = chatArea.InverseTransformPoint(corners[1]).y - chatArea.rect.yMin;
 
-        var bar = NewImage("AttachBar", chatArea, new Color(0.08f, 0.08f, 0.1f, 0.85f));
+        var bar = Ui.NewPanel("AttachBar", chatArea, Ui.Surface2, 6);
         var rt = bar.rectTransform;
         rt.anchorMin = new Vector2(0, 0);
         rt.anchorMax = new Vector2(1, 0);
@@ -413,9 +428,12 @@ public class PaperDesk : MonoBehaviour
         });
         attachBar = bar.gameObject;
 
-        attachText = NewText("Text", bar.transform, "", paperFont, 19, Color.white, TextAlignmentOptions.MidlineLeft);
-        Stretch(attachText.rectTransform, new Vector2(14, 0), new Vector2(-56, 0));
-        NewButton("Clear", bar.transform, "X", new Vector2(1, 0.5f), new Vector2(-6, 0), new Vector2(40, 36), ClearAttachments);
+        var accent = Ui.NewPanel("Accent", bar.transform, Ui.Teal, 3);
+        accent.raycastTarget = false;
+        Place(accent.rectTransform, new Vector2(0, 0.5f), new Vector2(8, 0), new Vector2(4, 28));
+        attachText = NewText("Text", bar.transform, "", paperFont, 18, Ui.Ink, TextAlignmentOptions.MidlineLeft);
+        Stretch(attachText.rectTransform, new Vector2(22, 0), new Vector2(-56, 0));
+        NewButton("Clear", bar.transform, "X", new Vector2(1, 0.5f), new Vector2(-6, 0), new Vector2(40, 34), ClearAttachments, Ui.ButtonStyle.Ghost);
         RefreshAttachBar();
     }
 
@@ -433,14 +451,11 @@ public class PaperDesk : MonoBehaviour
         return canvas;
     }
 
-    Button NewButton(string name, Transform parent, string label, Vector2 anchor, Vector2 pos, Vector2 size, UnityAction onClick)
+    static Button NewButton(string name, Transform parent, string label, Vector2 anchor, Vector2 pos, Vector2 size, UnityAction onClick,
+                            Ui.ButtonStyle style = Ui.ButtonStyle.Secondary)
     {
-        var img = NewImage(name, parent, new Color(0.95f, 0.94f, 0.9f));
-        Place(img.rectTransform, anchor, pos, size);
-        var button = img.gameObject.AddComponent<Button>();
-        button.onClick.AddListener(onClick);
-        var text = NewText("Label", img.transform, label, uiFont, 24, InkColor, TextAlignmentOptions.Center);
-        Stretch(text.rectTransform, Vector2.zero, Vector2.zero);
+        var button = Ui.NewButton(name, parent, label, style, onClick, 18f);
+        Place((RectTransform)button.transform, anchor, pos, size);
         return button;
     }
 

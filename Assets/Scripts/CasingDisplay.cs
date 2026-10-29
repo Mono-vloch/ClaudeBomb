@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -30,6 +31,30 @@ public class CasingDisplay : MonoBehaviour
 
         for (int i = 0; i < powerCellCubes.Length; i++)
             ApplyMaterialToAll(powerCellCubes[i], i < casing.cells ? cellOnMaterial : cellOffMaterial);
+    }
+
+    // For the tour: where the casing's information sits on the device.
+    public Bounds LampsAndCells() => Around(new[] { ventLamp, syncLamp, holdLamp }.Concat(powerCellCubes));
+    public Bounds StampArea()
+    {
+        if (stampText == null) return LampsAndCells();
+        var corners = new Vector3[4]; // the stamp is text on a canvas, with no mesh renderer to measure
+        stampText.rectTransform.GetWorldCorners(corners);
+        var b = new Bounds(corners[0], Vector3.zero);
+        foreach (var c in corners) b.Encapsulate(c);
+        return b;
+    }
+
+    static Bounds Around(System.Collections.Generic.IEnumerable<GameObject> parts)
+    {
+        Bounds? all = null;
+        foreach (var part in parts.Where(p => p != null))
+            foreach (var r in part.GetComponentsInChildren<Renderer>())
+            {
+                if (all == null) all = r.bounds;
+                else { var b = all.Value; b.Encapsulate(r.bounds); all = b; }
+            }
+        return all ?? new Bounds();
     }
 
     void SetLampVisual(GameObject lamp, bool lit)

@@ -5,6 +5,18 @@ using UnityEngine;
 
 public enum ModuleId { Wires, Glyphs, Sequence, Grid, Switches }
 
+// Each module's number and name as printed on its plate on the device, in plate order.
+public static class Plates
+{
+    public static readonly (ModuleId id, int number, string name)[] All =
+    {
+        (ModuleId.Wires, 1, "Wire bank"), (ModuleId.Grid, 2, "Colour grid"), (ModuleId.Sequence, 3, "Sequence strip"),
+        (ModuleId.Glyphs, 4, "Glyph pad"), (ModuleId.Switches, 5, "Switch bank"),
+    };
+
+    public static (ModuleId id, int number, string name) Of(ModuleId id) => System.Array.Find(All, p => p.id == id);
+}
+
 // Owns all device/run truth: the generated DeviceState, timer, strikes and solved flags.
 // Modules read input and call Rules themselves, then report outcomes here — this class
 // never computes a module's answer.
@@ -14,11 +26,11 @@ public class GameManager : MonoBehaviour
 
     public enum RunState { Playing, Won, Lost }
 
-    [SerializeField] float startingSeconds = 600f;
+    [SerializeField] float startingSeconds = 600f; // replaced by the menu's clock setting (Settings.ClockMinutes)
     [SerializeField] int maxStrikes = 3; // a first mistake costs a third of the lives, not half
 
-    [SerializeField] TMP_Text timerText;
-    [SerializeField] TMP_Text strikesText;
+    [SerializeField] TMP_Text timerText;   // the display on the device itself
+    [SerializeField] TMP_Text strikesText; // the old readout in the chat header - hidden, the HUD shows strikes
     [SerializeField] Color timerSafeColor = Color.green;    // first 33% of time remaining
     [SerializeField] Color timerWarningColor = new Color(1f, 0.55f, 0f); // middle 33%
     [SerializeField] Color timerDangerColor = Color.red;    // final 33%
@@ -28,9 +40,17 @@ public class GameManager : MonoBehaviour
     public int Strikes { get; private set; }
     public int MaxStrikes => maxStrikes;
     public float TimeRemaining { get; private set; }
-    // The clock waits until LUMA's introduction is over (LoomaCoach calls StartClock).
+    // The clock waits until the opening - title, briefing, LUMA's tour - is over
+    // (Opening calls StartClock).
     public bool ClockStarted { get; private set; }
     public void StartClock() => ClockStarted = true;
+    // Practice: the menu's clock setting is "no clock". Nothing counts down.
+    public bool NoClock { get; private set; }
+
+    // Every device comes from a seed, so "try this device again" can rebuild the same
+    // one: set ReplaySeed before reloading the scene.
+    public int Seed { get; private set; }
+    public static int? ReplaySeed { get; set; }
 
     // Stops only the countdown - the bomb stays playable - e.g. while LUMA is talking,
     // so listening to the coach never costs the player time.
@@ -48,7 +68,13 @@ public class GameManager : MonoBehaviour
     {
         Instance = this;
         GamePause.ResetAll();
+        Seed = ReplaySeed ?? Environment.TickCount;
+        ReplaySeed = null;
+        UnityEngine.Random.InitState(Seed);
         Device = DeviceState.Generate();
+        int minutes = Settings.ClockMinutes;
+        NoClock = minutes <= 0;
+        if (!NoClock) startingSeconds = minutes * 60f;
         TimeRemaining = startingSeconds;
 
 #if UNITY_EDITOR
@@ -66,13 +92,13 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        if (LoomaCoach.Instance == null) StartClock(); // no coach in the scene: nothing to wait for
+        if (strikesText != null) strikesText.gameObject.SetActive(false);
     }
 
     void Update()
     {
         if (State != RunState.Playing) return;
-        if (!ClockStarted || clockHolds.Count > 0) { UpdateHud(); return; }
+        if (!ClockStarted || NoClock || clockHolds.Count > 0) { UpdateHud(); return; }
 
         TimeRemaining -= Time.deltaTime;
         if (TimeRemaining <= 0f)
@@ -87,6 +113,8 @@ public class GameManager : MonoBehaviour
     }
 
     public bool IsSolved(ModuleId module) => solved[(int)module];
+    public int SolvedCount => solved.Count(s => s);
+    public float StartingSeconds => startingSeconds;
 
     public void ReportSolved(ModuleId module)
     {
@@ -131,12 +159,9 @@ public class GameManager : MonoBehaviour
     {
         if (timerText != null)
         {
-            timerText.text = FormatTime(TimeRemaining);
+            timerText.text = NoClock ? "--:--" : FormatTime(TimeRemaining);
             timerText.color = GetTimerColor();
         }
-
-        if (strikesText != null)
-            strikesText.text = $"strikes  {Strikes}/{maxStrikes}";
     }
 
     Color GetTimerColor()

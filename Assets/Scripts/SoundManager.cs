@@ -57,6 +57,7 @@ public class SoundManager : MonoBehaviour
 
     void Start()
     {
+        Settings.Apply(); // the menu's sound switch
         GameManager.Instance.OnStrike += HandleStrike;
         GameManager.Instance.OnModuleSolved += HandleModuleSolved;
         GameManager.Instance.OnGameEnded += HandleGameEnded;
@@ -97,6 +98,46 @@ public class SoundManager : MonoBehaviour
     public void PlaySwitchFlip() => sfxSource.PlayOneShot(switchClip);
     public void PlayWireCut() => sfxSource.PlayOneShot(electricalShotClip);
     public void PlayMessageSound() => sfxSource.PlayOneShot(messageClip);
+
+    // ---- Interface sounds (buttons, the opening, the tour, the HUD) ----
+    // Made here from sine waves and noise rather than recorded, once per session.
+    public void PlayUiTick() => sfxSource.PlayOneShot(Synth("tick", 0.04f, t => Mathf.Sin(t * 2400f * Tau) * Decay(t, 160f) * 0.25f));
+    public void PlayBlip() => sfxSource.PlayOneShot(Synth("blip", 0.03f, t => Mathf.Sign(Mathf.Sin(t * 1150f * Tau)) * Decay(t, 90f) * 0.05f));
+    public void PlayWhoosh() => sfxSource.PlayOneShot(Synth("whoosh", 0.7f, Whoosh));
+    // note: steps up a pentatonic scale, for chimes that rise one after another.
+    public void PlayChime(int note = 0) => sfxSource.PlayOneShot(Synth("chime" + note, 1.4f, t => Bell(t, 660f * Pentatonic(note))));
+    public void PlayBeep(bool last = false) => sfxSource.PlayOneShot(Synth(last ? "go" : "beep", last ? 0.7f : 0.16f, t =>
+        (Mathf.Sin(t * (last ? 1320f : 880f) * Tau) + (last ? 0.5f * Mathf.Sin(t * 1980f * Tau) : 0f)) * Decay(t, last ? 6f : 30f) * 0.3f));
+
+    const float Tau = Mathf.PI * 2f;
+    static readonly System.Collections.Generic.Dictionary<string, AudioClip> synthesized = new System.Collections.Generic.Dictionary<string, AudioClip>();
+    static readonly System.Random noise = new System.Random(7);
+
+    static float Decay(float t, float rate) => Mathf.Exp(-t * rate) * Mathf.Clamp01(t * 2000f); // with a tiny attack, no click
+    static float Pentatonic(int note) => Mathf.Pow(2f, new[] { 0, 2, 4, 7, 9 }[note % 5] / 12f + note / 5);
+
+    static float Bell(float t, float f) =>
+        (Mathf.Sin(t * f * Tau) + 0.45f * Mathf.Sin(t * f * 2.01f * Tau) + 0.2f * Mathf.Sin(t * f * 3.02f * Tau)) * Decay(t, 3.2f) * 0.16f;
+
+    // Noise through a filter that opens and closes: air rushing past.
+    static float whooshLow;
+    static float Whoosh(float t)
+    {
+        float k = Mathf.Sin(Mathf.PI * t / 0.7f);
+        whooshLow += (float)(noise.NextDouble() * 2 - 1 - whooshLow) * (0.02f + 0.25f * k);
+        return whooshLow * k * k * 0.5f;
+    }
+
+    static AudioClip Synth(string name, float seconds, System.Func<float, float> wave)
+    {
+        if (synthesized.TryGetValue(name, out var clip) && clip != null) return clip;
+        const int rate = 44100;
+        var data = new float[Mathf.CeilToInt(seconds * rate)];
+        for (int i = 0; i < data.Length; i++) data[i] = wave(i / (float)rate);
+        clip = AudioClip.Create(name, data.Length, 1, rate, false);
+        clip.SetData(data, 0);
+        return synthesized[name] = clip;
+    }
 
     // ---- Automatic reactions to GameManager's own events ----
     void HandleStrike(ModuleId module)

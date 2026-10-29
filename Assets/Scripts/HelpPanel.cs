@@ -3,34 +3,44 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // "How to play", opened from the gear button: the situation, the controls and the
-// rules. It deliberately says nothing about sharing manual pages with Claude -
-// finding that out is part of the game, and Claude tells the player when asked.
-// The clock is frozen while the panel is open. Builds its own UI at runtime.
+// rules, and a way to take LUMA's tour again. It deliberately says nothing about
+// sharing manual pages with Claude - finding that out is part of the game, and
+// Claude tells the player when asked. The clock is frozen while the panel is open.
+// Builds its own UI at runtime.
 public class HelpPanel : MonoBehaviour
 {
-    [SerializeField] TMP_FontAsset titleFont;
-    [SerializeField] TMP_FontAsset bodyFont;
+    static readonly (string title, string body)[] Left =
+    {
+        ("The situation",
+         "Night shift, Bay 3. A live device with five modules is in front of you. You can see it, but you don't know how to defuse it. " +
+         "Claude, the expert on the radio, knows how - but it can't see the device. Talk to Claude in the chat on the right.\n" +
+         "{clock} Three mistakes and the device explodes. Defuse all five modules to win."),
+        ("Look at the device",
+         "Rotate: the arrow buttons, the arrow keys, or hold the right mouse button and drag\n" +
+         "Zoom: mouse wheel, or W and S\n" +
+         "Move left and right: A and D\n" +
+         "Look at every side: some information is on the back and underneath."),
+    };
 
-    const string HelpText =
-        "<size=28><b>THE SITUATION</b></size>\n" +
-        "A live bomb with five modules is in front of you. You can see it, but you don't know how to defuse it. " +
-        "Claude knows how, but it can't see the bomb. Talk to Claude in the chat on the right.\n" +
-        "You have 10 minutes, and the clock starts when LUMA's introduction is over. Three mistakes and the bomb explodes. Solve all five modules to win.\n\n" +
-        "<size=28><b>LOOK AT THE BOMB</b></size>\n" +
-        "Rotate: the arrow buttons at the bottom, the arrow keys, or hold the right mouse button and drag\n" +
-        "Zoom: mouse wheel, or W and S\n" +
-        "Move left and right: A and D\n" +
-        "Look at every side of the bomb: some information is on the back and underneath.\n\n" +
-        "<size=28><b>USE THE MODULES</b></size>\n" +
-        "Cut a wire: hold the left mouse button and drag across the wire\n" +
-        "Buttons, glyphs, coloured cells and switches: left click\n" +
-        "Sequence strip: press PLAY to watch the lamps flash\n" +
-        "A module's light turns from red to green when it is solved.\n\n" +
-        "<size=28><b>THE MANUALS</b></size>\n" +
-        "MANUALS (bottom left) opens the table with the manual pages.\n" +
-        "Click a page to look at it up close. Click or drag over any text to black it out.";
+    static readonly (string title, string body)[] Right =
+    {
+        ("Use the modules",
+         "Cut a wire: hold the left mouse button and drag across the wire\n" +
+         "Buttons, glyphs, coloured cells and switches: left click\n" +
+         "Sequence strip: press PLAY to watch the lamps flash\n" +
+         "A module's light turns from red to green when it is solved."),
+        ("The manuals",
+         "Manuals (bottom left) opens the table with the manual pages.\n" +
+         "Click a page to look at it up close. Click or drag over any text to black it out."),
+        ("LUMA",
+         "Your coach. LUMA speaks up with a tip when it can help, and the clock stops while it talks."),
+        ("The menu",
+         "Esc, the pause button or the gear: pause, start again, take a new device, and set the sound, LUMA's voice and the clock."),
+    };
 
     GameObject panel;
+
+    public bool IsOpen => panel != null && panel.activeSelf;
 
     void Start()
     {
@@ -54,75 +64,59 @@ public class HelpPanel : MonoBehaviour
 
     void Build()
     {
-        var canvasGo = new GameObject("HelpCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvasGo.transform.SetParent(transform, false);
-        var canvas = canvasGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 20; // over the chat and the manual table
-        var scaler = canvasGo.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
+        var canvas = Ui.NewCanvas("HelpCanvas", transform, 20); // over the chat, the manual table and the HUD
 
         // Full-screen dim: also blocks clicks from reaching the bomb behind it.
-        panel = NewImage("HelpPanel", canvasGo.transform, new Color(0f, 0f, 0f, 0.85f)).gameObject;
-        var dimRt = (RectTransform)panel.transform;
-        dimRt.anchorMin = Vector2.zero;
-        dimRt.anchorMax = Vector2.one;
-        dimRt.offsetMin = dimRt.offsetMax = Vector2.zero;
+        panel = Ui.NewImage("HelpPanel", canvas.transform, Ui.Ink.WithAlpha(0.94f)).gameObject;
+        Ui.Stretch((RectTransform)panel.transform);
 
-        var box = NewImage("Box", panel.transform, new Color(0.12f, 0.12f, 0.14f, 0.98f));
-        Place(box.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1240, 980));
+        var card = Ui.NewCard("Card", panel.transform, Color.white, out var background, 24);
+        Ui.Place(card, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1320f, 900f));
 
-        var title = NewText("Title", box.transform, "HOW TO PLAY", titleFont, 48, TextAlignmentOptions.Center);
-        Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0, -34), new Vector2(1100, 64));
+        var kicker = Ui.NewLabel("Kicker", card, "Field guide", 12f, Ui.Text2);
+        Ui.Place(kicker.rectTransform, new Vector2(0f, 1f), new Vector2(60f, -46f), new Vector2(600f, 18f));
+        var title = Ui.NewHeading("Title", card, "How to play", 40f, Ui.Ink);
+        Ui.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(58f, -70f), new Vector2(900f, 52f));
+        Ui.NewUnderline(card, new Vector2(60f, -130f));
 
-        var body = NewText("Body", box.transform, HelpText, bodyFont, 24, TextAlignmentOptions.TopLeft);
-        Place(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(1120, 740));
-        body.enableAutoSizing = true;
-        body.fontSizeMin = 16;
-        body.fontSizeMax = 24;
-        body.color = new Color(0.9f, 0.9f, 0.88f);
+        Column(card, Left, 60f);
+        Column(card, Right, 690f);
 
-        var button = NewImage("Close", box.transform, new Color(0.95f, 0.94f, 0.9f));
-        Place(button.rectTransform, new Vector2(0.5f, 0f), new Vector2(0, 30), new Vector2(380, 66));
-        button.gameObject.AddComponent<Button>().onClick.AddListener(Hide);
-        var label = NewText("Label", button.transform, "BACK TO THE GAME", titleFont, 26, TextAlignmentOptions.Center);
-        label.color = new Color(0.13f, 0.13f, 0.15f);
-        var lr = label.rectTransform;
-        lr.anchorMin = Vector2.zero;
-        lr.anchorMax = Vector2.one;
-        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        var back = Ui.NewButton("Close", card, "Back to the game", Ui.ButtonStyle.Primary, Hide, 20f);
+        Ui.Place((RectTransform)back.transform, new Vector2(1f, 0f), new Vector2(-60f, 44f), new Vector2(340f, 66f));
+        var tour = Ui.NewButton("Tour", card, "Take the tour again", Ui.ButtonStyle.Secondary, () =>
+        {
+            Hide();
+            if (Tour.Instance != null) Tour.Instance.Replay();
+        }, 18f);
+        Ui.Place((RectTransform)tour.transform, new Vector2(1f, 0f), new Vector2(-420f, 44f), new Vector2(330f, 66f));
     }
 
-    static Image NewImage(string name, Transform parent, Color color)
+    // The clock as this device has it (the menu can change it).
+    static string ClockText()
     {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var img = go.AddComponent<Image>();
-        img.color = color;
-        return img;
+        var gm = GameManager.Instance;
+        if (gm == null || gm.NoClock) return "This device has no clock: it's practice.";
+        return $"You have {Mathf.RoundToInt(gm.StartingSeconds / 60f)} minutes, and the clock starts after LUMA's tour.";
     }
 
-    static TMP_Text NewText(string name, Transform parent, string text, TMP_FontAsset font, float size, TextAlignmentOptions alignment)
+    // One column of sections: a small coloured heading over each block of text.
+    static void Column(RectTransform card, (string title, string body)[] sections, float x)
     {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var t = go.AddComponent<TextMeshProUGUI>();
-        if (font != null) t.font = font;
-        t.fontSize = size;
-        t.color = Color.white;
-        t.alignment = alignment;
-        t.raycastTarget = false;
-        t.text = text;
-        return t;
-    }
-
-    // Anchor and pivot on the same point, so pos is measured from that corner or edge.
-    static void Place(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size)
-    {
-        rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = size;
+        var column = Ui.NewRect("Column", card);
+        Ui.Place(column, new Vector2(0f, 1f), new Vector2(x, -158f), new Vector2(570f, 600f));
+        var layout = column.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        foreach (var (heading, body) in sections)
+        {
+            Ui.NewHeading("Heading", column, heading, 20f, Ui.Ink);
+            var text = Ui.NewText("Body", column, body.Replace("{clock}", ClockText()), 19f, Ui.Text2);
+            text.lineSpacing = 8f;
+            var gap = Ui.NewRect("Gap", column).gameObject.AddComponent<LayoutElement>();
+            gap.preferredHeight = 16f;
+        }
     }
 }
