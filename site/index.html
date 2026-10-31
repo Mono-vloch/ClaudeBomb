@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maaloomatiia Games</title>
+  <meta name="description" content="The games of Maaloomatiia Academy: every game is a lesson you play.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="brand/emblem-light.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- The door: a dark cover screen with the class code. It lifts away once the code is in. -->
+  <section id="door" class="door" aria-labelledby="door-title">
+    <canvas id="field" class="door__field" aria-hidden="true"></canvas>
+    <div class="door__inner">
+      <img class="door__logo" src="brand/logo-dark.png" alt="Maaloomatiia" width="210" height="30">
+      <div class="door__body">
+        <p class="eyebrow door__eyebrow">Maaloomatiia Academy</p>
+        <h1 id="door-title" class="door__title"><span class="door__word">Maaloomatiia</span> <span class="door__word door__word--accent">Games</span></h1>
+        <p class="door__lead">Every game is a lesson you play. Four of them so far: build an agent, train a robot, defuse a device with Claude, escape a building without opening the wrong door.</p>
+        <form id="signin" class="signin" novalidate>
+          <label class="signin__label" for="code">Class code</label>
+          <div class="signin__row">
+            <input id="code" class="signin__input" name="code" type="text" inputmode="text" autocomplete="one-time-code"
+                   autocapitalize="characters" spellcheck="false" placeholder="Ask your instructor" required>
+            <button id="enter" class="btn btn--on-dark" type="submit">Enter</button>
+          </div>
+          <p id="signin-note" class="signin__note" aria-live="polite"></p>
+        </form>
+      </div>
+      <ol class="door__series" aria-label="The series">
+        <li><span class="door__num">01</span>AI Arena</li>
+        <li><span class="door__num">02</span>Robot Racing</li>
+        <li><span class="door__num">03</span>Claude Bomb</li>
+        <li><span class="door__num">04</span>Tech Escape</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- The menu: light, behind the door. -->
+  <div id="menu" class="menu" aria-hidden="true">
+    <header class="top">
+      <div class="container top__row">
+        <a class="top__brand" href="/" aria-label="Maaloomatiia Games">
+          <img src="brand/logo-light.png" alt="Maaloomatiia" width="140" height="20">
+          <span class="top__name">Games</span>
+        </a>
+        <button id="signout" class="top__signout" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="intro">
+        <h2 class="intro__title">Pick a game</h2>
+        <div class="section-rule"></div>
+        <p class="intro__text">Four course games, each one a lesson you play, in the order of the series. The ones in the works open here as soon as they are ready.</p>
+      </section>
+
+      <section id="games" class="games" aria-label="Games"></section>
+
+      <section class="note">
+        <h2 class="note__title">How it works</h2>
+        <div class="section-rule"></div>
+        <div class="note__grid">
+          <p><strong>One code, every game.</strong> Your instructor gives the class a code. It opens this menu, and every game on it, for the day.</p>
+          <p><strong>Claude is on the inside.</strong> The games that talk to Claude do so through the academy, so you never need a key or an account.</p>
+          <p><strong>Short on purpose.</strong> A game is fifteen to twenty minutes: long enough to learn the one idea it is built around, short enough to fit in a class.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="container foot__row">
+        <p class="foot__text">Maaloomatiia Academy. The games are made for its courses and are not sold separately.</p>
+        <img class="foot__emblem" src="brand/emblem-light.png" alt="" width="52" height="36">
+      </div>
+    </footer>
+  </div>
+
+  <!-- Shown for a moment while a game's page takes over. -->
+  <div id="launch" class="launch" aria-hidden="true">
+    <div class="launch__inner">
+      <p class="eyebrow launch__eyebrow">Opening</p>
+      <p id="launch-title" class="launch__title"></p>
+      <div class="launch__bar"><div class="launch__fill"></div></div>
+    </div>
+  </div>
+
+  <template id="card-template">
+    <article class="card">
+      <a class="card__cover" href="#">
+        <img class="card__img" alt="" loading="lazy" width="1600" height="1000">
+        <span class="card__num" aria-hidden="true"></span>
+      </a>
+      <div class="card__body">
+        <p class="card__topic"></p>
+        <h3 class="card__title"></h3>
+        <p class="card__pitch"></p>
+        <p class="card__about"></p>
+        <dl class="card__facts">
+          <div><dt>Course</dt><dd class="card__course"></dd></div>
+          <div><dt>Time</dt><dd class="card__time"></dd></div>
+          <div><dt>Players</dt><dd class="card__players"></dd></div>
+        </dl>
+        <div class="card__actions"></div>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{
+  "games": [
+    {
+      "id": "ai-arena",
+      "number": "01",
+      "title": "AI Arena",
+      "topic": "Building an AI agent",
+      "course": "Applied Agentic AI",
+      "pitch": "Build an agent. Press run. Lose control.",
+      "about": "Every student writes the instructions, the memory and the senses of one agent. Then the agents play on their own, and a vague instruction gets an agent eliminated in front of the class.",
+      "minutes": 20,
+      "players": "A class, one machine",
+      "status": "ready",
+      "path": "/games/ai-arena/",
+      "cover": "covers/ai-arena.jpg",
+      "tone": "light"
+    },
+    {
+      "id": "robot-racing",
+      "number": "02",
+      "title": "Robot Racing",
+      "topic": "Reinforcement learning",
+      "course": null,
+      "pitch": "Teach a robot to drive by rewarding it, not by programming it.",
+      "about": "A robot that knows nothing learns a track lap by lap from the rewards the students set. Change the reward, change the driver.",
+      "minutes": 15,
+      "players": "Solo or a class",
+      "status": "soon",
+      "path": null,
+      "cover": "covers/robot-racing.svg",
+      "tone": "dark"
+    },
+    {
+      "id": "claude-bomb",
+      "number": "03",
+      "title": "Claude Bomb",
+      "topic": "Working with Claude",
+      "course": "Claude Skills",
+      "pitch": "Claude knows how to defuse it. Only you can see it.",
+      "about": "Night shift at Meridian Labs. A device in Bay 3, a manual you cannot read, and Claude on the radio. Describe what you see, share the right pages, and defuse all five modules before the clock runs out.",
+      "minutes": 15,
+      "players": "Solo, best with sound",
+      "status": "ready",
+      "path": "/games/claude-bomb/",
+      "cover": "covers/claude-bomb.jpg",
+      "tone": "dark"
+    },
+    {
+      "id": "tech-escape",
+      "number": "04",
+      "title": "Tech Escape",
+      "topic": "Cybersecurity",
+      "course": "Cybersecurity Fundamentals",
+      "pitch": "Get out of the building without opening the wrong door.",
+      "about": "Locked rooms, each one a security habit: the phishing mail, the shared password, the USB stick in the car park. Every door you open the right way takes you closer to the exit.",
+      "minutes": 20,
+      "players": "Solo",
+      "status": "soon",
+      "path": null,
+      "cover": "covers/tech-escape.svg",
+      "tone": "dark"
+    }
+  ]
+}

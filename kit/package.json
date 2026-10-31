@@ -1,0 +1,12 @@
+{
+  "name": "com.maaloomatiia.games-kit",
+  "version": "0.1.0",
+  "displayName": "Maaloomatiia Games Kit",
+  "description": "What every game on the Maaloomatiia Games platform shares: where the platform is, how to go back to its menu, and how to reach Claude through the platform's key keeper.",
+  "unity": "6000.0",
+  "author": { "name": "Maaloomatiia Academy" },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.2",
+    "com.unity.modules.unitywebrequest": "1.0.0"
+  }
+}

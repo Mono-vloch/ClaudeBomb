@@ -1,0 +1,4 @@
+The models and textures in this folder are from Poly Haven (https://polyhaven.com)
+and are released under CC0: public domain, free for any use, no attribution required.
+Downloaded at 1k resolution. Each folder is named after the asset's Poly Haven id,
+e.g. https://polyhaven.com/a/hanging_industrial_lamp

@@ -1,0 +1,15 @@
+# Each game folder is a Unity project with its own .gitignore (Library, Temp, Logs, builds).
+# These are the platform-level ignores.
+
+# Built games land here (site/games/<id>/); the site itself is committed.
+/site/games/*/
+
+# Node and Netlify
+node_modules/
+.netlify/
+
+# Machine-specific
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
+/server/.env

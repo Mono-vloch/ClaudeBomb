@@ -1,0 +1,42 @@
+# Builds a game's web version without installing Unity on this computer, and serves the
+# platform. See "Building without Unity" in README.md.
+#
+#   docker compose run --rm unity login   once: sign in to Unity in the browser
+#   docker compose run --rm unity build   build Claude Bomb into site/games/claude-bomb
+#   docker compose up                     serve the menu and the games at http://localhost:8080
+#
+# Claude itself needs Claude Code, which is not in the web container: for a class, run
+# `node server/local.mjs` on this computer instead of `docker compose up`.
+name: maaloomatiia-games
+
+services:
+  unity:
+    build:
+      context: Docker
+      platforms: [linux/amd64]
+    platform: linux/amd64 # Unity's Linux editor exists for Intel only; Docker emulates it on Apple chips
+    hostname: maaloomatiia-games-unity # the license is tied to the machine, so keep its name fixed
+    working_dir: /project
+    environment:
+      GAME: claude-bomb # the folder under games/ to build
+    volumes:
+      - .:/project
+      - unity-library:/project/games/claude-bomb/Library # Unity's cache, kept between builds
+      - unity-home:/root # the Unity sign-in and license
+    profiles: [unity] # only on `docker compose run`, not `docker compose up`
+
+  web:
+    image: node:22-alpine
+    command: node server/local.mjs
+    working_dir: /project
+    volumes:
+      - .:/project:ro
+    environment:
+      ACCESS_CODE: local # what you type on the menu
+      HOST: 0.0.0.0 # inside the container, so the published port reaches it
+    ports:
+      - "127.0.0.1:8080:8080" # reachable from this computer only
+
+volumes:
+  unity-library:
+  unity-home:

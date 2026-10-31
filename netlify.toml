@@ -1,0 +1,26 @@
+# Maaloomatiia Games on Netlify: the menu site, every built game under site/games/,
+# and the key keeper (server/netlify/edge-functions) on the same address.
+#
+# Deploy from the repository root:
+#   npx netlify-cli deploy --prod          (or without --prod for a preview link)
+#
+# Three settings live in the Netlify dashboard, never in these files
+# (Site configuration > Environment variables):
+#   ANTHROPIC_API_KEY   the key the keeper uses for every game
+#   ACCESS_CODE         the class code students type on the menu
+#   SESSION_SECRET      a long random string that signs the session cookies
+
+[build]
+  publish = "site"
+  edge_functions = "server/netlify/edge-functions"
+
+# Unity's compressed build files are served as they are; each game's loader unpacks them.
+[[headers]]
+  for = "/games/*/Build/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
