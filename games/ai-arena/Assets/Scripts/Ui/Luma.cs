@@ -46,6 +46,7 @@ public class Luma : MonoBehaviour
     // What the voice says for a line: the text without any formatting.
     public static string Spoken(string id) => Regex.Replace(Lines[id], "<[^>]+>", "");
 
+    public static bool Silent; // the screenshot walks only: never saved, unlike Voice
     const string PrefVoice = "luma_voice";
     public static bool Voice
     {
@@ -68,7 +69,7 @@ public class Luma : MonoBehaviour
     public string Say(string id)
     {
         Hush();
-        if (Voice)
+        if (Voice && !Silent)
         {
             var clip = Resources.Load<AudioClip>("LumaVoice/" + id);
             if (clip != null) speaking = StartCoroutine(PlayWhenLoaded(clip));

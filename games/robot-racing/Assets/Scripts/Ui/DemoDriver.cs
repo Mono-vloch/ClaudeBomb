@@ -35,7 +35,7 @@ public class DemoDriver : MonoBehaviour
         var app = GetComponent<App>();
         if (CoverPath != null) { yield return Cover(app); yield break; }
         Directory.CreateDirectory(Folder);
-        Luma.Voice = false;
+        Luma.Silent = true;
         AudioListener.volume = 0f; // the walk is silent: it runs on a desk, not in a class
         yield return new WaitForSeconds(1.2f);
         yield return Shot("1-title");
@@ -82,7 +82,7 @@ public class DemoDriver : MonoBehaviour
     // whole window with nothing drawn over it.
     IEnumerator Cover(App app)
     {
-        Luma.Voice = false;
+        Luma.Silent = true;
         AudioListener.volume = 0f;
         yield return null;
         var canvas = app.Stage.parent.GetComponent<Canvas>();

@@ -44,7 +44,7 @@ public class DemoDriver : MonoBehaviour
         yield return new WaitForSeconds(1f);
         yield return Shot("1-title");
 
-        Luma.Voice = false; // the walk is silent
+        Luma.Silent = true; // the walk is silent
         AudioListener.volume = 0f;
         app.ShowStory(null);
         yield return new WaitForSeconds(2.5f);
@@ -124,7 +124,7 @@ public class DemoDriver : MonoBehaviour
     IEnumerator Cover(App app)
     {
         ClaudeAccess.ForceOffline = true;
-        Luma.Voice = false;
+        Luma.Silent = true;
         AudioListener.volume = 0f;
         yield return null; // the title has built by now; the market takes its place
         var rng = new System.Random(4);
