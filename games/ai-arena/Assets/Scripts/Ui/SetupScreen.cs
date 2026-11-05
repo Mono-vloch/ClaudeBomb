@@ -17,7 +17,8 @@ public class SetupScreen
     readonly App app;
     readonly Market world;
     readonly RectTransform strip, editor, frame;
-    readonly TextMeshProUGUI briefTitle, briefRule, briefNote, caption, stepNote;
+    readonly TextMeshProUGUI briefTitle, briefRule, briefNote, caption;
+    RectTransform coachLine;
     readonly Image message;
     readonly Button send;
     int selected;
@@ -58,17 +59,19 @@ public class SetupScreen
             var tour = Ui.Button(root, "Tour", () => { if (touring == null) touring = app.StartCoroutine(RunTour()); }, Ui.ButtonStyle.Quiet, 15);
             Ui.Place(tour.GetComponent<RectTransform>(), 1034, 44, 70, 42);
         }
+        var file = Ui.Button(root, "The file", () => app.ShowFile(), Ui.ButtonStyle.Quiet, 15);
+        Ui.Place(file.GetComponent<RectTransform>(), 1108, 44, 90, 42);
 
         // Mission settings, top right, and the deploy button.
         var turnsLabel = Ui.Eyebrow(root, "TURNS", Theme.Muted);
-        Ui.Place(turnsLabel.rectTransform, 1150, 24, 160, 20);
-        var turns = new Ui.Segmented(root, TurnOptions.Select(t => t.ToString()).ToArray(), System.Array.IndexOf(TurnOptions, app.turns), 170, 42, 14);
-        Ui.Place(turns.root, 1150, 46, 170, 42);
+        Ui.Place(turnsLabel.rectTransform, 1216, 24, 160, 20);
+        var turns = new Ui.Segmented(root, TurnOptions.Select(t => t.ToString()).ToArray(), System.Array.IndexOf(TurnOptions, app.turns), 160, 42, 14);
+        Ui.Place(turns.root, 1216, 46, 160, 42);
         turns.OnSelect = i => { app.turns = TurnOptions[i]; RefreshEstimate(); };
-        var budgetLabel = Ui.Eyebrow(root, "POCKET MONEY, IN TOKENS", Theme.Muted);
-        Ui.Place(budgetLabel.rectTransform, 1340, 24, 260, 20);
-        var budget = new Ui.Segmented(root, new[] { "10k", "30k", "100k" }, System.Array.IndexOf(BudgetOptions, app.budget), 230, 42, 14);
-        Ui.Place(budget.root, 1340, 46, 230, 42);
+        var budgetLabel = Ui.Eyebrow(root, "POCKET MONEY", Theme.Muted);
+        Ui.Place(budgetLabel.rectTransform, 1392, 24, 200, 20);
+        var budget = new Ui.Segmented(root, new[] { "10k", "30k", "100k" }, System.Array.IndexOf(BudgetOptions, app.budget), 192, 42, 14);
+        Ui.Place(budget.root, 1392, 46, 192, 42);
         budget.OnSelect = i => { app.budget = BudgetOptions[i]; RefreshEstimate(); };
         send = Ui.Button(root, "DEPLOY AGENTS", () => { foreach (var c in app.configs) c.Compose(); app.SaveConfigs(); app.StartRound(); }, Ui.ButtonStyle.Accent, 20);
         Ui.Place(send.GetComponent<RectTransform>(), 1600, 32, 260, 64);
@@ -85,8 +88,6 @@ public class SetupScreen
             var seg = new Ui.Segmented(root, labels.ToArray(), steps.IndexOf(app.step), 560, 40, 14);
             Ui.Place(seg.root, 150, 100, 560, 40);
             seg.OnSelect = i => { app.SetStep(steps[i]); Reload(); };
-            stepNote = Ui.Text(root, "", 13, Theme.Text2);
-            Ui.Place(stepNote.rectTransform, 730, 100, 840, 44);
         }
 
         // The mission: the family's message
@@ -112,7 +113,7 @@ public class SetupScreen
         captionCard.raycastTarget = false;
         caption = Ui.Text(captionCard.transform, "", 13, Theme.Text2, false, TextAlignmentOptions.MidlineLeft);
         Ui.Stretch(caption.rectTransform, 14, 0, 14, 0);
-        var robotsLabel = Ui.Eyebrow(root, "AGENTS  ·  ONE PER STUDENT", Theme.TealDeep);
+        var robotsLabel = Ui.Eyebrow(root, "AGENTS", Theme.TealDeep);
         Ui.Place(robotsLabel.rectTransform, 60, 956, 400, 20);
         strip = Ui.Node("Strip", root);
         Ui.Place(strip, 60, 980, 680, 100);
@@ -123,14 +124,26 @@ public class SetupScreen
         BuildWorld();
         RefreshStrip();
         BuildEditor();
+        Coach();
         Ui.Emblem(root);
 
         if (lesson != null && lesson.number == 1 && !Tour.Seen) touring = app.StartCoroutine(RunTour());
     }
 
+    // On a training run LUMA says why the ready list works, or what the broken one
+    // has in it, once, over the picture; the words stay in the file.
+    void Coach()
+    {
+        if (coachLine != null) Object.Destroy(coachLine.gameObject);
+        coachLine = null;
+        var setup = app.CurrentSetup;
+        if (setup == null) return;
+        coachLine = app.luma.Line(root, 60, 300, 680, (app.step == App.Step.FixIt ? "Fix it: " + setup.name + ". " : "") + setup.why, true, false, 15);
+    }
+
     void ShowBrief()
     {
-        briefTitle.text = $"MISSION  ·  A MESSAGE FROM {app.brief.from.ToUpperInvariant()}  ·  {app.brief.title.ToUpperInvariant()}";
+        briefTitle.text = $"A MESSAGE FROM {app.brief.from.ToUpperInvariant()}";
         briefRule.text = app.brief.rule;
         briefNote.text = "The catch: " + app.brief.note;
     }
@@ -143,6 +156,7 @@ public class SetupScreen
         world.RefreshRobot(Chosen);
         world.Dress(Chosen);
         Caption();
+        Coach();
     }
 
     // ---- the market behind ------------------------------------------------------
@@ -186,13 +200,9 @@ public class SetupScreen
         var setup = app.CurrentSetup;
         if (setup != null)
         {
-            caption.text = (app.step == App.Step.FixIt ? "Fix it: " + setup.name + ". " : "") + setup.why;
-            if (stepNote != null) stepNote.text = app.step == App.Step.SeeItWork
-                ? "A ready list that does the job, in every agent. Deploy, and watch why it works."
-                : "The same agents with the planned mistake in them. Deploy, watch it go wrong, fix the list, deploy again.";
+            caption.text = app.step == App.Step.FixIt ? "Fix it: " + setup.name : "Watch the pro: a ready list in every agent";
             return;
         }
-        if (stepNote != null) stepNote.text = "The students' own lists. This is the run that counts.";
         string memory = c.memory == MemoryModes.Notebook ? "a notebook in its hand" : MemoryModes.Turns(c.memory) == 0 ? "nothing between turns" : $"the last {MemoryModes.Turns(c.memory)} turns behind it";
         caption.text = $"Sees {c.vision} cell{(c.vision > 1 ? "s" : "")} around it  ·  {Models.All[c.model].label} on the antenna  ·  carries {memory}  ·  {Efforts.Labels[c.effort].ToLowerInvariant()} effort";
     }
@@ -336,7 +346,7 @@ public class SetupScreen
         // The list
         listArea = Ui.Node("List", t);
         Ui.Place(listArea, 16, 96, 1048, 396);
-        var listLabel = Ui.Eyebrow(t, "THE LIST  ·  THE AGENT'S JOB DESCRIPTION: EVERYTHING IT WILL KNOW ABOUT TONIGHT", Theme.TealDeep);
+        var listLabel = Ui.Eyebrow(t, "THE LIST", Theme.TealDeep);
         Ui.Place(listLabel.rectTransform, 28, 104, 800, 20);
         var mode = Ui.Button(t, c.freeText ? "Build it from parts" : "Write it yourself", () =>
         {
@@ -361,7 +371,7 @@ public class SetupScreen
              Efforts.Labels, c.effort, i => { c.effort = i; Dressed(); }, l == null || l.effort, Ladder.EffortLevel);
 
         // The fuel gauge: what one turn costs, and how far the pocket money goes.
-        var fuelLabel = Ui.Eyebrow(t, "POCKET MONEY  ·  HOW FAR IT GOES", Theme.TealDeep);
+        var fuelLabel = Ui.Eyebrow(t, "POCKET MONEY", Theme.TealDeep);
         Ui.Place(fuelLabel.rectTransform, 28, 680, 500, 20);
         fuel = Ui.Bar(t, Theme.Border, Theme.Aqua, 1024, 12);
         Ui.Place(fuel.track.rectTransform, 28, 704, 1024, 12);
@@ -374,8 +384,6 @@ public class SetupScreen
     // view, add your own words. The words the robot reads are shown underneath.
     void BuildParts(Transform t, AgentConfig c)
     {
-        var shelfHint = Ui.Text(t, "Tap a thing on the shelf: once to buy it, twice to never buy it, again to clear it.", 13, Theme.Text2);
-        Ui.Place(shelfHint.rectTransform, 28, 124, 700, 20);
         var all = Items.All;
         float slot = 1024f / all.Length;
         for (int i = 0; i < all.Length; i++)
@@ -412,13 +420,13 @@ public class SetupScreen
             });
         }
 
-        var ruleLabel = Ui.Eyebrow(t, "IF NOTHING ON THE LIST IS IN VIEW", Theme.Muted);
+        var ruleLabel = Ui.Eyebrow(t, "IF NOTHING IS IN VIEW", Theme.Muted);
         Ui.Place(ruleLabel.rectTransform, 28, 240, 500, 20);
         var rule = new Ui.Segmented(t, AgentConfig.FallbackLabels, c.fallback, 560, 38, 13);
         Ui.Place(rule.root, 28, 262, 560, 38);
         rule.OnSelect = i => { c.fallback = i; c.Compose(); RefreshRead(); };
 
-        var wordsLabel = Ui.Eyebrow(t, "YOUR OWN WORDS  ·  THE CATCH, ANYTHING ELSE", Theme.Muted);
+        var wordsLabel = Ui.Eyebrow(t, "YOUR OWN WORDS", Theme.Muted);
         Ui.Place(wordsLabel.rectTransform, 610, 240, 460, 20);
         var words = Ui.Input(t, "For example: in this house a tomato counts as a vegetable.", false, 14);
         Ui.Place(words.GetComponent<RectTransform>(), 610, 262, 442, 38);
@@ -494,13 +502,9 @@ public class SetupScreen
             Ui.Place(lockTag.rectTransform, 160, 14, 70, 20);
             var fixedText = Ui.Text(ct, options[selectedIndex], 15, Theme.TealDeep, true);
             Ui.Place(fixedText.rectTransform, 14, 44, 210, 24);
-            var opens = Ui.Text(ct, $"Opens at errand 1.{opensAt}. Until then every agent gets the same, so only this errand's idea is in play.", 12, Theme.Text2);
-            Ui.Place(opens.rectTransform, 14, 72, 210, 90);
-            return;
+            var opens = Ui.Text(ct, $"Opens at errand 1.{opensAt}", 12, Theme.Text2);
+            Ui.Place(opens.rectTransform, 14, 72, 210, 24);
         }
-        var b2 = Ui.Text(ct, blurb, 11, Theme.Text2);
-        Ui.Place(b2.rectTransform, 14, options.Length > 3 ? 162 : 142, 210, 30);
-        b2.enableWordWrapping = true;
     }
 
     // The arithmetic the students should be doing in their heads: what one turn
@@ -518,8 +522,7 @@ public class SetupScreen
         long turnsAffordable = perTurn > 0 ? app.budget / perTurn : 0;
         Ui.SetBar(fuel, app.turns > 0 ? Mathf.Clamp01((float)turnsAffordable / app.turns) : 0);
         fuel.fill.color = turnsAffordable >= app.turns ? Theme.Aqua : Theme.Amber;
-        string lasts = turnsAffordable >= app.turns ? $"enough for the whole errand of {app.turns} turns" : $"enough for about {turnsAffordable} of {app.turns} turns";
-        estimate.text = $"About {perTurn:N0} tokens a turn ({list:N0} list + {perView:N0} view + {memory:N0} memory + {output:N0} answer). " +
-                        $"With {app.budget:N0} tokens of pocket money that is {lasts}. Real usage comes back from Claude and will differ.";
+        string lasts = turnsAffordable >= app.turns ? $"the whole errand of {app.turns} turns" : $"about {turnsAffordable} of {app.turns} turns";
+        estimate.text = $"About {perTurn:N0} tokens a turn  ·  {app.budget:N0} tokens buys {lasts}";
     }
 }

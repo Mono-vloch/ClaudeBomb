@@ -596,3 +596,75 @@ The board for the game:
 The same shape as the other two: the data file carries the baked Inter atlases and URP's
 resources, the code shrank with the release settings. Under the 25 MB budget, and the game loads
 and runs on the platform (`games/tech-escape/Builds/look-audit/platform/6-game-tech-escape.png`).
+
+---
+
+# Phase 4a: AI Arena, the text pass
+
+5 November 2026, branch `look-and-feel`, after the three look-and-feel passes. The brief: a
+game is not a page. Claude Bomb's manuals are in Japanese, the story is four lines over a
+camera feed, LUMA speaks one line at a time and it goes; our three games had paragraphs on the
+briefing, lists on the debrief and a caption under everything. AI Arena is the pilot.
+
+## The rule
+
+On any screen, at most one sentence of English is on screen, it is LUMA's, it is spoken, typed
+out as she says it, and it fades (`Luma.Line`). Everything else is the world, numbers, icons,
+and **the file**: a sheet (`FileSheet`, the button "The file" on every screen that had the
+text) with everything the course says about the errand: the question and the headline, the
+idea, the message and its catch, the training runs' reasons, the takeaway, the question for
+the agent's manager, how the garage works, and whatever the screen adds (the debrief's full
+stories and checks). Nothing was deleted from the game; it stopped being the screen. LUMA's
+recorded lines, the curriculum text in `Lesson.cs` and the exact words the agent reads are
+unchanged.
+
+## What left each screen
+
+| Screen | Was | Is |
+|---|---|---|
+| Title | a 40-word blurb, LUMA's card, the errands' names, a footer | title, tagline, LUMA's one line, the errands as numbered stops with their stars; the voice and sound switches |
+| Story | LUMA's card, a "best with sound on" hint | her line in a smaller card; the pictures and captions as they were |
+| Briefing | kicker, LUMA, the 80-word idea, the message with its catch and the whole catalogue, six part cards with descriptions, a caption | the question, the headline, LUMA's intro spoken, the message, six part chips (this errand's lit), the ladder; the rest in the file |
+| Warm-up | "Right. That is from errand 1.1." | "Right." / "Not quite." with the answer lit |
+| Garage | a run note, the shelf hint, a dial blurb under each dial, "opens at … until then every agent gets the same…", the 40-word pocket-money arithmetic | labels only (THE LIST, IF NOTHING IS IN VIEW, YOUR OWN WORDS, POCKET MONEY, AGENTS); the training run's reason spoken by LUMA once over the robot; "Opens at errand 1.x"; "About 773 tokens a turn · 30,000 tokens buys the whole errand" |
+| Run | LUMA's card with three-sentence commentary | her lead sentence typed at the foot of the column, gone when she is done; the mission line, the cards and the loop as they were |
+| Debrief | the message and turn count, LUMA's takeaway + the five ways + the ask, three-line stories per agent, Done/Missed words with the full check labels, an unlock sentence | the takeaway as her line, one line per agent (and the part that failed, on the capstone), lamps with short labels, the unlock as a name; the full stories and checks in the file |
+| Decide | a 50-word instruction card, the reasons on the debrief rows | "Mark each task: an agent, a simple automation, or neither."; the reasons in the file |
+
+## The short forms
+
+The debrief's lamps carry these; the full label stays in the file and in the platform's report.
+
+| Full label | On the lamp |
+|---|---|
+| Said what to buy: apples | Named apples |
+| Said what to leave at the market | Said what to leave |
+| Came home with dinner | Came home |
+| Named the items, not just "fruit" | Named the items |
+| Covered the catch: the tomato | Covered the tomato |
+| Said what to do when nothing on the list is in view | A rule for nothing in view |
+| Found something on the list | Found a listed item |
+| Told it what to do when nothing is in view | A rule for nothing in view |
+| Bought something on the list / Bought at least one thing on the list | Bought a listed item |
+| No notebook to write in | No notebook |
+| Nothing in the basket, so no cost per item | Empty basket |
+| Named the items and the exceptions | Named items and exceptions |
+| Said what to do when the list does not fit | A rule for nothing in view |
+| Cheapest item of the round: $x | Cheapest item: $x |
+| Chose a simple automation where one did the job | A rule where a rule did |
+| Chose an agent where the task needed judgment | An agent where it needed one |
+| Marked the task for a person as neither | Neither, for the person's call |
+
+The one-line stories: "Sent home on turn 2: bought a carrot", "Out of tokens with 1 in the
+basket", "Came home with 2 wanted items", "Came home with nothing"; on the capstone the part
+that failed in two or three words ("The job description", "Its brain", "Its budget", "What it
+saw", "What it remembered"). The unlock names: "How far it sees", "Memory", "Brain and effort",
+"Agent, rule, or neither", "Everything open: the capstone".
+
+Frames: `games/ai-arena/Builds/look-audit/text/` (the same walk as `after/`, plus `3c-file.png`
+with the file open over the briefing).
+
+## Web after the text pass
+
+19.2 MB transferred, 3.7 s to load (was 19.2 MB / 3.8 s after the look pass): the words moved,
+they did not leave the build. Loads and runs on the platform.

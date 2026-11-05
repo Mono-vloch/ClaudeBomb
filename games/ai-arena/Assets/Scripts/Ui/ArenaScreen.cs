@@ -30,8 +30,7 @@ public class ArenaScreen
     readonly HashSet<AgentState> announced = new HashSet<AgentState>();
     readonly Queue<(string text, string sub, Color colour, float seconds, bool big)> banners = new Queue<(string, string, Color, float, bool)>();
     readonly Follower follower;
-    TextMeshProUGUI coach;
-    RectTransform knows, bubble;
+    RectTransform coachLine, knows, bubble;
     AgentState bubbleFor;
     bool saidScore, saidOut, saidTokens, saidConfused;
     bool firstErrand; // the first turn is read out as one loop
@@ -144,7 +143,7 @@ public class ArenaScreen
 
         // LUMA gets the bottom of the column when the cards leave room for her.
         bool withCoach = arena.agents.Count <= 6;
-        cardsHeight = withCoach ? 760 : 930;
+        cardsHeight = withCoach ? 830 : 930;
         cards = Ui.Node("Cards", root);
         Ui.Place(cards, 1020, 98, 840, cardsHeight);
         BuildCards();
@@ -158,7 +157,7 @@ public class ArenaScreen
                 : setup != null && app.step == App.Step.SeeItWork ? "Watch the pro. " + setup.why
                 : setup != null && app.step == App.Step.FixIt ? "Fix it: " + setup.name + ". " + setup.why
                 : app.luma.Say(app.lesson != null ? "live-" + app.lesson.number : "free");
-            coach = Luma.Card(root, 1020, 872, 840, 148, opening, 16, null, app.luma);
+            SayLine(opening, true);
             sim.OnTurnResolved += Watch;
         }
 
@@ -482,6 +481,14 @@ public class ArenaScreen
         }
     }
 
+    // LUMA's line at the foot of the column: the lead of what she has to say, typed as she
+    // says it, gone once she is done. The whole of it is on the debrief and in the file.
+    void SayLine(string text, bool stay = false)
+    {
+        if (coachLine != null) Object.Destroy(coachLine.gameObject);
+        coachLine = app.luma.Line(root, 1020, 938, 840, Labels.Lead(text), false, stay, 15);
+    }
+
     // The first time each kind of thing happens, LUMA names it in the words of
     // the lesson: an agent sent home first, then the budget, a lost turn, a buy.
     // On the first errand the first turn is read out as one loop first.
@@ -491,17 +498,17 @@ public class ArenaScreen
         if (firstErrand)
         {
             var who = world.Highlighted != null && world.Highlighted.Active ? world.Highlighted : arena.agents.FirstOrDefault(x => x.Active);
-            if (sim.turn == 1 && who != null) { coach.text = Coach.Step(who, 1); return; }
-            if (sim.turn == 2) { firstErrand = false; coach.text = app.luma.Say("live-1"); return; }
+            if (sim.turn == 1 && who != null) { SayLine(Coach.Step(who, 1)); return; }
+            if (sim.turn == 2) { firstErrand = false; SayLine(app.luma.Say("live-1")); return; }
         }
         var dead = sim.lastMoves.FirstOrDefault(m => m.ate != null && !m.agent.alive);
-        if (dead != null && !saidOut) { saidOut = true; coach.text = Coach.Eliminated(dead.agent); return; }
+        if (dead != null && !saidOut) { saidOut = true; SayLine(Coach.Eliminated(dead.agent)); return; }
         var broke = arena.agents.FirstOrDefault(a => a.outOfTokens);
-        if (broke != null && !saidTokens) { saidTokens = true; coach.text = Coach.OutOfTokens(broke, sim.turn); return; }
+        if (broke != null && !saidTokens) { saidTokens = true; SayLine(Coach.OutOfTokens(broke, sim.turn)); return; }
         var confused = arena.agents.FirstOrDefault(a => a.confusedTurns > 0);
-        if (confused != null && !saidConfused) { saidConfused = true; coach.text = Coach.Confused(confused); return; }
+        if (confused != null && !saidConfused) { saidConfused = true; SayLine(Coach.Confused(confused)); return; }
         var scored = sim.lastMoves.FirstOrDefault(m => m.ate != null && m.agent.alive);
-        if (scored != null && !saidScore) { saidScore = true; coach.text = Coach.Scored(scored.agent, scored.ate); }
+        if (scored != null && !saidScore) { saidScore = true; SayLine(Coach.Scored(scored.agent, scored.ate)); }
     }
 
     void Refresh()

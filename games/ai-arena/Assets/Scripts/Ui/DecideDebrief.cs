@@ -40,8 +40,9 @@ public class DecideDebrief
         app.StartCoroutine(Platform.ReportProgress($"{lesson.id}:{result}", ticked, string.Join("; ", checks.Select(c => $"{c.label}: {(c.ok ? "done" : "missed")}"))));
 
         long agentTokens = run.results.Count > 0 ? (long)run.results.Average(r => r.agent.TokensUsed) : 0;
-        var measured = Ui.Text(root, $"The course says an agent costs about four times a chat. Measured here: the agents spent {agentTokens:N0} tokens a task on average; every fixed rule spent none.", 17, Theme.Text2);
+        var measured = Ui.Text(root, $"Agents: {agentTokens:N0} tokens a task on average.  Fixed rules: none.", 17, Theme.Text2);
         Ui.Place(measured.rectTransform, 80, 110, 1500, 30);
+        var whys = new List<(string head, string body)> { ("THE COURSE SAYS", "An agent costs about four times a chat to run; the figure above is this game's own measurement.") };
 
         // One row per task.
         float y = 156, h = 118;
@@ -71,8 +72,7 @@ public class DecideDebrief
                 var none = Ui.Text(t, "Not run: no agent and no rule should take this one.", 14, Theme.Muted);
                 Ui.Place(none.rectTransform, 620, 40, 640, 40);
             }
-            var why = Ui.Text(t, task.why, 13, Theme.Text2);
-            Ui.Place(why.rectTransform, 1300, 14, 440, h - 24);
+            whys.Add(($"{i + 1}  ·  {task.message.ToUpperInvariant()}", $"The better call: {Decide.Choices[task.right].ToLowerInvariant()}. {task.why}"));
             y += h + 8;
         }
 
@@ -83,25 +83,29 @@ public class DecideDebrief
         float ly = 12;
         foreach (var (ok, label) in checks)
         {
-            var word = Ui.Text(checksCard.transform, ok ? "Done" : "Missed", 13, ok ? Theme.TealDeep : Theme.Danger, true);
-            Ui.Place(word.rectTransform, 16, ly + 1, 56, 22);
-            var lab = Ui.Text(checksCard.transform, label, 14, Theme.Ink);
-            Ui.Place(lab.rectTransform, 76, ly, 440, 22);
+            var lamp = Ui.Box(checksCard.transform, "Lamp", ok ? Theme.Aqua : Theme.Danger, false);
+            Ui.Place(lamp.rectTransform, 18, ly + 5, 12, 12);
+            lamp.raycastTarget = false;
+            var lab = Ui.Text(checksCard.transform, Labels.Of(label), 15, Theme.Ink);
+            Ui.Place(lab.rectTransform, 42, ly, 470, 22);
             ly += 28;
         }
         app.luma.Say("recap");
-        Luma.Card(root, 620, cy, 1220, 110, lesson.takeaway, 18, "Ask as the agent's manager: " + lesson.ask);
+        app.luma.Line(root, 620, cy, 1220, lesson.takeaway, false, true, 18);
+        whys.Add(("THE CHECKS", string.Join("\n", checks.Select(c => (c.ok ? "Done: " : "Missed: ") + c.label))));
 
         var next = Ui.Button(root, $"Next errand: {Ladder.Get(lesson.number + 1).title}", app.NextLevel, Ui.ButtonStyle.Primary, 18);
         Ui.Place(next.GetComponent<RectTransform>(), 80, 990, 420, 56);
         var again = Ui.Button(root, "Decide again", app.ShowSetup, Ui.ButtonStyle.Secondary, 17);
         Ui.Place(again.GetComponent<RectTransform>(), 520, 990, 200, 56);
+        var file = Ui.Button(root, "The file", () => app.ShowFile(whys.ToArray()), Ui.ButtonStyle.Secondary, 17);
+        Ui.Place(file.GetComponent<RectTransform>(), 740, 990, 130, 56);
         var home = Ui.Button(root, "Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 17);
-        Ui.Place(home.GetComponent<RectTransform>(), 740, 990, 180, 56);
+        Ui.Place(home.GetComponent<RectTransform>(), 890, 990, 180, 56);
         if (Platform.IsWeb)
         {
             var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.Quiet, 17);
-            Ui.Place(menu.GetComponent<RectTransform>(), 940, 990, 180, 56);
+            Ui.Place(menu.GetComponent<RectTransform>(), 1090, 990, 180, 56);
         }
         Ui.Emblem(root);
     }

@@ -140,6 +140,7 @@ public class App : MonoBehaviour
 
     RectTransform Fresh()
     {
+        FileSheet.Close();
         luma.Hush();
         onLeave?.Invoke();
         onLeave = null;
@@ -156,6 +157,7 @@ public class App : MonoBehaviour
     }
 
     public void ShowTitle() { new TitleScreen(Fresh(), this); }
+    public void ShowFile(params (string head, string body)[] extra) => FileSheet.Toggle(this, screen, extra);
     public void ShowLesson() { new LessonScreen(Fresh(), this); }
     public StoryScreen story;
     public void ShowStory(Action then) { story = new StoryScreen(Fresh(), this, () => { StorySeen = true; story = null; if (then != null) then(); else ShowTitle(); }); }

@@ -58,8 +58,12 @@ public class DemoDriver : MonoBehaviour
         yield return new WaitForSeconds(4.5f);
         yield return Shot("2c-story-tomato");
         app.StartLevel(1);
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(2.5f); // LUMA's line has been typed by then
         yield return Shot("3-lesson");
+        app.ShowFile();
+        yield return new WaitForSeconds(0.5f);
+        yield return Shot("3c-file");
+        app.ShowFile();
         Tour.Seen = false;
         app.ShowSetup();
         yield return new WaitForSeconds(1.5f);

@@ -42,8 +42,10 @@ public class ResultsScreen
 
         var title = Ui.Text(root, lesson != null ? $"Debrief · Errand {lesson.id} · {app.StepName}" : "The agents are home", 44, Theme.Ink, true);
         Ui.Place(title.rectTransform, 80, 36, 1200, 56);
-        var sub = Ui.Text(root, $"{arena.brief.from}: {arena.brief.rule}  Turns played: {Mathf.Min(sim.turn, sim.totalTurns)} of {sim.totalTurns}.", 16, Theme.Text2);
-        Ui.Place(sub.rectTransform, 80, 100, 900, 50);
+        var sub = Ui.Text(root, $"{arena.brief.from}: {arena.brief.rule}", 16, Theme.Text2);
+        Ui.Place(sub.rectTransform, 80, 100, 900, 30);
+        sub.enableWordWrapping = false; sub.overflowMode = TextOverflowModes.Ellipsis;
+        var extras = new List<(string head, string body)>(); // the full stories and checks, for the file
 
         var ranked = arena.agents
             .OrderByDescending(a => a.alive ? 1 : 0)
@@ -119,23 +121,29 @@ public class ResultsScreen
                 Ui.Stretch(mt.rectTransform);
             }
 
-            string story = Verdicts.Of(a, arena, sim);
-            if (capstone) { string part = Verdicts.Part(a); if (part != null) story += "\nWhich part did it? " + part; }
-            var verdict = Ui.Text(t, story, h < 80 ? 14 : checks ? 15 : 17, Theme.Text2);
+            string full = Verdicts.Of(a, arena, sim);
+            string partFull = capstone ? Verdicts.Part(a) : null;
+            if (partFull != null) full += "\nWhich part did it? " + partFull;
+            string story = Verdicts.Short(a);
+            string part = capstone ? Verdicts.PartShort(a) : null;
+            if (part != null) story += "\n" + part;
+            var verdict = Ui.Text(t, story, h < 80 ? 15 : checks ? 16 : 18, a.alive ? Theme.Text2 : Theme.Danger, !a.alive);
             Ui.Place(verdict.rectTransform, 680, 8, checks ? 500 : 840, h - 16);
             verdict.alignment = TextAlignmentOptions.MidlineLeft;
+            string checksFull = list == null ? "" : string.Join("\n", list.Select(c => (c.result == Practised.Yes ? "Done: " : c.result == Practised.Missed ? "Missed: " : "Not needed: ") + c.label));
+            extras.Add((a.Name.ToUpperInvariant(), full + (checksFull == "" ? "" : "\n\n" + checksFull)));
 
             if (checks)
             {
                 float cy = 12;
                 foreach (var (result, label) in list)
                 {
-                    // A word as well as a colour, so the result reads without the colour.
-                    var word = Ui.Text(t, result == Practised.Yes ? "Done" : result == Practised.Missed ? "Missed" : "n/a", 13,
-                                       result == Practised.Yes ? Theme.TealDeep : result == Practised.Missed ? Theme.Danger : Theme.Muted, true);
-                    Ui.Place(word.rectTransform, 1194, cy + 1, 56, 22);
-                    var lab = Ui.Text(t, label, 14, result == Practised.NotNeeded ? Theme.Muted : Theme.Ink);
-                    Ui.Place(lab.rectTransform, 1254, cy, 290, 22);
+                    // A lamp and a short label; the full label is in the file.
+                    var lamp = Ui.Box(t, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : Theme.Border, false);
+                    Ui.Place(lamp.rectTransform, 1198, cy + 5, 12, 12);
+                    lamp.raycastTarget = false;
+                    var lab = Ui.Text(t, Labels.Of(label), 15, result == Practised.NotNeeded ? Theme.Muted : Theme.Ink);
+                    Ui.Place(lab.rectTransform, 1222, cy, 320, 22);
                     lab.enableWordWrapping = false;
                     lab.overflowMode = TextOverflowModes.Ellipsis;
                     cy += 24;
@@ -153,7 +161,7 @@ public class ResultsScreen
             if (counts) app.SetStars(lesson.number, bestMedal);
             app.luma.Say("recap");
             bool unlock = counts && lesson.number < Ladder.Count;
-            Luma.Card(root, 80, 156, 900, unlock ? 136 : 240, lesson.takeaway + (capstone ? " " + Ladder.FiveWays : ""), 16, "Ask as the agent's manager: " + lesson.ask);
+            app.luma.Line(root, 80, 156, 900, lesson.takeaway, false, true, 17);
             if (unlock) Unlock(304, Ladder.Get(lesson.number + 1), bestMedal);
 
             float bx = 80;
@@ -183,6 +191,7 @@ public class ResultsScreen
                 if (capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.Secondary, 200);
             }
             Add("The lists", ShowLists, Ui.ButtonStyle.Secondary, 150);
+            Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.Secondary, 130);
             Add("Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 170);
             if (Platform.IsWeb) Add("Games menu", Platform.GoToMenu, Ui.ButtonStyle.Quiet, 170);
         }
@@ -277,13 +286,13 @@ public class ResultsScreen
         var tag = Ui.Eyebrow(t, $"UNLOCKED FOR ERRAND {next.id}", Theme.Teal);
         tag.font = Theme.Bold;
         Ui.Place(tag.rectTransform, 20, 12, 380, 20);
-        string what = next.number == Ladder.VisionLevel ? "How far it sees: the vision dial opens."
-                    : next.number == Ladder.MemoryLevel ? "Memory: none, the last turns, or a notebook it writes."
-                    : next.number == Ladder.ModelLevel ? "Brain and effort: which Claude, and how hard it thinks."
-                    : next.number == Ladder.DecideLevel ? "The choice: an agent, a fixed rule, or neither."
-                    : next.number == Ladder.Count ? "Everything open, and no help: the capstone."
+        string what = next.number == Ladder.VisionLevel ? "How far it sees"
+                    : next.number == Ladder.MemoryLevel ? "Memory"
+                    : next.number == Ladder.ModelLevel ? "Brain and effort"
+                    : next.number == Ladder.DecideLevel ? "Agent, rule, or neither"
+                    : next.number == Ladder.Count ? "Everything open: the capstone"
                     : next.title;
-        var body = Ui.Text(t, what, 17, Color.white, true);
+        var body = Ui.Text(t, what, 20, Color.white, true);
         Ui.Place(body.rectTransform, 20, 34, 860, 30);
         body.enableWordWrapping = false; body.overflowMode = TextOverflowModes.Ellipsis;
         var starsLine = Ui.Text(t, $"{stars} of 3 stars banked for this errand  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Theme.Teal);

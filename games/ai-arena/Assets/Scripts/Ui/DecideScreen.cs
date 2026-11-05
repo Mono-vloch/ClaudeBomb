@@ -44,16 +44,18 @@ public class DecideScreen
         Ui.Place(run.GetComponent<RectTransform>(), 1520, 54, 340, 62);
         run.interactable = false;
 
-        Luma.Card(root, 80, 130, 1780, 96,
-            "Mark each task: an agent, a simple automation, or neither. Then the shopping tasks run with both kinds on the same market, " +
-            "a fixed rule against an agent, so you can see the cost and the result side by side. The rule for each task was written in advance; it takes exactly the things it names.", 16);
+        app.luma.Line(root, 80, 130, 1780, "Mark each task: an agent, a simple automation, or neither.", false, true);
 
         rows = Ui.Node("Rows", root);
-        Ui.Place(rows, 80, 244, 1780, 700);
+        Ui.Place(rows, 80, 214, 1780, 700);
         Build();
 
         var home = Ui.Button(root, "Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 16);
         Ui.Place(home.GetComponent<RectTransform>(), 80, 980, 160, 48);
+        var file = Ui.Button(root, "The file", () => app.ShowFile(("HOW THE TASKS RUN",
+            "Then the shopping tasks run with both kinds on the same market, a fixed rule against an agent, so you can see the cost and the result side by side. " +
+            "The rule for each task was written in advance; it takes exactly the things it names.")), Ui.ButtonStyle.Quiet, 16);
+        Ui.Place(file.GetComponent<RectTransform>(), 250, 980, 120, 48);
         Ui.Emblem(root);
     }
 

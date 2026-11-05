@@ -62,20 +62,18 @@ public class StoryScreen
         scene = Ui.Node("Scene", root);
         Ui.Place(scene, 120, 262, 1100, 620);
 
-        lumaText = Luma.Card(root, 1300, 262, 500, 330, "", 20, null, null, true, 170);
+        lumaText = Luma.Card(root, 1300, 262, 500, 220, "", 19, null, null, true, 64);
         for (int i = 0; i < Captions.Length; i++)
         {
             var d = Ui.Box(root, "Dot", Theme.Faint);
-            Ui.Place(d.rectTransform, 1300 + i * 22, 616, 10, 10);
+            Ui.Place(d.rectTransform, 1300 + i * 22, 506, 10, 10);
             d.raycastTarget = false;
             dots.Add(d);
         }
         var skipBtn = Ui.Button(root, "Skip the story", () => skip = true, Ui.ButtonStyle.GhostOnDark, 17);
-        Ui.Place(skipBtn.GetComponent<RectTransform>(), 1300, 650, 190, 54);
+        Ui.Place(skipBtn.GetComponent<RectTransform>(), 1300, 540, 190, 54);
         var nextBtn = Ui.Button(root, "Next", () => next = true, Ui.ButtonStyle.Accent, 20);
-        Ui.Place(nextBtn.GetComponent<RectTransform>(), 1510, 650, 160, 54);
-        var hint = Ui.Text(root, "Best with sound on.", 15, Theme.Faint);
-        Ui.Place(hint.rectTransform, 1300, 720, 400, 24);
+        Ui.Place(nextBtn.GetComponent<RectTransform>(), 1510, 540, 160, 54);
 
         main = app.StartCoroutine(Run(done));
         app.onLeave = Stop;

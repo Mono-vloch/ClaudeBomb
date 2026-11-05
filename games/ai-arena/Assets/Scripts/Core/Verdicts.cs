@@ -45,6 +45,23 @@ public static class Verdicts
         return sb.ToString().Trim();
     }
 
+    // One line for the debrief's row; the two sentences of Of go to the file.
+    public static string Short(AgentState a)
+    {
+        if (!a.alive) return $"Sent home on turn {a.eliminatedTurn}: bought {Items.Named(a.ateItem)}";
+        if (a.outOfTokens) return $"Out of tokens with {a.score} in the basket";
+        return a.score == 0 ? "Came home with nothing" : $"Came home with {a.score} wanted item{(a.score == 1 ? "" : "s")}";
+    }
+
+    // The part that let it down, in two or three words: the capstone's row.
+    public static string PartShort(AgentState a)
+    {
+        var p = Part(a);
+        if (p == null) return null;
+        int c = p.IndexOf(':');
+        return c > 0 ? p.Substring(0, c) : p;
+    }
+
     // Why the wrong thing went into the basket, traced to the list.
     public static string WhyEliminated(AgentState a)
     {
