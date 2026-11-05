@@ -33,7 +33,7 @@ public class RobotModel
         body = new GameObject("Body").transform;
         body.SetParent(root, false);
 
-        var team = Look.Mat(colour);
+        var team = Look.Mat(colour, Color.black, 0.45f);
         var dark = Look.Mat(Look.Dark);
         MeshKit.Part(body, "wheel", MeshKit.Sphere, Look.Mat(Look.Wheel), new Vector3(-0.15f, 0.1f, 0), 0.2f);
         MeshKit.Part(body, "wheel", MeshKit.Sphere, Look.Mat(Look.Wheel), new Vector3(0.15f, 0.1f, 0), 0.2f);
@@ -44,16 +44,16 @@ public class RobotModel
         MeshKit.Part(body, "arm", MeshKit.Capsule, team, new Vector3(0.29f, 0.4f, 0), new Vector3(0, 0, 8), new Vector3(0.1f, 0.3f, 0.1f));
         leftHand = MeshKit.Part(body, "hand", MeshKit.Sphere, Look.Mat(Look.Shell), new Vector3(-0.31f, 0.25f, 0.03f), 0.1f).transform;
         MeshKit.Part(body, "hand", MeshKit.Sphere, Look.Mat(Look.Shell), new Vector3(0.31f, 0.25f, 0.03f), 0.1f);
-        MeshKit.Part(body, "head", MeshKit.Box, Look.Mat(Look.Shell), new Vector3(0, 0.74f, 0), new Vector3(0.38f, 0.28f, 0.34f));
-        MeshKit.Part(body, "visor", MeshKit.Box, dark, new Vector3(0, 0.76f, 0.175f), new Vector3(0.3f, 0.12f, 0.02f));
-        var eyeMat = Look.Mat(Look.Eye, dusk ? Look.Eye * 0.6f : Look.Eye * 0.25f);
+        MeshKit.Part(body, "head", MeshKit.Box, Look.Mat(Look.Shell, Color.black, 0.5f), new Vector3(0, 0.74f, 0), new Vector3(0.38f, 0.28f, 0.34f));
+        MeshKit.Part(body, "visor", MeshKit.Box, Look.Mat(Look.Dark, Color.black, 0.6f), new Vector3(0, 0.76f, 0.175f), new Vector3(0.3f, 0.12f, 0.02f));
+        var eyeMat = Look.Mat(Look.Eye, dusk ? Look.Eye * 0.9f : Look.Eye * 0.45f, 0.8f);
         eyes = new[]
         {
             MeshKit.Part(body, "eye", MeshKit.Sphere, eyeMat, new Vector3(-0.07f, 0.76f, 0.19f), 0.065f).GetComponent<Renderer>(),
             MeshKit.Part(body, "eye", MeshKit.Sphere, eyeMat, new Vector3(0.07f, 0.76f, 0.19f), 0.065f).GetComponent<Renderer>(),
         };
         MeshKit.Part(body, "mast", MeshKit.Cylinder, dark, new Vector3(0, 0.93f, 0), new Vector3(0.03f, 0.1f, 0.03f));
-        antenna = Look.Own(colour);
+        antenna = Look.Own(colour, 0.5f);
         antennaBall = MeshKit.Part(body, "antenna", MeshKit.Sphere, antenna, new Vector3(0, 1.0f, 0), 0.09f).transform;
         basket = MeshKit.Part(body, "basket", MeshKit.Box, Look.Mat(Look.Straw), new Vector3(0, 0.5f, -0.27f), new Vector3(0.3f, 0.2f, 0.2f)).transform;
         MeshKit.Part(basket, "rim", MeshKit.Box, Look.Mat(Look.WoodDark), new Vector3(0, 0.5f, 0), new Vector3(1.08f, 0.12f, 1.08f));

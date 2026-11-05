@@ -43,7 +43,7 @@ public static class Ui
         var rt = Node(name, parent);
         var img = rt.gameObject.AddComponent<Image>();
         img.color = fill;
-        if (rounded) { img.sprite = Theme.Round; img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = 1f; }
+        if (rounded) { img.sprite = Corner; img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = 1f; } // 12 px corners, everywhere
         return img;
     }
 
@@ -95,6 +95,21 @@ public static class Ui
             fadeStrip = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 1f, 0, SpriteMeshType.FullRect);
             return fadeStrip;
         }
+    }
+
+    // Dark glass: the HUD's material over the world, ink at 78 % with a keyline on the left.
+    public static Image Glass(Transform parent, string name, float x, float y, float w, float h, bool keyline = true, Color? keylineColour = null)
+    {
+        var box = Box(parent, name, new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.78f));
+        Place(box.rectTransform, x, y, w, h);
+        box.raycastTarget = false;
+        if (keyline)
+        {
+            var line = Box(box.transform, "Keyline", keylineColour ?? Theme.Teal, false);
+            Place(line.rectTransform, 0, 10, 4, h - 20);
+            line.raycastTarget = false;
+        }
+        return box;
     }
 
     // A box with a hairline: an outer image in the border colour, an inner one in the fill.
@@ -403,7 +418,9 @@ public static class Ui
 
     // ---- motion ----------------------------------------------------------------
 
-    public static CanvasGroup Group(Component c) => c.GetComponent<CanvasGroup>() ?? c.gameObject.AddComponent<CanvasGroup>();
+    // TryGetComponent, not GetComponent with ??: in the Editor a missing component is a
+    // stand-in that ?? accepts, and the next access throws (a build returns null).
+    public static CanvasGroup Group(Component c) => c.TryGetComponent<CanvasGroup>(out var group) ? group : c.gameObject.AddComponent<CanvasGroup>();
 
     // Runs step(k) with k from 0 to 1 over the given seconds, unscaled.
     public static IEnumerator Animate(float seconds, Action<float> step, Func<float, float> ease = null)

@@ -40,6 +40,9 @@ public class TitleScreen
             var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 18);
             Ui.Place(menu.GetComponent<RectTransform>(), 1600, 58, 200, 52);
         }
+        Button sound = null;
+        sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(sound.GetComponent<RectTransform>(), 1440, 58, 140, 52);
 
         var eyebrow = Ui.Eyebrow(root, "AI ARENA  ·  GAME 02", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
@@ -62,8 +65,9 @@ public class TitleScreen
         // Connection
         var status = Ui.Text(root, "", 18, Theme.Faint);
         Ui.Place(status.rectTransform, 150, 700, 900, 30);
-        var dot = Ui.Dot(root, Theme.Teal, 12);
+        var dot = Ui.Box(root, "Status", Theme.Teal);
         Ui.Place(dot.rectTransform, 124, 708, 12, 12);
+        dot.raycastTarget = false;
         var hint = Ui.Text(root, "", 15, Theme.Faint);
         Ui.Place(hint.rectTransform, 150, 732, 820, 50);
         void ShowStatus()
@@ -90,16 +94,17 @@ public class TitleScreen
             var l = Ladder.Get(i);
             bool isNext = i == next, isDone = i <= done;
             float x = first + (i - 1) * step;
+            // Rounded squares, never circles: the errand's stop is a button.
             if (isNext)
             {
-                var halo = Ui.Dot(root, new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f), 64);
+                var halo = Ui.Box(root, "Halo", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f));
                 Ui.Place(halo.rectTransform, x - 32, trackY - 32, 64, 64);
                 halo.raycastTarget = false;
             }
-            var rim = Ui.Dot(root, isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f), 44);
-            Ui.Place(rim.rectTransform, x - 22, trackY - 22, 44, 44);
-            var stop = Ui.Dot(root, isDone || isNext ? Theme.Teal : Theme.Ink, 40);
-            Ui.Place(stop.rectTransform, x - 20, trackY - 20, 40, 40);
+            var rim = Ui.Box(root, "Rim", isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f));
+            Ui.Place(rim.rectTransform, x - 24, trackY - 24, 48, 48);
+            var stop = Ui.Box(root, "Stop", isDone || isNext ? Theme.Teal : Theme.Ink);
+            Ui.Place(stop.rectTransform, x - 22, trackY - 22, 44, 44);
             var num = Ui.Text(stop.transform, i.ToString(), 18, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
             Ui.Stretch(num.rectTransform);
             var name = Ui.Text(root, l.title, 12, isNext ? Color.white : isDone ? Theme.Teal : Theme.Faint, isNext, TextAlignmentOptions.Top);
@@ -108,7 +113,7 @@ public class TitleScreen
             int stars = app.StarsOf(i);
             for (int s = 0; s < 3; s++)
             {
-                var star = Ui.Dot(root, s < stars ? Theme.Teal : new Color(1, 1, 1, 0.18f), 8);
+                var star = Ui.Box(root, "Star", s < stars ? Theme.Teal : new Color(1, 1, 1, 0.18f));
                 Ui.Place(star.rectTransform, x - 16 + s * 12, trackY + 78, 8, 8);
                 star.raycastTarget = false;
             }

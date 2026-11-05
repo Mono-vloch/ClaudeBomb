@@ -45,6 +45,7 @@ public class DemoDriver : MonoBehaviour
         yield return Shot("1-title");
 
         Luma.Voice = false; // the walk is silent
+        AudioListener.volume = 0f;
         app.ShowStory(null);
         yield return new WaitForSeconds(2.5f);
         yield return Shot("2-story");
@@ -111,7 +112,7 @@ public class DemoDriver : MonoBehaviour
         while (app.Sim != null && !app.Sim.finished && waited < (Live ? 300f : 30f)) { waited += Time.deltaTime; yield return null; }
         yield return new WaitForSeconds(0.5f);
         app.ShowResults(app.CurrentArena, app.Sim);
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(2.6f); // the medal has been revealed by then
         yield return Shot("7-debrief");
         yield return new WaitForSeconds(0.5f);
         Application.Quit();
@@ -124,6 +125,7 @@ public class DemoDriver : MonoBehaviour
     {
         ClaudeAccess.ForceOffline = true;
         Luma.Voice = false;
+        AudioListener.volume = 0f;
         yield return null; // the title has built by now; the market takes its place
         var rng = new System.Random(4);
         var configs = new List<AgentConfig>();

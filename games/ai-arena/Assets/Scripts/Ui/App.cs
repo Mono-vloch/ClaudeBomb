@@ -26,6 +26,8 @@ public class App : MonoBehaviour
     public Luma luma;
     public Market world;         // the market in three dimensions, behind the canvas
     public MarketCamera view;
+    public Atmosphere atmosphere;
+    public CameraRig rig;
 
     const string PrefConfigs = "ai_arena_agents";
     const string PrefLevel = "ai_arena_level";  // the highest level finished on this machine
@@ -79,7 +81,7 @@ public class App : MonoBehaviour
 
     void Awake()
     {
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = Maaloomatiia.Games.Platform.IsWeb ? -1 : 60; // the browser paces its own frames
         Application.runInBackground = true; // a round keeps going while the teacher switches windows
 #if UNITY_WEBGL && !UNITY_EDITOR
         WebGLInput.captureAllKeyboardInput = true; // typing reaches the lists even when the page, not the canvas, has focus
@@ -89,12 +91,16 @@ public class App : MonoBehaviour
         BuildCanvas();
         Market.Setup();
         view = Camera.main.gameObject.AddComponent<MarketCamera>();
+        atmosphere = Camera.main.gameObject.AddComponent<Atmosphere>();
+        rig = Camera.main.gameObject.AddComponent<CameraRig>();
         world = new GameObject("World").AddComponent<Market>();
         world.cam = view;
+        world.rig = rig;
         world.gameObject.SetActive(false);
         LoadConfigs();
         luma = gameObject.AddComponent<Luma>();
         Sfx.Init(gameObject);
+        Sfx.luma = luma;
         brief = Brief.Make(briefIndex = rng.Next(Brief.Random), rng);
         if (DemoDriver.Wanted) gameObject.AddComponent<DemoDriver>();
     }
@@ -138,6 +144,7 @@ public class App : MonoBehaviour
         onLeave?.Invoke();
         onLeave = null;
         world.Hide(); // a screen that wants the market shows it again
+        atmosphere.MenuBlur(false);
         if (screen != null) Destroy(screen.gameObject);
         if (sim != null) { Destroy(sim); sim = null; }
         screen = Ui.Node("Screen", stage);
@@ -275,6 +282,7 @@ public class App : MonoBehaviour
         onLeave?.Invoke();
         onLeave = null;
         world.Hide();
+        atmosphere.MenuBlur(false);
         if (screen != null) Destroy(screen.gameObject);
         screen = Ui.Node("Screen", stage);
         Ui.Stretch(screen);

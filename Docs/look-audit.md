@@ -374,3 +374,107 @@ measured (headless Chrome renders in software); the Mac build runs the walk at 6
   play the Mac build with sound once to confirm.
 - **The web build grew 2 MB** (fonts and URP resources in the data file) while the code
   shrank (strip engine code, IL2CPP size, DiskSize+LTO linking): see the table above.
+
+---
+
+# Phase 3a: AI Arena
+
+5 November 2026, branch `look-and-feel`, after the Robot Racing pilot was approved. The same
+floors, adapted to the market: every step checked in the live Editor (muted) before the next,
+the Mac build's own walk made the "after" set in `games/ai-arena/Builds/look-audit/after/`, and
+the web build was measured on the platform. LUMA's lines, the curriculum text and the exact
+words the agent reads are unchanged.
+
+## What changed
+
+1. **Art bible**: `games/ai-arena/Docs/art-bible.md`. A toy-market diorama under a late-morning
+   sun: warm limestone plaza and tiles, meadow and moss, oak and linen stalls under aqua
+   awnings, the agents in their team colours with white heads; the dusk variant with every
+   stall's lamp lit for the title, the story and the cover.
+2. **URP 17.3.0 and Cinemachine 2.10.5**, the same `RenderSetup` as Robot Racing (`Assets/
+   Settings/AIArena_RPAsset` + `Renderer`, all quality levels, linear colour), the same four
+   URP shaders (`Flat` with its sheen, `Glass`, `Sky`, `Spark`), `Look.cs` extended with gloss
+   and the sky globals. No material went pink or grey.
+3. **Lighting** (`Market.BuildLight`): the warm key at 42 degrees at 1.15 with full soft
+   shadows, gradient ambient, fog from 30 to 120, a mossy verge under the square; at dusk every
+   lamp glows and a third of them light the stalls around them.
+4. **Post-processing**: `Atmosphere` on the camera (ACES, bloom, vignette, grading, SMAA,
+   depth of field behind the briefing, the decide screen and the debrief, the red pulse and
+   hit-stop when an agent is sent home).
+5. **Cameras** (`CameraRig`): the agent's eye is now a Cinemachine chase over the chosen
+   agent's shoulder (the stalls it can see in colour, every stall beyond its sight a grey
+   question-mark crate, its sight square on the ground); the countdown flies in from high and
+   wide behind the first agent and back to the overview as they set out; an impulse shake when
+   an agent is sent home; ALL HOME turns slowly around the first agent home in slow motion.
+6. **The loop, visible.** The HUD carries LOOK · DECIDE · MOVE and lights them one after the
+   other every turn: LOOK flashes a ring in the agent's colour under the chosen agent as its
+   observation is written, DECIDE holds while the agents think (the antennas pulse), MOVE while
+   they walk. SENT HOME (red, sparks, shake, alarm, the item that ruined dinner underneath), OUT
+   OF TOKENS (amber), ALL HOME (teal, fanfare, confetti over every house, the slow turn),
+   NOBODY CAME HOME and n OF m HOME are moments in dark glass; 3 · 2 · 1 · AGENTS OUT opens
+   every errand. A buy chimes with a puff of teal confetti; dust rises under a walking agent.
+7. **Sound**: Robot Racing's layer without the engine: chime, thud, beeps, GO, fanfare, alarm,
+   a murmur over the market while it shows, a sound switch on the title, ducking under LUMA.
+8. **Screens**: baked Inter atlases, 12 px corners everywhere (the errand nodes and the stars
+   are rounded squares, the status dot too), the briefing rebuilt around a window on the
+   errand's market with the ladder in glass over it and the agent's parts in two columns, the
+   decide screen's five tasks on a sheet over the soft market, the debrief with the market
+   turning in a window, the medal badge revealed with stars, confetti and a fanfare, the
+   unlock card beside LUMA's takeaway, the run's mission HUD in dark glass (errand and step,
+   turn, home count, baskets, tokens left) with the speed controls beside the view toggle.
+   `Ui.Group` fixed for the Editor; the walk and the cover are silent.
+9. **Web release settings** in the build script (strip engine code, IL2CPP for size, no debug
+   symbols, DiskSize+LTO); the frame rate left to the browser.
+
+## Scores after
+
+Same walk (twelve screens), same six axes, same reference. Frames in
+`games/ai-arena/Builds/look-audit/after/`; the "before" set is still in `before/`.
+
+| Screen | Palette | Style | Lighting | Silhouette | UI | Feedback | Mean | Before |
+|---|---|---|---|---|---|---|---|---|
+| 1-title | 4 | 4 | 4 | 3 | 4 | 3 | 3.7 | 3.2 |
+| 2-story | 4 | 4 | 4 | 3 | 4 | 2 | 3.5 | 2.7 |
+| 2b-story-market | 4 | 3 | 4 | 3 | 4 | 3 | 3.5 | 2.8 |
+| 2c-story-tomato | 4 | 4 | 4 | 3 | 4 | 2 | 3.5 | 2.2 |
+| 3-lesson | 4 | 4 | 3 | 2 | 4 | 2 | 3.2 | 1.8 |
+| 3b-warm-up | 4 | 4 | 3 | 2 | 4 | 2 | 3.2 | 1.8 |
+| 4-tour | 4 | 4 | 4 | 3 | 4 | 3 | 3.7 | 2.5 |
+| 4b-decide | 4 | 4 | 3 | 1 | 4 | 2 | 3.0 | 1.5 |
+| 5-setup | 4 | 4 | 4 | 3 | 4 | 3 | 3.7 | 2.7 |
+| 6-market | 4 | 4 | 4 | 3 | 4 | 5 | 4.0 | 2.8 |
+| 6b-agents-eye | 4 | 4 | 4 | 3 | 4 | 5 | 4.0 | 3.0 |
+| 7-debrief | 4 | 4 | 3 | 3 | 4 | 4 | 3.7 | 2.0 |
+| **mean** | | | | | | | **3.6** | **2.4** |
+
+The board for the game:
+
+- palette: 4/5 — the bible's warm stone, meadow, oak and linen on every box, the team colours on
+  the agents, teal only where the lesson points; no default material, sky or UI.
+- style: 4/5 — one diorama from the stalls to the houses to the trees, the glass HUD and the
+  moments part of it; the story's flat sprites are the one other register, kept on purpose.
+- lighting: 4/5 — the warm key with full soft shadows by day, every lamp lit at dusk with
+  bloom, fog, a vignette; 3 behind the card screens where the depth of field is doing its job.
+- silhouette: 3/5 — the agent is still a box with a box head, now with a sheen, bright eyes
+  and a glowing antenna; it reads as a robot over its shoulder and as a coloured dot from the
+  overview. The character pass stays the axis at the floor, as in Robot Racing.
+- UI: 4/5 — 12 px corners everywhere, the errand nodes and the stars rounded squares, the
+  mission HUD and the moments in dark glass, the medal badge, baked Inter.
+- feedback: 4/5 — the loop's three words light every turn with a ring under the agent, SENT
+  HOME with sparks, shake, pulse and alarm, a chime and confetti on a buy, 3 · 2 · 1 · AGENTS
+  OUT, ALL HOME with the slow turn, the medal reveal; 2 on the briefing, the warm-up and the
+  decide sheet, which show the world but do not answer the player.
+
+## Web after
+
+| | Before | After |
+|---|---|---|
+| Build on disk | 17.6 MB | 19.5 MB |
+| Transferred | 17.3 MB | 19.2 MB |
+| Load time | 2.3 s | 3.8 s |
+| data file | 7.8 MB | 10.5 MB |
+| wasm | 9.8 MB | 9.3 MB |
+
+The same shape as Robot Racing: the data file grew (the baked Inter atlases and URP's
+resources), the code shrank with the release settings. Well under the 25 MB budget, and the
+game loads and runs on the platform (`games/ai-arena/Builds/look-audit/platform/`).

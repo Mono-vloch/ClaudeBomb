@@ -19,8 +19,19 @@ public class DecideScreen
         this.app = app;
         root = Ui.Node("Decide", parent);
         Ui.Stretch(root);
-        app.Paper(Theme.Page);
+        app.Paper(Color.clear);
         var l = app.lesson;
+        // The market behind the tasks, soft: the question is which of them needs an agent in it.
+        var window = Ui.Node("Window", root);
+        Ui.Stretch(window);
+        app.world.Build(new Arena(app.brief, app.configs.ConvertAll(c => c.Clone()), app.budget, 61), false);
+        app.world.ShowMarket(window);
+        app.atmosphere.MenuBlur(true);
+        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.4f), false);
+        Ui.Stretch(scrim.rectTransform);
+        scrim.raycastTarget = false;
+        var sheet = Ui.Float(root, "Sheet", 40, 20, 1840, 1040);
+        sheet.raycastTarget = false;
         choices = Enumerable.Repeat(-1, Decide.Tasks.Length).ToArray();
 
         var eyebrow = Ui.Eyebrow(root, $"ERRAND {l.id}  ·  DECIDE, TASK BY TASK", Theme.TealDeep);

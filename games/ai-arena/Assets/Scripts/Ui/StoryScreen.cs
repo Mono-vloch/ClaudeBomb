@@ -39,7 +39,20 @@ public class StoryScreen
         this.app = app;
         root = Ui.Node("Story", parent);
         Ui.Stretch(root);
-        app.Paper(Theme.Ink);
+        app.Paper(Color.clear);
+
+        // The market at dusk behind, on the right, the agents strolling; ink over the left.
+        var frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 1020, 40, 900, 960);
+        app.world.ShowCover(frame);
+        var shade = Ui.Box(root, "Shade", Theme.Ink, false);
+        Ui.Place(shade.rectTransform, -800, -300, 1720, 1700);
+        shade.raycastTarget = false;
+        var fade = Ui.Node("Fade", root).gameObject.AddComponent<Image>();
+        fade.sprite = Ui.FadeStrip;
+        fade.color = Theme.Ink;
+        fade.raycastTarget = false;
+        Ui.Place(fade.rectTransform, 920, -300, 440, 1700);
 
         Ui.Wordmark(root, 120, 64, 200);
         var eyebrow = Ui.Eyebrow(root, "THE STORY", Theme.Faint);
@@ -52,8 +65,9 @@ public class StoryScreen
         lumaText = Luma.Card(root, 1300, 262, 500, 330, "", 20, null, null, true, 170);
         for (int i = 0; i < Captions.Length; i++)
         {
-            var d = Ui.Dot(root, Theme.Faint, 10);
+            var d = Ui.Box(root, "Dot", Theme.Faint);
             Ui.Place(d.rectTransform, 1300 + i * 22, 616, 10, 10);
+            d.raycastTarget = false;
             dots.Add(d);
         }
         var skipBtn = Ui.Button(root, "Skip the story", () => skip = true, Ui.ButtonStyle.GhostOnDark, 17);
@@ -328,23 +342,27 @@ public class StoryScreen
     // 6. The ladder.
     IEnumerator Beat6()
     {
+        // Four cards on the first row, three on the second; the kicker sits under the
+        // title's measured height, so a two-line question never runs into it.
         for (int i = 0; i < Ladder.Count; i++)
         {
             var l = Ladder.All[i];
             var card = Ui.Card(scene, "Step", Theme.Ink2, Theme.TealDeep);
-            Ui.Place(card.rectTransform, 20 + (i % 3) * 360, 40 + (i / 3) * 210, 340, 180);
-            var n = Ui.Text(card.transform, (i + 1).ToString(), 56, Theme.Teal, true);
-            Ui.Place(n.rectTransform, 24, 14, 100, 70);
-            var t = Ui.Text(card.transform, l.title, 24, Color.white, true);
-            Ui.Place(t.rectTransform, 24, 86, 300, 34);
-            var k = Ui.Text(card.transform, l.kicker, 15, Theme.Faint);
-            Ui.Place(k.rectTransform, 24, 120, 300, 50);
+            Ui.Place(card.rectTransform, 20 + (i % 4) * 268, 30 + (i / 4) * 212, 252, 196);
+            var n = Ui.Text(card.transform, (i + 1).ToString(), 36, Theme.Teal, true);
+            Ui.Place(n.rectTransform, 20, 12, 80, 44);
+            var t = Ui.Text(card.transform, l.title, 19, Color.white, true);
+            float th = Mathf.Max(26f, t.GetPreferredValues(l.title, 216, 0).y);
+            Ui.Place(t.rectTransform, 20, 58, 216, th);
+            var k = Ui.Text(card.transform, l.kicker, 13, Theme.Faint);
+            Ui.Place(k.rectTransform, 20, 58 + th + 6, 216, 196 - (58 + th + 6) - 10);
+            k.overflowMode = TextOverflowModes.Ellipsis;
             var g = Ui.Group(card); g.alpha = 0;
             app.StartCoroutine(Ui.Animate(0.45f, q => { if (g == null) return; g.alpha = q; card.transform.localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, q); }, Ui.EaseOutBack));
             Sfx.Tick();
             yield return new WaitForSecondsRealtime(0.25f);
         }
-        var note = Ui.Text(scene, "Each errand opens one more part of the agent. Free play, with everything open, waits at the end.", 20, Theme.Faint);
-        Ui.Place(note.rectTransform, 20, 470, 1040, 60);
+        var note = Ui.Text(scene, "Each errand opens one more part of the agent. Free play, with everything open, waits at the end.", 18, Theme.Faint);
+        Ui.Place(note.rectTransform, 20, 460, 1040, 60);
     }
 }

@@ -15,101 +15,118 @@ public class LessonScreen
         var l = app.lesson;
         root = Ui.Node("Lesson", parent);
         Ui.Stretch(root);
-        app.Paper(Theme.Page);
+        app.Paper(Color.clear);
 
-        var eyebrow = Ui.Eyebrow(root, "MISSION BRIEFING  ·  TIER 1: WHAT AN AGENT IS", Theme.Text2);
-        Ui.Place(eyebrow.rectTransform, 160, 72, 800, 22);
+        // The world: this errand's market by day, framed in a window top right; soft behind the cards.
+        var window = Ui.Node("Window", root);
+        Ui.Place(window, 1000, 150, 860, 340);
+        app.world.Build(new Arena(app.brief, app.configs.ConvertAll(c => c.Clone()), app.budget, l.number * 17 + 3), false);
+        app.world.ShowMarket(window);
+        app.atmosphere.MenuBlur(true);
+        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.3f), false);
+        Ui.Stretch(scrim.rectTransform);
+        scrim.raycastTarget = false;
 
-        // The ladder, top right: where this errand sits. Any other step jumps there.
-        var ladder = Ui.Eyebrow(root, "THE LADDER  ·  CLICK A STEP TO JUMP THERE", Theme.Muted);
-        Ui.Place(ladder.rectTransform, 1260, 40, 500, 20);
+        // The brief, left.
+        var brief = Ui.Float(root, "Brief", 60, 60, 900, 960);
+        var b = brief.transform;
+        var eyebrow = Ui.Eyebrow(b, "MISSION BRIEFING  ·  TIER 1: WHAT AN AGENT IS", Theme.Text2);
+        Ui.Place(eyebrow.rectTransform, 40, 32, 820, 22);
+        var level = Ui.Eyebrow(b, $"ERRAND {l.id} OF {Ladder.Count}", Theme.TealDeep);
+        level.font = Theme.Bold;
+        Ui.Place(level.rectTransform, 40, 78, 600, 22);
+        var title = Ui.Text(b, l.title, 40, Theme.Ink, true);
+        Ui.Place(title.rectTransform, 36, 102, 830, 100); // two lines, the errands' questions are long
+        var kicker = Ui.Text(b, l.kicker, 23, Theme.Aqua, true);
+        Ui.Place(kicker.rectTransform, 40, 208, 820, 64);
+
+        Luma.Card(b, 40, 276, 820, 110, app.luma.Say("intro-" + l.number), 18);
+
+        var learn = Ui.Text(b, l.learn, 17, Theme.Text2);
+        Ui.Place(learn.rectTransform, 40, 400, 820, 150);
+
+        // The mission: the family's message, as the garage will show it.
+        var msg = Ui.Soft(b, "Message");
+        Ui.Place(msg.rectTransform, 40, 560, 820, 286);
+        var from = Ui.Eyebrow(msg.transform, $"MISSION  ·  A MESSAGE FROM {app.brief.from.ToUpperInvariant()}  ·  {app.brief.title.ToUpperInvariant()}", Theme.TealDeep);
+        Ui.Place(from.rectTransform, 24, 16, 780, 22);
+        var rule = Ui.Text(msg.transform, app.brief.rule, 22, Theme.Ink);
+        Ui.Place(rule.rectTransform, 24, 42, 772, 64);
+        var note = Ui.Text(msg.transform, "The catch: " + app.brief.note, 14, Theme.Text2);
+        Ui.Place(note.rectTransform, 24, 108, 772, 40);
+        var sells = Ui.Eyebrow(msg.transform, "AT THE MARKET", Theme.TealDeep);
+        Ui.Place(sells.rectTransform, 24, 150, 300, 22);
+        Ui.Catalogue(msg.transform, 24, 172, 772, 26, Theme.Ink);
+
+        var go = Ui.Button(b, l.decide ? "Decide the tasks" : "Go to the garage", app.ShowSetup, Ui.ButtonStyle.Accent, 22);
+        Ui.Place(go.GetComponent<RectTransform>(), 40, 866, 320, 64);
+        var home = Ui.Button(b, "Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 18);
+        Ui.Place(home.GetComponent<RectTransform>(), 380, 866, 200, 64);
+
+        // The ladder, over the window: the errands. Any other step jumps there.
+        var strip = Ui.Glass(root, "Ladder", 1000, 60, 860, 82, false);
+        var ladder = Ui.Eyebrow(strip.transform, "THE LADDER  ·  CLICK A STEP TO JUMP THERE", Theme.Teal);
+        Ui.Place(ladder.rectTransform, 20, 10, 600, 20);
         for (int i = 1; i <= Ladder.Count; i++)
         {
             bool current = i == l.number, done = i <= app.LevelsDone;
-            var step = Ui.Card(root, "Step", current ? Theme.TealDeep : done ? Theme.Surface2 : Theme.Panel, current ? Theme.TealDeep : done ? Theme.BorderTeal : Theme.Border);
-            Ui.Place(step.rectTransform, 1260 + (i - 1) * 58, 62, 50, 50);
-            var n = Ui.Text(step.transform, "1." + i, 15, current ? Color.white : done ? Theme.TealDeep : Theme.Muted, true, TextAlignmentOptions.Center);
+            var step = Ui.Card(strip.transform, "Step", current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.08f), current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.3f));
+            Ui.Place(step.rectTransform, 20 + (i - 1) * 70, 34, 62, 38);
+            var n = Ui.Text(step.transform, "1." + i, 14, current ? Theme.Ink : Color.white, true, TextAlignmentOptions.Center);
             Ui.Stretch(n.rectTransform);
             if (!current)
             {
+                step.raycastTarget = true;
                 var button = step.gameObject.AddComponent<Button>();
                 button.targetGraphic = step;
                 int number = i;
                 button.onClick.AddListener(() => { Sfx.Tick(); app.StartLevel(number); });
             }
         }
+        var caption = Ui.Glass(root, "Caption", 1000, 440, 860, 50);
+        var ct = Ui.Text(caption.transform, $"the market  ·  {app.brief.title}  ·  the agents at their houses", 14, Look.Chalk, false, TextAlignmentOptions.MidlineLeft);
+        Ui.Place(ct.rectTransform, 20, 0, 820, 50);
+        ct.enableWordWrapping = false; ct.overflowMode = TextOverflowModes.Ellipsis;
 
-        var level = Ui.Eyebrow(root, $"ERRAND {l.id} OF {Ladder.Count}", Theme.TealDeep);
-        level.font = Theme.Bold;
-        Ui.Place(level.rectTransform, 160, 130, 600, 22);
-        var title = Ui.Text(root, l.title, 58, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 156, 156, 1060, 80);
-        var kicker = Ui.Text(root, l.kicker, 30, Theme.Aqua, true);
-        Ui.Place(kicker.rectTransform, 160, 246, 1040, 84);
-
-        Luma.Card(root, 160, 340, 1040, 110, app.luma.Say("intro-" + l.number), 18);
-
-        var learn = Ui.Text(root, l.learn, 19, Theme.Text2);
-        Ui.Place(learn.rectTransform, 160, 464, 1040, 176);
-
-        // The mission: the family's message, as the garage will show it.
-        var msg = Ui.Soft(root, "Message");
-        Ui.Place(msg.rectTransform, 160, 652, 1040, 250);
-        var from = Ui.Eyebrow(msg.transform, $"MISSION  ·  A MESSAGE FROM {app.brief.from.ToUpperInvariant()}  ·  {app.brief.title.ToUpperInvariant()}", Theme.TealDeep);
-        Ui.Place(from.rectTransform, 24, 16, 900, 22);
-        var rule = Ui.Text(msg.transform, app.brief.rule, 24, Theme.Ink);
-        Ui.Place(rule.rectTransform, 24, 42, 990, 64);
-        var note = Ui.Text(msg.transform, "The catch: " + app.brief.note, 15, Theme.Text2);
-        Ui.Place(note.rectTransform, 24, 108, 990, 24);
-        var sells = Ui.Eyebrow(msg.transform, "AT THE MARKET", Theme.TealDeep);
-        Ui.Place(sells.rectTransform, 24, 138, 300, 22);
-        Ui.Catalogue(msg.transform, 24, 160, 990, 28, Theme.Ink);
-
-        // The robot's parts, right: what each dial is and whether it is open yet.
-        var parts = Ui.Float(root, "Parts", 1260, 130, 500, 692);
+        // The agent's parts, below the window: what each dial is and whether it is open yet.
+        var parts = Ui.Float(root, "Parts", 1000, 510, 860, 510);
         var pt = Ui.Text(parts.transform, "Your agent, part by part", 22, Theme.Ink, true);
-        Ui.Place(pt.rectTransform, 26, 22, 440, 30);
-        var ps = Ui.Text(parts.transform, "Each errand opens one more dial. The ones with a dot are this errand's.", 15, Theme.Text2);
-        Ui.Place(ps.rectTransform, 26, 54, 440, 40);
-        float y = 102;
-        Part(parts.transform, ref y, "The list", "Its job description: everything it knows about tonight.", "You write it", true, l.number <= 2);
-        Part(parts.transform, ref y, "How far it sees", "Its context: the stalls in view, turned into words each turn.",
+        Ui.Place(pt.rectTransform, 24, 18, 600, 30);
+        var ps = Ui.Text(parts.transform, "Each errand opens one more dial. The ones with a dot are this errand's.", 14, Theme.Text2);
+        Ui.Place(ps.rectTransform, 24, 48, 800, 22);
+        float y = 80; int col = 0;
+        Part(parts.transform, ref y, ref col, "The list", "Its job description: everything it knows about tonight.", "You write it", true, l.number <= 2);
+        Part(parts.transform, ref y, ref col, "How far it sees", "Its context: the stalls in view, turned into words each turn.",
              l.vision ? "You choose: 1 to 3 cells" : $"Fixed at {Lesson.FixedVision} cells · opens at errand 1.{Ladder.VisionLevel}", l.vision, l.number == Ladder.VisionLevel);
-        Part(parts.transform, ref y, "Memory", "What rides along from earlier turns, if anything.",
+        Part(parts.transform, ref y, ref col, "Memory", "What rides along from earlier turns, if anything.",
              l.memory ? "You choose" : $"Fixed: {MemoryModes.Labels[Lesson.FixedMemory].ToLowerInvariant()} · opens at errand 1.{Ladder.MemoryLevel}", l.memory, l.number == Ladder.MemoryLevel);
-        Part(parts.transform, ref y, "Brain", "Which Claude runs it, and what each of its tokens costs.",
+        Part(parts.transform, ref y, ref col, "Brain", "Which Claude runs it, and what each of its tokens costs.",
              l.model ? "You choose" : $"Fixed: {Models.All[Lesson.FixedModel].label} · opens at errand 1.{Ladder.ModelLevel}", l.model, l.number == Ladder.ModelLevel);
-        Part(parts.transform, ref y, "Effort", "How hard it thinks at each stall.",
+        Part(parts.transform, ref y, ref col, "Effort", "How hard it thinks at each stall.",
              l.effort ? "You choose" : $"Fixed: {Efforts.Labels[Lesson.FixedEffort].ToLowerInvariant()} · opens at errand 1.{Ladder.EffortLevel}", l.effort, l.number == Ladder.EffortLevel);
-        Part(parts.transform, ref y, l.decide ? "Agent, or a fixed rule" : "Pocket money",
+        Part(parts.transform, ref y, ref col, l.decide ? "Agent, or a fixed rule" : "Pocket money",
              l.decide ? "Whether the task needs an agent at all, or a simple automation, or neither." : "The tokens it may spend on the errand. Every dial above spends some, every turn.",
              l.decide ? "You decide, task by task" : "Set in the garage", true, l.decide || l.number == Ladder.Count);
-
-        var go = Ui.Button(root, l.decide ? "Decide the tasks" : "Go to the garage", app.ShowSetup, Ui.ButtonStyle.Accent, 22);
-        Ui.Place(go.GetComponent<RectTransform>(), 160, 926, 320, 64);
-        var home = Ui.Button(root, "Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 18);
-        Ui.Place(home.GetComponent<RectTransform>(), 500, 926, 200, 64);
         Ui.Emblem(root);
 
         if (l.recall != null) Recall(app, l.recall);
     }
 
-    static void Part(Transform t, ref float y, string name, string what, string state, bool open, bool lit)
+    // Two columns of parts, 404 wide, 130 tall.
+    static void Part(Transform t, ref float y, ref int col, string name, string what, string state, bool open, bool lit)
     {
+        float x = 20 + col * 416;
         var row = Ui.Card(t, name, lit ? Theme.Surface2 : Theme.Panel, lit ? Theme.BorderTeal : Theme.Border1);
-        Ui.Place(row.rectTransform, 20, y, 460, 88);
-        if (lit)
-        {
-            var dot = Ui.Dot(row.transform, Theme.Aqua, 10);
-            Ui.Place(dot.rectTransform, 18, 20, 10, 10);
-        }
-        var n = Ui.Text(row.transform, name, 19, Theme.Ink, true);
-        Ui.Place(n.rectTransform, lit ? 34 : 18, 12, 220, 26);
-        var s = Ui.Text(row.transform, state, 13, open ? Theme.TealDeep : Theme.Muted, true, TextAlignmentOptions.TopRight);
-        Ui.Place(s.rectTransform, 200, 14, 244, 40);
-        var w = Ui.Text(row.transform, what, 14, Theme.Text2);
-        Ui.Place(w.rectTransform, 18, 44, 424, 40);
-        y += 96;
+        Ui.Place(row.rectTransform, x, y, 404, 130);
+        if (lit) { var dot = Ui.Box(row.transform, "Dot", Theme.Aqua); Ui.Place(dot.rectTransform, 14, 18, 10, 10); dot.raycastTarget = false; }
+        var n = Ui.Text(row.transform, name, 17, Theme.Ink, true);
+        Ui.Place(n.rectTransform, lit ? 30 : 14, 10, 220, 24);
+        var s = Ui.Text(row.transform, state, 11, open ? Theme.TealDeep : Theme.Muted, true, TextAlignmentOptions.TopRight);
+        Ui.Place(s.rectTransform, 200, 12, 192, 36);
+        var w = Ui.Text(row.transform, what, 13, Theme.Text2);
+        Ui.Place(w.rectTransform, 14, 52, 378, 72);
+        col++;
+        if (col == 2) { col = 0; y += 138; }
     }
 
     // The warm-up: one question from an earlier errand, over the briefing. No
@@ -143,6 +160,7 @@ public class LessonScreen
                 verdict.text = right ? $"Right. That is from errand {r.from}."
                                      : $"Not quite. The answer: {r.options[r.answer]}. That is from errand {r.from}.";
                 verdict.color = right ? Theme.TealDeep : Theme.Danger;
+                if (right) Sfx.Chime(); else Sfx.Ruin();
                 for (int j = 0; j < buttons.Length; j++)
                 {
                     buttons[j].interactable = false;

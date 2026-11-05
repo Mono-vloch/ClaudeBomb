@@ -19,6 +19,10 @@ public class Market : MonoBehaviour
     public enum View { Market, RobotsEye }
 
     public MarketCamera cam;                 // on the scene's camera; set by App
+    public CameraRig rig;                    // the walk behind an agent, the countdown, the shake; set by App
+    Effects effects;
+    Transform beatRing;
+    Renderer beatRenderer;
     public RectTransform frame;              // where on the stage the market sits; set by the screen
     public Arena arena;
     public View view = View.Market;
@@ -44,16 +48,7 @@ public class Market : MonoBehaviour
 
     // Shadows and lights for the whole game; the quality levels in the project
     // settings were made for the flat version.
-    public static void Setup()
-    {
-        QualitySettings.shadows = ShadowQuality.All;
-        QualitySettings.shadowResolution = ShadowResolution.High;
-        QualitySettings.shadowProjection = ShadowProjection.StableFit;
-        QualitySettings.shadowDistance = 60f;
-        QualitySettings.shadowCascades = 2;
-        QualitySettings.pixelLightCount = 3;
-        QualitySettings.antiAliasing = 4;
-    }
+    public static void Setup() { } // shadows and anti-aliasing come from the pipeline asset (AI Arena > Set up URP) and the camera's Atmosphere
 
     // ---- building ----------------------------------------------------------
 
@@ -61,8 +56,10 @@ public class Market : MonoBehaviour
     {
         Clear();
         gameObject.SetActive(true);
+        Sfx.Ambient(true);
         this.arena = arena;
         this.dusk = dusk;
+        if (effects == null) { effects = new GameObject("Effects").AddComponent<Effects>(); effects.transform.SetParent(transform.parent, false); }
         BuildGround();
         BuildLight();
         stallsRoot = new GameObject("Stalls").transform; stallsRoot.SetParent(transform, false);
@@ -129,6 +126,17 @@ public class Market : MonoBehaviour
         wandering = StartCoroutine(Wander());
     }
 
+    // The square turning slowly in a frame, as built: the debrief's window.
+    public void ShowOrbitOf(RectTransform frame)
+    {
+        this.frame = frame;
+        view = View.Market;
+        Canvas.ForceUpdateCanvases();
+        cam.Orbit(frame, Square.center);
+        cam.Snap();
+        ApplyFog();
+    }
+
     public void Clear()
     {
         StopAllCoroutines();
@@ -144,6 +152,8 @@ public class Market : MonoBehaviour
     public void Hide()
     {
         Clear();
+        Sfx.Ambient(false);
+        if (rig != null) rig.Release();
         gameObject.SetActive(false);
         if (cam != null) cam.Sleep();
     }
@@ -154,6 +164,7 @@ public class Market : MonoBehaviour
         ground.SetParent(transform, false);
         // The park: grass to the horizon, the square a step above it with a kerb.
         NoShadow(MeshKit.Part(ground, "grass", MeshKit.Box, Look.Mat(Look.Grass), new Vector3(0, -0.3f, 0), new Vector3(120, 0.2f, 120)));
+        NoShadow(MeshKit.Part(ground, "verge", MeshKit.Box, Look.Mat(Look.GrassDark), new Vector3(0, -0.29f, 0), new Vector3(Size + 5f, 0.2f, Size + 5f)));
         MeshKit.Part(ground, "kerb", MeshKit.Box, Look.Mat(Look.Kerb), new Vector3(0, -0.16f, 0), new Vector3(Size + 2.2f, 0.12f, Size + 2.2f));
         MeshKit.Part(ground, "plaza", MeshKit.Box, Look.Mat(Look.Plaza), new Vector3(0, -0.05f, 0), new Vector3(Size + 1.4f, 0.1f, Size + 1.4f));
         for (int x = 0; x < Size; x++)
@@ -185,6 +196,10 @@ public class Market : MonoBehaviour
         }
     }
 
+    // The light story, from Docs/art-bible.md. Day: a warm late-morning key from the camera's
+    // right, full soft shadows, a gradient ambient that keeps the shadow sides cool, haze that
+    // deepens with distance. Dusk (the title, the story, the cover): the sun low and amber,
+    // the brand's ink sky, every stall's lamp lit.
     void BuildLight()
     {
         var sunGo = new GameObject("Sun");
@@ -192,9 +207,7 @@ public class Market : MonoBehaviour
         var sun = sunGo.AddComponent<Light>();
         sun.type = LightType.Directional;
         sun.shadows = LightShadows.Soft;
-        sun.shadowStrength = 0.55f;
-        sun.shadowBias = 0.05f;
-        sun.shadowNormalBias = 0.4f;
+        sun.shadowStrength = dusk ? 0.75f : 0.85f;
 
         var dome = MeshKit.Part(transform, "sky", MeshKit.Sphere, null, Vector3.zero, Vector3.one * 300f);
         NoShadow(dome);
@@ -202,36 +215,29 @@ public class Market : MonoBehaviour
         domeRenderer.receiveShadows = false;
 
         var camera = cam.GetComponent<Camera>();
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
         if (dusk)
         {
-            sun.transform.rotation = Quaternion.Euler(16, 55, 0);
-            sun.color = Look.SunDusk;
-            sun.intensity = 0.8f;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = Theme.Hex("#2A3F6B");
-            RenderSettings.ambientEquatorColor = Theme.Hex("#6B4A5E");
-            RenderSettings.ambientGroundColor = Theme.Hex("#1A2433");
+            sun.transform.rotation = Quaternion.Euler(16, 55, 0); sun.color = Look.SunDusk; sun.intensity = 0.9f;
+            RenderSettings.ambientSkyColor = Theme.Hex("#2A3F6B"); RenderSettings.ambientEquatorColor = Theme.Hex("#6B4A5E"); RenderSettings.ambientGroundColor = Theme.Hex("#1A2433");
             RenderSettings.fogColor = Theme.Hex("#2B3E52");
             domeRenderer.sharedMaterial = Look.Sky(Look.DuskTop, Look.DuskHorizon, Look.DuskBottom);
             camera.backgroundColor = Look.DuskHorizon;
+            Look.SetSky(Look.DuskTop, Look.DuskHorizon);
         }
         else
         {
-            sun.transform.rotation = Quaternion.Euler(52, -32, 0);
-            sun.color = Look.SunDay;
-            sun.intensity = 0.7f;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = Theme.Hex("#6B8CA6");
-            RenderSettings.ambientEquatorColor = Theme.Hex("#8E877A");
-            RenderSettings.ambientGroundColor = Theme.Hex("#4F5F4D");
+            sun.transform.rotation = Quaternion.Euler(42, -55, 0); sun.color = Look.SunDay; sun.intensity = 1.15f;
+            RenderSettings.ambientSkyColor = Theme.Hex("#8FB6D8"); RenderSettings.ambientEquatorColor = Theme.Hex("#C9C2B4"); RenderSettings.ambientGroundColor = Theme.Hex("#4A5A6B");
             RenderSettings.fogColor = Look.Haze;
             domeRenderer.sharedMaterial = Look.Sky(Look.SkyTop, Look.SkyHorizon, Look.SkyBottom);
             camera.backgroundColor = Look.SkyHorizon;
+            Look.SetSky(Look.SkyTop, Look.SkyHorizon);
         }
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
-        RenderSettings.fogStartDistance = 40f;
-        RenderSettings.fogEndDistance = 140f;
+        RenderSettings.fogStartDistance = 30f;
+        RenderSettings.fogEndDistance = 120f;
     }
 
     // A robot's house: just off the square, behind its home cell, facing in.
@@ -290,7 +296,7 @@ public class Market : MonoBehaviour
         MeshKit.Part(k, "post", MeshKit.Cylinder, Look.Mat(Look.WoodDark), new Vector3(0.43f, 0.62f, 0.32f), new Vector3(0.06f, 1.24f, 0.06f));
         MeshKit.Part(k, "bar", MeshKit.Cylinder, Look.Mat(Look.WoodDark), new Vector3(0, 1.24f, 0.32f), new Vector3(0, 0, 90), new Vector3(0.04f, 0.92f, 0.04f));
         for (int i = 0; i < 5; i++)
-            MeshKit.Part(k, "banner", MeshKit.Box, Look.Mat(i % 2 == 0 ? Look.Awning : Look.AwningWhite), new Vector3(-0.352f + 0.176f * i, 0.97f, 0.33f), new Vector3(12, 0, 0), new Vector3(0.176f, 0.5f, 0.04f));
+            MeshKit.Part(k, "banner", MeshKit.Box, Look.Mat(i % 2 == 0 ? Look.Awning : Look.AwningWhite, Color.black, 0.25f), new Vector3(-0.352f + 0.176f * i, 0.97f, 0.33f), new Vector3(12, 0, 0), new Vector3(0.176f, 0.5f, 0.04f));
         var spots = new[] { new Vector2(-0.24f, 0.0f), new Vector2(0.22f, -0.05f), new Vector2(-0.02f, 0.2f), new Vector2(0.0f, -0.18f) };
         int pieces = ItemModels.Pieces(kind.id);
         var r = dice;
@@ -303,15 +309,16 @@ public class Market : MonoBehaviour
         }
         if (dusk)
         {
-            var lamp = MeshKit.Part(k, "lamp", MeshKit.Sphere, Look.Mat(Look.Lamp, Look.Lamp), new Vector3(0, 1.08f, 0.1f), 0.11f);
+            var lamp = MeshKit.Part(k, "lamp", MeshKit.Sphere, Look.Mat(Look.Lamp, Look.Lamp * 1.6f), new Vector3(0, 1.08f, 0.1f), 0.11f);
             MeshKit.Part(k, "cord", MeshKit.Cylinder, Look.Mat(Look.Dark), new Vector3(0, 1.17f, 0.1f), new Vector3(0.015f, 0.1f, 0.015f));
             if (r.Next(3) == 0)
             {
                 var light = lamp.AddComponent<Light>();
                 light.type = LightType.Point;
                 light.color = Look.Lamp;
-                light.range = 2.8f;
-                light.intensity = 1.6f;
+                light.range = 3.2f;
+                light.intensity = 2.2f;
+                light.shadows = LightShadows.None;
             }
         }
 
@@ -375,15 +382,66 @@ public class Market : MonoBehaviour
         Highlighted = a;
         UpdateVision();
         ApplyFog();
-        if (view == View.RobotsEye && a != null && bots.TryGetValue(a, out var r)) cam.Follow(r.root, frame);
+        if (view == View.RobotsEye && a != null && bots.TryGetValue(a, out var r)) rig.Chase(r.root, frame);
     }
 
     public void SetView(View v)
     {
         view = v;
-        if (v == View.RobotsEye && Highlighted != null && bots.TryGetValue(Highlighted, out var r)) cam.Follow(r.root, frame);
-        else { view = View.Market; cam.Overview(frame, Square); }
+        if (v == View.RobotsEye && Highlighted != null && bots.TryGetValue(Highlighted, out var r)) rig.Chase(r.root, frame);
+        else { view = View.Market; rig.Release(); cam.Overview(frame, Square); }
         ApplyFog();
+    }
+
+    // The countdown: the camera flies in from high and wide, down behind the first agent,
+    // then back to the overview as they set out.
+    public void ShowCountdown(RectTransform frame, float seconds)
+    {
+        this.frame = frame;
+        var first = arena.agents.Count > 0 && bots.TryGetValue(arena.agents[0], out var r) ? r.root : null;
+        if (first != null) rig.Countdown(first, frame, seconds);
+    }
+    public void BackToOverview() { if (view == View.Market) { rig.Release(); cam.Overview(frame, Square); } }
+
+    // All home: a slow turn around the square in slow motion, confetti over every house.
+    public void Celebrate(System.Action done)
+    {
+        if (effects != null)
+            foreach (var a in arena.agents) if (a.alive && bots.TryGetValue(a, out var r)) effects.Confetti(r.Position + Vector3.up * 1.2f, 24);
+        var who = arena.agents.FirstOrDefault(a => a.alive);
+        var was = cam.mode; // the orbit of a debrief comes back as an orbit, the market as the overview
+        if (who != null && bots.TryGetValue(who, out var hero))
+            rig.FinishMoment(hero.root, 2.2f, () => { if (was == MarketCamera.Mode.Orbit) { rig.Release(); cam.Orbit(frame, Square.center); } else BackToOverview(); done?.Invoke(); });
+        else done?.Invoke();
+    }
+
+    // The loop, visible: a ring in the agent's colour flashes under it as it looks, the
+    // antenna is the thinking (Think), the walk is the move (Animate).
+    public void Beat(AgentState a)
+    {
+        if (a == null || !bots.TryGetValue(a, out var r)) return;
+        if (beatRing == null)
+        {
+            var go = NoShadow(MeshKit.Part(transform, "beat", MeshKit.Cylinder, Look.Glass(Color.clear), Vector3.zero, new Vector3(1f, 0.01f, 1f)));
+            beatRing = go.transform; beatRenderer = go.GetComponent<Renderer>();
+        }
+        StartCoroutine(Ring(r, Theme.Team[a.config.colour]));
+    }
+
+    IEnumerator Ring(RobotModel r, Color c)
+    {
+        float t = 0, d = 0.5f;
+        beatRing.gameObject.SetActive(true);
+        while (t < d && r.root != null)
+        {
+            t += Time.deltaTime;
+            float k = t / d;
+            beatRing.position = r.Position + Vector3.up * 0.09f;
+            beatRing.localScale = new Vector3(0.5f + 1.3f * k, 0.01f, 0.5f + 1.3f * k);
+            beatRenderer.sharedMaterial = Look.Glass(new Color(c.r, c.g, c.b, 0.55f * (1 - k)));
+            yield return null;
+        }
+        beatRing.gameObject.SetActive(false);
     }
 
     // The square the chosen robot can see, on the ground around it.
@@ -446,7 +504,7 @@ public class Market : MonoBehaviour
                 var r = bots[m.agent];
                 r.Position = Vector3.Lerp(from[m.agent], to[m.agent], k);
                 r.root.rotation = Quaternion.Slerp(fromRot[m.agent], toRot[m.agent], Mathf.Clamp01(k * 2.5f));
-                if (m.to != m.from) r.Bob(k);
+                if (m.to != m.from) { r.Bob(k); if (effects != null && Time.frameCount % 6 == 0) effects.Dust(r.Position + Vector3.up * 0.05f, 1); }
             }
             yield return null;
         }
@@ -454,8 +512,8 @@ public class Market : MonoBehaviour
         foreach (var m in moves)
         {
             if (m.ate == null) continue;
-            if (m.agent.alive) { Sfx.Buy(); StartCoroutine(Buy(m)); }
-            else { Sfx.Ruin(); StartCoroutine(Out(m.agent)); }
+            if (m.agent.alive) { Sfx.Chime(); StartCoroutine(Buy(m)); if (effects != null) effects.Confetti(bots[m.agent].Position + Vector3.up * 0.9f, 12); }
+            else { Sfx.Crash(); StartCoroutine(Out(m.agent)); }
         }
         RefreshItems();
         RefreshBots(false);
@@ -485,7 +543,10 @@ public class Market : MonoBehaviour
     {
         var r = bots[a];
         r.SetOut();
-        StartCoroutine(Puff(r.Position + Vector3.up * 0.6f, Theme.Danger));
+        if (effects != null) effects.Sparks(r.Position + Vector3.up * 0.6f, 1.2f);
+        rig.Shake(1f);
+        Atmosphere.Current?.Pulse(Theme.Danger, 0.35f, 0.5f);
+        Atmosphere.Current?.HitStop(0.07f);
         var rot = r.root.rotation;
         var pos = r.Position;
         float t = 0;
@@ -502,31 +563,6 @@ public class Market : MonoBehaviour
         t = 0;
         while (t < 0.5f) { t += Time.deltaTime; r.root.localScale = Vector3.one * RobotModel.Scale * Mathf.Max(0, 1 - t / 0.5f); yield return null; }
         r.root.gameObject.SetActive(false);
-    }
-
-    // A burst of little balls, for a dinner ruined.
-    IEnumerator Puff(Vector3 at, Color colour)
-    {
-        var bits = new List<(Transform t, Vector3 v)>();
-        var r = dice;
-        for (int i = 0; i < 12; i++)
-        {
-            var bit = MeshKit.Part(transform, "puff", MeshKit.Sphere, Look.Mat(i % 3 == 0 ? colour : Look.Grey), at, 0.12f).transform;
-            var v = new Vector3((float)r.NextDouble() - 0.5f, (float)r.NextDouble() * 0.8f + 0.4f, (float)r.NextDouble() - 0.5f) * 3.2f;
-            bits.Add((bit, v));
-        }
-        float t = 0, d = 0.7f;
-        while (t < d)
-        {
-            t += Time.deltaTime;
-            foreach (var (b, v) in bits)
-            {
-                b.position += (v + Vector3.down * 5f * t) * Time.deltaTime;
-                b.localScale = Vector3.one * 0.12f * (1 - t / d);
-            }
-            yield return null;
-        }
-        foreach (var (b, _) in bits) Destroy(b.gameObject);
     }
 
     IEnumerator Pop(Transform t)

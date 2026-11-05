@@ -54,6 +54,8 @@ public static class Theme
 
     static TMP_FontAsset Make(string resource)
     {
+        var baked = Resources.Load<TMP_FontAsset>(resource + " SDF"); // AI Arena > Bake Fonts
+        if (baked != null) return baked;
         var font = Resources.Load<Font>(resource);
         if (font == null) { Debug.LogWarning($"Font {resource} missing, using the TextMesh Pro default."); return TMP_Settings.defaultFontAsset; }
         var asset = TMP_FontAsset.CreateFontAsset(font);

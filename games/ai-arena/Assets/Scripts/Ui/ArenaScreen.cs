@@ -18,14 +18,17 @@ public class ArenaScreen
     readonly Arena arena;
     readonly Simulation sim;
     readonly Market world;
-    readonly TextMeshProUGUI turnText, phaseText;
+    readonly TextMeshProUGUI turnText, phaseText, homeText, basketText, tokensText;
+    readonly Image[] loopChips = new Image[3];
+    readonly TextMeshProUGUI[] loopWords = new TextMeshProUGUI[3];
+    bool showing;
     readonly Button pause, results;
     readonly RectTransform cards, labelsLayer, bannerLayer;
     readonly float cardsHeight;
     readonly Dictionary<AgentState, Card> cardOf = new Dictionary<AgentState, Card>();
     readonly Dictionary<AgentState, RectTransform> labelOf = new Dictionary<AgentState, RectTransform>();
     readonly HashSet<AgentState> announced = new HashSet<AgentState>();
-    readonly Queue<(string text, Color colour, float seconds)> banners = new Queue<(string, Color, float)>();
+    readonly Queue<(string text, string sub, Color colour, float seconds, bool big)> banners = new Queue<(string, string, Color, float, bool)>();
     readonly Follower follower;
     TextMeshProUGUI coach;
     RectTransform knows, bubble;
@@ -55,37 +58,64 @@ public class ArenaScreen
         world.Build(arena, false);
         world.ShowMarket(frame);
 
-        // The cards sit on frosted glass over the park; so does the header.
+        // The cards sit on frosted glass over the park.
         var column = Ui.Box(root, "Column", new Color(1, 1, 1, 0.84f), false);
         Ui.Place(column.rectTransform, 1000, -300, 1600, 1700);
         column.raycastTarget = false;
-        var top = Ui.Box(root, "Top", new Color(1, 1, 1, 0.8f));
-        Ui.Place(top.rectTransform, 40, 16, 950, 82);
-        top.raycastTarget = false;
 
-        turnText = Ui.Text(root, "", 30, Theme.Ink, true);
-        Ui.Place(turnText.rectTransform, 60, 24, 360, 40);
+        // The mission HUD, dark glass over the market: the errand and the step, the turn,
+        // the loop's three words lighting one after the other, and the score.
+        var hud1 = Ui.Glass(root, "Hud", 40, 16, 520, 96);
+        string where = app.decide != null ? $"TASK {app.decide.RunNumber} OF {Decide.ShoppingTasks}" : app.lesson != null ? $"ERRAND {app.lesson.id}  ·  {app.StepName.ToUpperInvariant()}" : "FREE PLAY";
+        var levelTag = Ui.Eyebrow(hud1.transform, where, Theme.Teal);
+        levelTag.font = Theme.Bold;
+        Ui.Place(levelTag.rectTransform, 20, 10, 480, 18);
+        turnText = Ui.Text(hud1.transform, "", 28, Color.white, true);
+        Ui.Place(turnText.rectTransform, 20, 28, 480, 40);
         turnText.enableWordWrapping = false;
-        phaseText = Ui.Text(root, "", 16, Theme.Text2);
-        Ui.Place(phaseText.rectTransform, 60, 62, 400, 26);
+        phaseText = Ui.Text(hud1.transform, "", 12, Look.Chalk);
+        Ui.Place(phaseText.rectTransform, 20, 68, 480, 22);
+        phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
+        var hud2 = Ui.Glass(root, "Loop", 570, 16, 420, 96);
+        var loopTag = Ui.Eyebrow(hud2.transform, "THE LOOP  ·  EVERY TURN", Theme.Teal);
+        Ui.Place(loopTag.rectTransform, 20, 10, 380, 16);
+        string[] words = { "LOOK", "DECIDE", "MOVE" };
+        for (int i = 0; i < 3; i++)
+        {
+            loopChips[i] = Ui.Box(hud2.transform, "Chip", new Color(1f, 1f, 1f, 0.1f));
+            Ui.Place(loopChips[i].rectTransform, 20 + i * 126, 36, 116, 42);
+            loopChips[i].raycastTarget = false;
+            loopWords[i] = Ui.Text(loopChips[i].transform, words[i], 15, Look.Chalk, true, TextAlignmentOptions.Center);
+            loopWords[i].characterSpacing = 3;
+            Ui.Stretch(loopWords[i].rectTransform);
+        }
+        var hud3 = Ui.Glass(root, "Score", 40, 120, 520, 70);
+        TextMeshProUGUI Stat(string name, float x, float w)
+        {
+            var e = Ui.Eyebrow(hud3.transform, name, Theme.Teal);
+            Ui.Place(e.rectTransform, x, 10, w, 16);
+            var v = Ui.Text(hud3.transform, "", 22, Color.white, true);
+            Ui.Place(v.rectTransform, x, 28, w, 34);
+            v.enableWordWrapping = false; v.overflowMode = TextOverflowModes.Ellipsis;
+            return v;
+        }
+        homeText = Stat("HOME", 20, 150);
+        basketText = Stat("IN THE BASKETS", 180, 170);
+        tokensText = Stat("TOKENS LEFT", 360, 150);
 
-        var speedLabel = Ui.Text(root, "Speed", 14, Theme.Text2, false, TextAlignmentOptions.MidlineRight);
-        Ui.Place(speedLabel.rectTransform, 436, 36, 60, 44);
-        var speed = new Ui.Segmented(root, new[] { "1x", "2x", "4x" }, 1, 168, 44, 15);
-        Ui.Place(speed.root, 504, 36, 168, 44);
-        speed.OnSelect = i => sim.speed = i == 0 ? 1 : i == 1 ? 2 : 4;
-
-        pause = Ui.Button(root, "Pause", () => { sim.paused = !sim.paused; Ui.SetLabel(pause, sim.paused ? "Resume" : "Pause"); }, Ui.ButtonStyle.Secondary, 15);
-        Ui.Place(pause.GetComponent<RectTransform>(), 684, 36, 100, 44);
-        var stop = Ui.Button(root, "Call them home", () => { if (!sim.finished) sim.Abort(); }, Ui.ButtonStyle.Quiet, 15);
-        Ui.Place(stop.GetComponent<RectTransform>(), 790, 36, 190, 44);
-
-        // The view: the whole market, or what the chosen agent sees.
+        // The view: the whole market, or what the chosen agent sees; the speed; the pause.
         var viewToggle = new Ui.Segmented(root, new[] { "The market", "Agent's eye" }, 0, 300, 40, 14);
         Ui.Place(viewToggle.root, 40, 1032, 300, 40);
         viewToggle.OnSelect = i => world.SetView(i == 0 ? Market.View.Market : Market.View.RobotsEye);
-        var viewHint = Ui.Text(root, "Agent's eye: from behind the chosen agent. A stall it cannot see is a gray box, because for the agent it does not exist.", 13, Theme.Text2);
-        Ui.Place(viewHint.rectTransform, 352, 1034, 630, 40);
+        var speedLabel = Ui.Text(root, "Speed", 14, Theme.Text2, false, TextAlignmentOptions.MidlineRight);
+        Ui.Place(speedLabel.rectTransform, 350, 1032, 50, 40);
+        var speed = new Ui.Segmented(root, new[] { "1x", "2x", "4x" }, 1, 168, 40, 14);
+        Ui.Place(speed.root, 408, 1032, 168, 40);
+        speed.OnSelect = i => sim.speed = i == 0 ? 1 : i == 1 ? 2 : 4;
+        pause = Ui.Button(root, "Pause", () => { sim.paused = !sim.paused; Ui.SetLabel(pause, sim.paused ? "Resume" : "Pause"); }, Ui.ButtonStyle.Secondary, 14);
+        Ui.Place(pause.GetComponent<RectTransform>(), 588, 1032, 90, 40);
+        var stop = Ui.Button(root, "Call them home", () => { if (!sim.finished) sim.Abort(); }, Ui.ButtonStyle.Quiet, 14);
+        Ui.Place(stop.GetComponent<RectTransform>(), 686, 1032, 160, 40);
 
         // The agents' names, under their feet; the bubble over the chosen one.
         labelsLayer = Ui.Node("Labels", root);
@@ -105,7 +135,6 @@ public class ArenaScreen
         // The mission, at the top of the column.
         var mission = Ui.Soft(root, "Mission");
         Ui.Place(mission.rectTransform, 1020, 28, 840, 58);
-        string where = app.decide != null ? $"TASK {app.decide.RunNumber} OF {Decide.ShoppingTasks}" : app.lesson != null ? $"ERRAND {app.lesson.id}  ·  {app.StepName.ToUpperInvariant()}" : "FREE PLAY";
         var missionTag = Ui.Eyebrow(mission.transform, $"MISSION  ·  {arena.brief.from.ToUpperInvariant()}  ·  {where}", Theme.TealDeep);
         Ui.Place(missionTag.rectTransform, 16, 8, 800, 18);
         var missionText = Ui.Text(mission.transform, arena.brief.rule, 15, Theme.Ink);
@@ -151,8 +180,11 @@ public class ArenaScreen
             results.gameObject.SetActive(true);
             pause.interactable = false;
             int home = arena.agents.Count(a => a.alive), all = arena.agents.Count;
-            banners.Enqueue((home == all ? "ALL HOME" : home == 0 ? "NOBODY CAME HOME" : $"{home} OF {all} HOME", home == all ? Theme.TealDeep : home == 0 ? Theme.Danger : Theme.Ink, 2.2f));
+            if (home == all) { Sfx.Sting(Sfx.Mood.Fanfare); world.Celebrate(null); Announce("ALL HOME", $"{all} of {all} agents back with dinner", Theme.Teal, 2.4f, true); }
+            else if (home == 0) Announce("NOBODY CAME HOME", "every list had a gap in it", Theme.Danger, 2.4f, true);
+            else Announce($"{home} OF {all} HOME", "the rest were sent home early", Theme.Amber, 2.2f, true);
         };
+        sim.OnChanged += () => { if (sim.phase == "thinking" && !sim.finished) follower.StartCoroutine(Loop()); };
         world.Picked += Choose;
         world.Highlight(arena.agents[0]);
         Refresh();
@@ -163,52 +195,113 @@ public class ArenaScreen
         follower.StartCoroutine(Countdown());
     }
 
-    // ---- banners -----------------------------------------------------------------------
+    // ---- moments -----------------------------------------------------------------------
+
+    public void Announce(string text, string sub, Color colour, float seconds, bool big) => banners.Enqueue((text, sub, colour, seconds, big));
 
     IEnumerator Countdown()
     {
-        yield return new WaitForSeconds(0.4f);
-        foreach (var n in new[] { "3", "2", "1" }) yield return Banner(n, Theme.Ink, 0.5f);
-        yield return Banner("AGENTS OUT", Theme.TealDeep, 0.9f);
+        yield return new WaitForSeconds(0.3f);
+        world.ShowCountdown(world.frame, 2.6f);
+        foreach (var n in new[] { "3", "2", "1" }) Announce(n, "", Theme.Teal, 0.5f, true);
+        Announce("AGENTS OUT", "nobody can help them now", Theme.Teal, 0.9f, true);
+        follower.StartCoroutine(Banners());
+        yield return new WaitForSecondsRealtime(2.3f);
+        world.BackToOverview();
         sim.paused = false;
         Ui.SetLabel(pause, "Pause");
-        follower.StartCoroutine(Banners());
     }
 
     IEnumerator Banners()
     {
         while (true)
         {
-            if (banners.Count > 0) { var (text, colour, seconds) = banners.Dequeue(); yield return Banner(text, colour, seconds); }
+            if (banners.Count > 0) { var (text, sub, colour, seconds, big) = banners.Dequeue(); showing = true; yield return Moment(text, sub, colour, seconds, big); showing = false; }
             else yield return null;
         }
     }
 
-    // A big word across the market, in and out.
-    IEnumerator Banner(string text, Color colour, float seconds)
+    static float OutBack(float k) { const float c = 1.70158f; k -= 1f; return 1f + (c + 1f) * k * k * k + c * k * k; }
+
+    // A moment over the market: dark glass, the words in the moment's colour, in with an
+    // overshoot; a big one flashes the frame first and carries a line underneath.
+    IEnumerator Moment(string text, string sub, Color colour, float seconds, bool big)
     {
-        var card = Ui.Box(bannerLayer, "Banner", new Color(1, 1, 1, 0.92f));
-        Ui.Place(card.rectTransform, 110, 470, 820, 120);
+        Image flash = null;
+        if (big)
+        {
+            flash = Ui.Box(bannerLayer, "Flash", new Color(colour.r, colour.g, colour.b, 0f), false);
+            Ui.Place(flash.rectTransform, 40, 104, 940, 920);
+            flash.raycastTarget = false;
+        }
+        var card = Ui.Box(bannerLayer, "Moment", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f));
+        float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : 92;
+        float w = big ? 780 : 620;
+        Ui.Place(card.rectTransform, 40 + (940 - w) / 2, 530 - h / 2, w, h);
         card.raycastTarget = false;
-        var t = Ui.Text(card.transform, text, 56, colour, true, TextAlignmentOptions.Center);
-        t.characterSpacing = 4;
-        Ui.Stretch(t.rectTransform);
+        var keyline = Ui.Box(card.transform, "Keyline", colour, false);
+        Ui.Place(keyline.rectTransform, 0, 0, 6, h);
+        var t = Ui.Text(card.transform, text, big ? (text.Length <= 2 ? 96 : 56) : 36, colour, true, TextAlignmentOptions.Center);
+        t.characterSpacing = big ? 6 : 4;
+        Ui.Place(t.rectTransform, 20, big ? 14 : 20, w - 40, big ? 100 : 52);
+        t.enableWordWrapping = false;
+        if (!string.IsNullOrEmpty(sub))
+        {
+            var st = Ui.Text(card.transform, sub, big ? 18 : 14, Look.Chalk, false, TextAlignmentOptions.Center);
+            Ui.Place(st.rectTransform, 20, h - (big ? 52 : 32), w - 40, 26);
+            st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
+        }
         var group = Ui.Group(card);
         card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        card.rectTransform.anchoredPosition = new Vector2(110 + 410, -(470 + 60));
-        yield return Ui.Animate(0.18f, k => { group.alpha = k; card.rectTransform.localScale = Vector3.one * (1.15f - 0.15f * k); }, Ui.EaseOut);
+        card.rectTransform.anchoredPosition = new Vector2(510, -530);
+        if (big) Sfx.Sting(colour == Theme.Danger ? Sfx.Mood.Alarm : text == "AGENTS OUT" ? Sfx.Mood.Go : text.Length <= 1 ? Sfx.Mood.Beep : colour == Theme.Amber ? Sfx.Mood.Alarm : Sfx.Mood.Fanfare); else Sfx.Tick();
+        yield return Ui.Animate(big ? 0.34f : 0.2f, k =>
+        {
+            group.alpha = Mathf.Min(1f, k * 3f);
+            float sc = big ? Mathf.LerpUnclamped(0.6f, 1f, OutBack(k)) : Mathf.Lerp(1.12f, 1f, k);
+            card.rectTransform.localScale = Vector3.one * sc;
+            if (flash != null) flash.color = new Color(colour.r, colour.g, colour.b, 0.45f * Mathf.Max(0f, 1f - k * 2.5f));
+        });
+        if (flash != null) Object.Destroy(flash.gameObject);
         yield return new WaitForSecondsRealtime(seconds);
-        yield return Ui.Animate(0.25f, k => group.alpha = 1 - k);
+        yield return Ui.Animate(0.22f, k => { group.alpha = 1 - k; card.rectTransform.localScale = Vector3.one * (1f - 0.08f * k); });
         Object.Destroy(card.gameObject);
+    }
+
+    // The loop's three words light one after the other every turn: LOOK while the
+    // observation is written (a ring flashes under the chosen agent), DECIDE while the
+    // agents think, MOVE while they walk.
+    IEnumerator Loop()
+    {
+        Light(0);
+        world.Beat(world.Highlighted);
+        yield return new WaitForSecondsRealtime(0.45f);
+        if (sim.phase == "thinking") Light(1);
+        while (sim.phase == "thinking" && !sim.finished) yield return null;
+        Light(2);
+        yield return new WaitForSecondsRealtime(0.9f / Mathf.Max(0.5f, sim.speed));
+        if (sim.phase != "thinking") Light(-1);
+    }
+
+    void Light(int which)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (loopChips[i] == null) continue;
+            bool on = i == which;
+            loopChips[i].color = on ? Theme.Teal : new Color(1f, 1f, 1f, 0.1f);
+            loopWords[i].color = on ? Theme.Ink : Look.Chalk;
+            loopChips[i].transform.localScale = Vector3.one * (on ? 1.06f : 1f);
+        }
     }
 
     // After every turn: whoever was sent home or ran dry gets a banner, once.
     void Announce()
     {
         foreach (var m in sim.lastMoves)
-            if (m.ate != null && !m.agent.alive && announced.Add(m.agent)) banners.Enqueue(($"SENT HOME  ·  {m.agent.Name}", Theme.Danger, 1.4f));
+            if (m.ate != null && !m.agent.alive && announced.Add(m.agent)) Announce("SENT HOME", $"{m.agent.Name} bought {Items.Named(m.ate.id)}: that ruins dinner", Theme.Danger, 1.8f, true);
         foreach (var a in arena.agents)
-            if (a.alive && a.outOfTokens && announced.Add(a)) banners.Enqueue(($"OUT OF TOKENS  ·  {a.Name}", Theme.Amber, 1.4f));
+            if (a.alive && a.outOfTokens && announced.Add(a)) Announce("OUT OF TOKENS", $"{a.Name} has no money left for another turn", Theme.Amber, 1.6f, true);
     }
 
     // ---- the chosen agent ---------------------------------------------------------------
@@ -426,6 +519,10 @@ public class ArenaScreen
                   : sim.phase == "thinking" ? $"{running} agent{(running == 1 ? " is" : "s are")} looking at the stalls and deciding"
                   : "Walking.";
         phaseText.text = phaseBase;
+        homeText.text = $"{alive} / {arena.agents.Count}";
+        basketText.text = arena.agents.Sum(a => a.score).ToString();
+        long left = arena.agents.Where(a => !a.config.IsRule).Sum(a => a.TokensLeft);
+        tokensText.text = left >= 1000 ? $"{left / 1000f:0.0}k" : left.ToString();
         foreach (var a in arena.agents)
         {
             var c = cardOf[a];

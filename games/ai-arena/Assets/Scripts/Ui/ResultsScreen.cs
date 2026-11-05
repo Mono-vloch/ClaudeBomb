@@ -28,12 +28,22 @@ public class ResultsScreen
         bool training = app.Training, capstone = lesson != null && lesson.number == Ladder.Count, counts = lesson != null && !training;
         root = Ui.Node("Results", parent);
         Ui.Stretch(root);
-        app.Paper(Theme.Page);
+        app.Paper(Color.clear);
 
-        var title = Ui.Text(root, lesson != null ? $"Debrief · Errand {lesson.id} · {app.StepName}" : "The agents are home", 48, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 80, 44, 1200, 60);
-        var sub = Ui.Text(root, $"{arena.brief.from}: {arena.brief.rule}  Turns played: {Mathf.Min(sim.turn, sim.totalTurns)} of {sim.totalTurns}.", 18, Theme.Text2);
-        Ui.Place(sub.rectTransform, 80, 110, 1600, 30);
+        // The world behind the screen: the market the errand ran on, turning slowly, soft.
+        var window = Ui.Node("Window", root);
+        Ui.Place(window, 1000, 100, 860, 300);
+        app.world.Build(arena, false);
+        app.world.ShowOrbitOf(window);
+        app.atmosphere.MenuBlur(true);
+        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.28f), false);
+        Ui.Stretch(scrim.rectTransform);
+        scrim.raycastTarget = false;
+
+        var title = Ui.Text(root, lesson != null ? $"Debrief · Errand {lesson.id} · {app.StepName}" : "The agents are home", 44, Theme.Ink, true);
+        Ui.Place(title.rectTransform, 80, 36, 1200, 56);
+        var sub = Ui.Text(root, $"{arena.brief.from}: {arena.brief.rule}  Turns played: {Mathf.Min(sim.turn, sim.totalTurns)} of {sim.totalTurns}.", 16, Theme.Text2);
+        Ui.Place(sub.rectTransform, 80, 100, 900, 50);
 
         var ranked = arena.agents
             .OrderByDescending(a => a.alive ? 1 : 0)
@@ -42,8 +52,7 @@ public class ResultsScreen
             .ToList();
 
         int n = ranked.Count;
-        float recap = lesson != null ? 150 : 0;
-        float y = 156, h = Mathf.Min(122, (1080 - 156 - 130 - recap - 10 * (n - 1)) / n);
+        float y = 416, h = Mathf.Min(122, (980 - 416 - 10 * (n - 1)) / n);
         bool checks = lesson != null && h >= 100;
         int bestMedal = 0;
         foreach (var a in ranked)
@@ -84,9 +93,9 @@ public class ResultsScreen
                     bool bad = !arena.brief.IsSafe(Items.Get(item));
                     if (bad)
                     {
-                        var ring = Ui.Dot(t, Theme.Danger, 34);
+                        var ring = Ui.Box(t, "Ring", Theme.Danger);
                         Ui.Place(ring.rectTransform, bx - 3, 58, 34, 34);
-                        var inner = Ui.Dot(t, Theme.DangerSoft, 30);
+                        var inner = Ui.Box(t, "Inner", Theme.DangerSoft);
                         Ui.Place(inner.rectTransform, bx - 1, 60, 30, 30);
                     }
                     var icon = Ui.Icon(t, item, 26);
@@ -103,9 +112,9 @@ public class ResultsScreen
             Ui.Place(score.rectTransform, 400, 0, 150, h);
             if (lesson != null && medal > 0)
             {
-                var pill = Ui.Box(t, "Medal", medal == 3 ? Gold : medal == 2 ? Silver : Bronze);
-                Ui.Place(pill.rectTransform, 580, h / 2 - 13, 80, 26);
-                var mt = Ui.Text(pill.transform, MedalNames[medal], 11, Color.white, true, TextAlignmentOptions.Center);
+                var badge = Ui.Box(t, "Medal", medal == 3 ? Gold : medal == 2 ? Silver : Bronze);
+                Ui.Place(badge.rectTransform, 580, h / 2 - 14, 84, 28);
+                var mt = Ui.Text(badge.transform, MedalNames[medal], 11, Color.white, true, TextAlignmentOptions.Center);
                 mt.characterSpacing = 3;
                 Ui.Stretch(mt.rectTransform);
             }
@@ -138,13 +147,14 @@ public class ResultsScreen
             y += h + 10;
         }
 
+        Medal(bestMedal, lesson != null, ranked.Count(a => a.alive));
         if (lesson != null)
         {
             if (counts) app.SetStars(lesson.number, bestMedal);
             app.luma.Say("recap");
             bool unlock = counts && lesson.number < Ladder.Count;
-            Luma.Card(root, 80, y + 4, unlock ? 1320 : 1760, 136, lesson.takeaway + (capstone ? " " + Ladder.FiveWays : ""), 18, "Ask as the agent's manager: " + lesson.ask);
-            if (unlock) Unlock(y + 4, Ladder.Get(lesson.number + 1), bestMedal);
+            Luma.Card(root, 80, 156, 900, unlock ? 136 : 240, lesson.takeaway + (capstone ? " " + Ladder.FiveWays : ""), 16, "Ask as the agent's manager: " + lesson.ask);
+            if (unlock) Unlock(304, Ladder.Get(lesson.number + 1), bestMedal);
 
             float bx = 80;
             Button Add(string label, System.Action act, Ui.ButtonStyle style, float w)
@@ -204,15 +214,69 @@ public class ResultsScreen
         return needed > 0 && ticked == needed ? 3 : ticked * 2 >= needed && needed > 0 ? 2 : a.alive ? 1 : 0;
     }
 
+    // The medal, revealed over the turning market: the badge comes in with an overshoot,
+    // the stars light one by one, confetti and a fanfare for silver and gold.
+    void Medal(int medal, bool hasLevel, int home)
+    {
+        var cap = Ui.Glass(root, "Window caption", 1000, 100, 860, 40);
+        var caption = Ui.Eyebrow(cap.transform, $"{arena.brief.title.ToUpperInvariant()}  ·  {home} OF {arena.agents.Count} HOME WITH DINNER", Theme.Teal);
+        Ui.Place(caption.rectTransform, 20, 12, 820, 18);
+        Color colour = medal == 3 ? Gold : medal == 2 ? Silver : medal == 1 ? Bronze : Theme.Ink;
+        var badge = Ui.Glass(root, "Medal", 1230, 215, 400, 150, true, colour);
+        var b = badge.transform;
+        var tag = Ui.Eyebrow(b, hasLevel ? "THE MEDAL" : "FREE PLAY", Theme.Teal);
+        Ui.Place(tag.rectTransform, 0, 14, 400, 18); tag.alignment = TextAlignmentOptions.Top;
+        var name = Ui.Text(b, medal > 0 ? MedalNames[medal] : "NO MEDAL YET", medal > 0 ? 44 : 28, medal > 0 ? colour : Look.Chalk, true, TextAlignmentOptions.Center);
+        name.characterSpacing = 6;
+        Ui.Place(name.rectTransform, 0, 34, 400, 60);
+        var stars = new Image[3];
+        for (int s = 0; s < 3; s++)
+        {
+            stars[s] = Ui.Box(b, "Star", s < medal ? colour : new Color(1, 1, 1, 0.16f));
+            Ui.Place(stars[s].rectTransform, 155 + s * 32, 98, 26, 26);
+            stars[s].raycastTarget = false;
+        }
+        var rank = Ui.Text(b, hasLevel ? $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}" : "the stars count on an errand's own run", 13, Look.Chalk, false, TextAlignmentOptions.Center);
+        Ui.Place(rank.rectTransform, 0, 122, 400, 20);
+        app.StartCoroutine(Reveal(badge, stars, medal, colour));
+    }
+
+    System.Collections.IEnumerator Reveal(Image badge, Image[] stars, int medal, Color colour)
+    {
+        var group = Ui.Group(badge);
+        group.alpha = 0f;
+        badge.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        badge.rectTransform.anchoredPosition = new Vector2(1230 + 200, -(215 + 75));
+        foreach (var s in stars) s.transform.localScale = Vector3.zero;
+        yield return new WaitForSecondsRealtime(0.55f);
+        if (badge == null) yield break;
+        if (medal > 0) Sfx.Sting(Sfx.Mood.Fanfare); else Sfx.Tick();
+        yield return Ui.Animate(0.45f, k =>
+        {
+            if (badge == null) return;
+            group.alpha = Mathf.Min(1f, k * 3f);
+            badge.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.5f, 1f, Ui.EaseOutBack(k));
+        });
+        for (int s = 0; s < medal; s++)
+        {
+            int i = s;
+            Sfx.Chime();
+            yield return Ui.Animate(0.22f, k => { if (stars[i] != null) stars[i].transform.localScale = Vector3.one * Mathf.LerpUnclamped(0f, 1f, Ui.EaseOutBack(k)); });
+            if (medal >= 2) app.world.Celebrate(null);
+            yield return new WaitForSecondsRealtime(0.1f);
+        }
+        for (int s = medal; s < 3; s++) if (stars[s] != null) stars[s].transform.localScale = Vector3.one;
+    }
+
     // What the next errand opens, revealed here: the reward for this one.
     void Unlock(float y, Lesson next, int stars)
     {
         var card = Ui.Card(root, "Unlock", Theme.TealDeep, Theme.TealDeep);
-        Ui.Place(card.rectTransform, 1420, y, 420, 136);
+        Ui.Place(card.rectTransform, 80, y, 900, 100);
         var t = card.transform;
         var tag = Ui.Eyebrow(t, $"UNLOCKED FOR ERRAND {next.id}", Theme.Teal);
         tag.font = Theme.Bold;
-        Ui.Place(tag.rectTransform, 20, 14, 380, 20);
+        Ui.Place(tag.rectTransform, 20, 12, 380, 20);
         string what = next.number == Ladder.VisionLevel ? "How far it sees: the vision dial opens."
                     : next.number == Ladder.MemoryLevel ? "Memory: none, the last turns, or a notebook it writes."
                     : next.number == Ladder.ModelLevel ? "Brain and effort: which Claude, and how hard it thinks."
@@ -220,9 +284,10 @@ public class ResultsScreen
                     : next.number == Ladder.Count ? "Everything open, and no help: the capstone."
                     : next.title;
         var body = Ui.Text(t, what, 17, Color.white, true);
-        Ui.Place(body.rectTransform, 20, 38, 380, 56);
+        Ui.Place(body.rectTransform, 20, 34, 860, 30);
+        body.enableWordWrapping = false; body.overflowMode = TextOverflowModes.Ellipsis;
         var starsLine = Ui.Text(t, $"{stars} of 3 stars banked for this errand  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Theme.Teal);
-        Ui.Place(starsLine.rectTransform, 20, 100, 380, 24);
+        Ui.Place(starsLine.rectTransform, 20, 66, 860, 24);
     }
 
     // On the platform's site: out of this game, back to the menu of games.
