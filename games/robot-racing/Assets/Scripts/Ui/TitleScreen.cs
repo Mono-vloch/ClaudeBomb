@@ -35,6 +35,9 @@ public class TitleScreen
             var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 18);
             Ui.Place(menu.GetComponent<RectTransform>(), 1600, 58, 200, 52);
         }
+        Button sound = null;
+        sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(sound.GetComponent<RectTransform>(), 1440, 58, 140, 52);
 
         var eyebrow = Ui.Eyebrow(root, "ROBOT RACING  ·  GAME 03", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
@@ -70,17 +73,18 @@ public class TitleScreen
                 var l = levels[i];
                 bool isNext = l.number == next, isDone = l.number <= done;
                 float x = x0 + i * step;
+                // Rounded squares, never circles: the level's stop is a button.
                 if (isNext)
                 {
-                    var halo = Ui.Dot(root, new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f), 48);
-                    Ui.Place(halo.rectTransform, x - 24, ty - 24, 48, 48);
+                    var halo = Ui.Box(root, "Halo", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f));
+                    Ui.Place(halo.rectTransform, x - 26, ty - 26, 52, 52);
                     halo.raycastTarget = false;
                 }
-                var rim = Ui.Dot(root, isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f), 34);
-                Ui.Place(rim.rectTransform, x - 17, ty - 17, 34, 34);
-                var stop = Ui.Dot(root, isDone || isNext ? Theme.Teal : Theme.Ink, 30);
-                Ui.Place(stop.rectTransform, x - 15, ty - 15, 30, 30);
-                var num = Ui.Text(stop.transform, l.id, 11, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
+                var rim = Ui.Box(root, "Rim", isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f));
+                Ui.Place(rim.rectTransform, x - 19, ty - 19, 38, 38);
+                var stop = Ui.Box(root, "Stop", isDone || isNext ? Theme.Teal : Theme.Ink);
+                Ui.Place(stop.rectTransform, x - 17, ty - 17, 34, 34);
+                var num = Ui.Text(stop.transform, l.id, 12, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
                 Ui.Stretch(num.rectTransform);
                 int stars = app.StarsOf(l.number);
                 for (int s = 0; s < 3; s++)

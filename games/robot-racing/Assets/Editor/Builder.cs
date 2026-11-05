@@ -10,7 +10,7 @@ public static class Builder
     [MenuItem("Robot Racing/Build macOS app")]
     public static void BuildMac()
     {
-        ProjectSetup.Run(); ProjectSetup.FixPictures();
+        ProjectSetup.Run(); ProjectSetup.FixPictures(); FontBaker.Bake(false);
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = new[] { Scene },
@@ -33,12 +33,21 @@ public static class Builder
     [MenuItem("Robot Racing/Build web")]
     public static void BuildWeb()
     {
-        ProjectSetup.Run(); ProjectSetup.FixPictures();
+        ProjectSetup.Run(); ProjectSetup.FixPictures(); FontBaker.Bake(false);
         Maaloomatiia.Games.Editor.WebTemplate.Install(); // the platform's page, from the kit
         PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
         PlayerSettings.WebGL.decompressionFallback = true;
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.nameFilesAsHashes = true;
+        // The release settings (Unity's web optimisation guide): strip the engine, size over
+        // speed in IL2CPP, no debug symbols, the smallest code the linker can make. Managed
+        // stripping stays at Medium: the kit reads JSON through reflection.
+        PlayerSettings.stripEngineCode = true;
+        PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.WebGL, ManagedStrippingLevel.Medium);
+        PlayerSettings.SetIl2CppCodeGeneration(UnityEditor.Build.NamedBuildTarget.WebGL, UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize);
+        PlayerSettings.WebGL.debugSymbolMode = WebGLDebugSymbolMode.Off;
+        PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
+        UnityEditor.WebGL.UserBuildSettings.codeOptimization = UnityEditor.WebGL.WasmCodeOptimization.DiskSizeLTO;
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = new[] { Scene },

@@ -40,6 +40,7 @@ public class Luma : MonoBehaviour
     public static Sprite Portrait => Resources.Load<Sprite>("Luma/luma");
 
     AudioSource voice;
+    public bool Speaking => voice != null && voice.isPlaying;
     Coroutine speaking;
 
     void Awake()

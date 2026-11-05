@@ -10,7 +10,7 @@ using UnityEngine;
 // stays straight. Changes glide.
 public class SceneCamera : MonoBehaviour
 {
-    public enum Mode { Off, Overview, Follow, Orbit, Portrait }
+    public enum Mode { Off, Overview, Follow, Orbit, Portrait, Rig } // Rig: CameraRig drives the camera
 
     public Mode mode = Mode.Off;
     public RectTransform frame;   // the part of the screen (an overlay-canvas rect) the subject sits in
@@ -76,9 +76,21 @@ public class SceneCamera : MonoBehaviour
     // The next frame jumps into place instead of gliding (a new screen).
     public void Snap() => snap = true;
 
+    // Taking the camera back from the rig: glide on from where it is now.
+    public void Resume()
+    {
+        pos = transform.position; rot = transform.rotation; currentFov = cam.fieldOfView;
+        velocity = Vector3.zero; snap = false;
+        if (mode == Mode.Rig) mode = follow != null ? Mode.Follow : Mode.Overview;
+    }
+
+    // A small shake of the overview on a crash: an offset that dies down.
+    float kick;
+    public void Kick(float strength) => kick = Mathf.Max(kick, strength);
+
     void LateUpdate()
     {
-        if (mode == Mode.Off || frame == null) return;
+        if (mode == Mode.Off || mode == Mode.Rig || frame == null) return;
         if ((mode == Mode.Follow || mode == Mode.Portrait) && follow == null) mode = Mode.Overview;
         float dt = Time.unscaledDeltaTime;
 
@@ -134,6 +146,12 @@ public class SceneCamera : MonoBehaviour
             pos = Vector3.SmoothDamp(pos, targetPos, ref velocity, 0.4f, float.PositiveInfinity, dt);
             rot = Quaternion.Slerp(rot, targetRot, 1f - Mathf.Exp(-5f * dt));
             currentFov = Mathf.Lerp(currentFov, targetFov, 1f - Mathf.Exp(-4f * dt));
+        }
+        if (kick > 0.001f)
+        {
+            float k = kick;
+            kick = Mathf.MoveTowards(kick, 0f, dt * 0.8f);
+            pos += new Vector3(Mathf.Sin(Time.unscaledTime * 61f), Mathf.Cos(Time.unscaledTime * 47f), 0f) * (k * k * 0.4f);
         }
         transform.SetPositionAndRotation(pos, rot);
         cam.fieldOfView = currentFov;

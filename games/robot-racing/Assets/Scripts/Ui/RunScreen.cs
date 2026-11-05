@@ -25,15 +25,16 @@ public class RunScreen
     public Phase phase = Phase.Training;
     readonly Chart chart;
     readonly RectTransform labelsLayer, bannerLayer, bookContent;
-    readonly TextMeshProUGUI turnText, phaseText, pointsText, exploreText, moveText, bookCount, coach, missionText;
+    readonly TextMeshProUGUI turnText, phaseText, pointsText, exploreText, moveText, bookCount, coach, missionText, rewardText, bestText, lapText;
     readonly TextMeshProUGUI[] sensorText = new TextMeshProUGUI[Sensors.Count];
     readonly (Image track, Image fill)[] sensorBar = new (Image, Image)[Sensors.Count];
     readonly Button pause, results, stop;
-    readonly Ui.Segmented speed;
+    readonly Ui.Segmented speed, viewToggle;
     readonly Follower follower;
-    readonly Queue<(string text, Color colour, float seconds)> banners = new Queue<(string, Color, float)>();
+    readonly Queue<(string text, string sub, Color colour, float seconds, bool big)> banners = new Queue<(string, string, Color, float, bool)>();
+    readonly List<Vector2Int> path = new List<Vector2Int>();
     int speedIndex = 2;
-    bool paused, saidFirst, saidSettled, saidLoophole;
+    bool paused, saidFirst, saidSettled, saidLoophole, showing;
     float acc, bookTimer, chartTimer;
     string shownKey = "";
     static readonly float[] Interval = { 1f / 5, 1f / 40, 1f / 400, 0f };
@@ -55,28 +56,45 @@ public class RunScreen
         var column = Ui.Box(root, "Column", new Color(1, 1, 1, 0.84f), false);
         Ui.Place(column.rectTransform, 1000, -300, 1600, 1700);
         column.raycastTarget = false;
-        var top = Ui.Box(root, "Top", new Color(1, 1, 1, 0.8f));
-        Ui.Place(top.rectTransform, 40, 16, 950, 82);
-        top.raycastTarget = false;
-
-        turnText = Ui.Text(root, "", 28, Theme.Ink, true);
-        Ui.Place(turnText.rectTransform, 60, 24, 370, 40);
+        // The mission HUD, dark glass over the world: the level and the step, the attempt,
+        // the reward score, the best, the lap.
+        var hud1 = Ui.Glass(root, "Hud", 40, 16, 500, 96);
+        var levelTag = Ui.Eyebrow(hud1.transform, l != null ? $"LEVEL {l.id}  ·  {app.StepName.ToUpperInvariant()}" : "FREE PLAY", Theme.Teal);
+        levelTag.font = Theme.Bold;
+        Ui.Place(levelTag.rectTransform, 20, 10, 460, 18);
+        turnText = Ui.Text(hud1.transform, "", 28, Color.white, true);
+        Ui.Place(turnText.rectTransform, 20, 28, 460, 40);
         turnText.enableWordWrapping = false;
-        phaseText = Ui.Text(root, "", 15, Theme.Text2);
-        Ui.Place(phaseText.rectTransform, 60, 62, 370, 26);
-        var speedLabel = Ui.Text(root, "Speed", 14, Theme.Text2, false, TextAlignmentOptions.MidlineRight);
-        Ui.Place(speedLabel.rectTransform, 430, 36, 50, 44);
-        speed = new Ui.Segmented(root, new[] { "1x", "10x", "100x", "Max" }, speedIndex, 292, 44, 13);
-        Ui.Place(speed.root, 486, 36, 292, 44);
-        speed.OnSelect = i => speedIndex = i;
-        pause = Ui.Button(root, "Pause", () => { paused = !paused; Ui.SetLabel(pause, paused ? "Resume" : "Pause"); }, Ui.ButtonStyle.Secondary, 14);
-        Ui.Place(pause.GetComponent<RectTransform>(), 786, 36, 86, 44);
-        stop = Ui.Button(root, "Stop, race now", () => { if (phase == Phase.Training) { training.done = true; } }, Ui.ButtonStyle.Quiet, 14);
-        Ui.Place(stop.GetComponent<RectTransform>(), 876, 36, 110, 44);
+        phaseText = Ui.Text(hud1.transform, "", 12, Look.AsphaltLine);
+        Ui.Place(phaseText.rectTransform, 20, 68, 460, 22);
+        phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
+        var hud2 = Ui.Glass(root, "Score", 550, 16, 440, 96);
+        TextMeshProUGUI Stat(string name, float x, float w)
+        {
+            var e = Ui.Eyebrow(hud2.transform, name, Theme.Teal);
+            Ui.Place(e.rectTransform, x, 12, w, 16);
+            var v = Ui.Text(hud2.transform, "", 26, Color.white, true);
+            Ui.Place(v.rectTransform, x, 32, w, 40);
+            v.enableWordWrapping = false; v.overflowMode = TextOverflowModes.Ellipsis;
+            return v;
+        }
+        rewardText = Stat("REWARD", 20, 150);
+        bestText = Stat("BEST", 180, 130);
+        lapText = Stat("LAP", 320, 110);
 
-        var viewToggle = new Ui.Segmented(root, new[] { "The track", "Follow" }, 0, 260, 40, 14);
+        viewToggle = new Ui.Segmented(root, new[] { "The track", "Follow" }, 0, 260, 40, 14);
         Ui.Place(viewToggle.root, 40, 1032, 260, 40);
         viewToggle.OnSelect = i => { if (i == 0) app.world.ShowOverviewAgain(); else app.world.ShowFollow(frame); };
+        var speedLabel = Ui.Text(root, "Speed", 14, Theme.Text2, false, TextAlignmentOptions.MidlineRight);
+        Ui.Place(speedLabel.rectTransform, 310, 1032, 50, 40);
+        speed = new Ui.Segmented(root, new[] { "1x", "10x", "100x", "Max" }, speedIndex, 292, 40, 13);
+        Ui.Place(speed.root, 368, 1032, 292, 40);
+        speed.OnSelect = i => { speedIndex = i; Sfx.EngineAudible = i <= 1; };
+        Sfx.EngineAudible = speedIndex <= 1;
+        pause = Ui.Button(root, "Pause", () => { paused = !paused; Ui.SetLabel(pause, paused ? "Resume" : "Pause"); if (paused) Sfx.Engine(0f); }, Ui.ButtonStyle.Secondary, 14);
+        Ui.Place(pause.GetComponent<RectTransform>(), 672, 1032, 90, 40);
+        stop = Ui.Button(root, "Stop, race now", RaceNow, Ui.ButtonStyle.Quiet, 14);
+        Ui.Place(stop.GetComponent<RectTransform>(), 770, 1032, 150, 40);
 
         chart = new Chart(root, 40, 716, 940, 304, "POINTS PER ATTEMPT  ·  THE CURVE");
         labelsLayer = Ui.Node("Labels", root);
@@ -166,7 +184,8 @@ public class RunScreen
     }
     int lapsWanted => app.lesson != null ? app.lesson.laps : 5;
 
-    public void SetSpeed(int i) { speedIndex = i; speed.Set(i, false); }
+    public void SetSpeed(int i) { speedIndex = i; speed.Set(i, false); Sfx.EngineAudible = i <= 1; }
+    public void RaceNow() { if (phase == Phase.Training) training.done = true; }
 
     // ---- every frame ---------------------------------------------------------------------
 
@@ -201,14 +220,18 @@ public class RunScreen
         if (phase == Phase.Training)
         {
             if (training.done) { StartRace(); return false; }
+            if (path.Count == 0) path.Add(training.car.from);
             bool ended = training.Tick();
+            if (path.Count == 0 || path[path.Count - 1] != training.car.pos) path.Add(training.car.pos);
             if (ended)
             {
                 var a = training.Last;
-                if (watchable || speedIndex == 1) { if (a.finished) app.world.Finished(); else app.world.Crash(); }
-                if (a.finished && !saidFirst) { saidFirst = true; banners.Enqueue(("FIRST FINISH", Theme.Amber, 1.2f)); coach.text = $"First finish at attempt {a.index}. One finish proves nothing: watch whether the curve stays up."; }
-                if (training.settled > 0 && !saidSettled) { saidSettled = true; banners.Enqueue(("THE CURVE SETTLED", Theme.TealDeep, 1.2f)); coach.text = $"The curve settled at attempt {training.settled}: most attempts finish now. That is learning, not luck."; }
-                if (!saidLoophole && a.points > training.s.finish * 0.6f && !a.finished && training.s.speedBonus > 0) { saidLoophole = true; banners.Enqueue(("POINTS, NO LAP", Theme.Danger, 1.4f)); coach.text = "Look: the curve rises and the lap count stays at zero. It found the cheapest way to the number, and the number was not the job."; }
+                if (watchable || speedIndex == 1) { if (a.finished) app.world.Finished(watchable); else app.world.Crash(watchable); }
+                app.world.AddGhost(path, a.finished);
+                path.Clear();
+                if (a.finished && !saidFirst) { saidFirst = true; Announce("FIRST FINISH", $"attempt {a.index}", Theme.Amber, 1.4f, true); coach.text = $"First finish at attempt {a.index}. One finish proves nothing: watch whether the curve stays up."; }
+                if (training.settled > 0 && !saidSettled) { saidSettled = true; Announce("THE CURVE SETTLED", $"attempt {training.settled}: most attempts finish now", Theme.Teal, 1.5f, true); coach.text = $"The curve settled at attempt {training.settled}: most attempts finish now. That is learning, not luck."; }
+                if (!saidLoophole && a.points > training.s.finish * 0.6f && !a.finished && training.s.speedBonus > 0) { saidLoophole = true; Announce("REWARD HACKED", "points, no lap: it found the cheapest way to the number", Theme.Danger, 2.4f, true); coach.text = "Look: the curve rises and the lap count stays at zero. It found the cheapest way to the number, and the number was not the job."; }
                 if (training.done) { StartRace(); return false; }
             }
             return true;
@@ -219,8 +242,8 @@ public class RunScreen
             if (lapEnded)
             {
                 var lap = race.laps.Last();
-                if (watchable || speedIndex == 1) { if (lap.finished) app.world.Finished(); else app.world.Crash(); }
-                if (watchable) banners.Enqueue((lap.finished ? $"LAP {lap.index}: FINISHED IN {lap.steps} MOVES" : $"LAP {lap.index}: CRASHED", lap.finished ? Theme.TealDeep : Theme.Danger, 0.9f));
+                if (watchable || speedIndex == 1) { if (lap.finished) app.world.Finished(watchable); else app.world.Crash(watchable); }
+                if (watchable) Announce(lap.finished ? $"LAP {lap.index}" : $"LAP {lap.index}: CRASHED", lap.finished ? $"finished in {lap.steps} moves" : "", lap.finished ? Theme.Teal : Theme.Danger, 0.9f, false);
                 if (race.done) { EndRace(); return false; }
             }
             return true;
@@ -235,12 +258,42 @@ public class RunScreen
         race = new Race(training, Track.Get(training.s.test), lapsWanted, training.s.seed + 1);
         if (race.track != training.track || true) { app.world.Build(race.track, false); app.world.ShowOverview(app.world.frame); }
         if (speedIndex > 1) SetSpeed(1);
-        banners.Enqueue(("THE RACE", Theme.Ink, 1.2f));
         coach.text = $"The race: {lapsWanted} laps on {race.track.name.ToLowerInvariant()} with the rule book as it is. No new moves, no learning.";
         Mission();
+        follower.StartCoroutine(RaceIntro());
+    }
+
+    // The grid: the camera flies in behind the car while the countdown runs, then the chase.
+    IEnumerator RaceIntro()
+    {
+        paused = true;
+        Ui.SetLabel(pause, "Pause");
+        // A teaching moment still on its way (the first finish, the curve settling, the
+        // wrong reward) is shown first: at the fast speeds the training ends under it.
+        while (banners.Count > 0 || showing) yield return null;
+        app.world.ShowCountdown(app.world.frame, 2.6f);
+        viewToggle.Set(1, false);
+        yield return new WaitForSecondsRealtime(0.3f);
+        foreach (var n in new[] { "3", "2", "1" }) Announce(n, "", Theme.Teal, 0.5f, true);
+        Announce("GO", $"{lapsWanted} laps, the rule book as it is", Theme.Teal, 0.9f, true);
+        yield return new WaitForSecondsRealtime(2.3f);
+        paused = false;
     }
 
     void EndRace()
+    {
+        var last = race.laps.Last();
+        if (last.finished && (phase == Phase.Real || which + 1 >= queue.Count))
+        {
+            // The last lap of the last race: the slow-motion turn around the car first.
+            paused = true;
+            app.world.FinishMoment(1.8f, () => { paused = false; EndRaceNow(); });
+            return;
+        }
+        EndRaceNow();
+    }
+
+    void EndRaceNow()
     {
         if (phase == Phase.Real) { app.session.real = race; phase = Phase.Done; Finish(); return; }
         app.session.runs.Add(training);
@@ -259,7 +312,7 @@ public class RunScreen
         app.world.Build(race.track, false);
         app.world.ShowOverview(app.world.frame);
         SetSpeed(0);
-        banners.Enqueue(("THE REAL RUN", Theme.Danger, 1.4f));
+        Announce("THE REAL RUN", "one lap, no learning, on a track the simulator never had", Theme.Danger, 1.8f, true);
         coach.text = "One lap on the real track, no learning. The oil on the straight is something the simulator never had.";
         Mission();
     }
@@ -267,7 +320,7 @@ public class RunScreen
     void Finish()
     {
         int home = app.session.races.Count > 0 ? app.session.LastRace.Finishes : 0;
-        banners.Enqueue((home * 2 >= lapsWanted ? "RACE OVER" : "BACK TO THE PIT LANE", Theme.Ink, 1.6f));
+        Announce(home * 2 >= lapsWanted ? "RACE OVER" : "BACK TO THE PIT LANE", home * 2 >= lapsWanted ? $"{home} of {lapsWanted} laps finished" : "most laps did not finish", home * 2 >= lapsWanted ? Theme.Teal : Theme.Amber, 1.8f, true);
         results.gameObject.SetActive(true);
         pause.interactable = stop.interactable = false;
         Mission();
@@ -285,6 +338,10 @@ public class RunScreen
     {
         if (phase == Phase.Training)
         {
+            var bestLap = training.curve.Where(a => a.finished).Select(a => a.steps).DefaultIfEmpty(0).Min();
+            rewardText.text = $"{training.attemptPoints:+0;-0;0}";
+            bestText.text = $"{training.Best:0}";
+            lapText.text = bestLap > 0 ? $"{bestLap} mv" : "–";
             turnText.text = $"Attempt {Mathf.Min(training.Attempts + 1, training.s.attempts)} of {training.s.attempts}";
             phaseText.text = training.firstFinish < 0 ? "No finish yet. Random moves, and the points sorting them." : training.settled < 0 ? $"First finish at {training.firstFinish}. Waiting for the curve to settle." : $"Settled at {training.settled}.";
             pointsText.text = $"This attempt: {training.attemptPoints:0} points  ·  best attempt: {training.Best:0}  ·  last move earned {training.lastReward:+0.#;-0.#}";
@@ -294,6 +351,10 @@ public class RunScreen
         }
         else if (race != null)
         {
+            var bestLap = race.laps.Where(a => a.finished).Select(a => a.steps).DefaultIfEmpty(0).Min();
+            rewardText.text = $"{race.Finishes}/{race.laps.Count}";
+            bestText.text = bestLap > 0 ? $"{bestLap} mv" : "–";
+            lapText.text = $"{race.car.steps} mv";
             turnText.text = phase == Phase.Real ? "The real run" : $"Lap {Mathf.Min(race.Lap, lapsWanted)} of {lapsWanted}";
             phaseText.text = $"Finished {race.Finishes}, crashed {race.Crashes}, wall touches {race.Touches:0.0} a lap, lap time {race.LapTime:0} moves";
             pointsText.text = $"No new moves, no learning: the rule book as it is. Unknown situations met: {race.unknown}.";
@@ -346,36 +407,68 @@ public class RunScreen
         bookContent.sizeDelta = new Vector2(0, y);
     }
 
-    // ---- banners -----------------------------------------------------------------------
+    // ---- moments -----------------------------------------------------------------------
+
+    public void Announce(string text, string sub, Color colour, float seconds, bool big) => banners.Enqueue((text, sub, colour, seconds, big));
 
     IEnumerator Countdown()
     {
         paused = true;
         yield return new WaitForSeconds(0.3f);
-        yield return Banner("ATTEMPT 1", Theme.Ink, 0.7f);
+        yield return Moment("ATTEMPT 1", "it starts knowing nothing", Theme.Teal, 0.8f, false);
         paused = false;
         Ui.SetLabel(pause, "Pause");
         while (true)
         {
-            if (banners.Count > 0) { var (text, colour, seconds) = banners.Dequeue(); yield return Banner(text, colour, seconds); }
+            if (banners.Count > 0) { var (text, sub, colour, seconds, big) = banners.Dequeue(); showing = true; yield return Moment(text, sub, colour, seconds, big); showing = false; }
             else yield return null;
         }
     }
 
-    IEnumerator Banner(string text, Color colour, float seconds)
+    static float OutBack(float k) { const float c = 1.70158f; k -= 1f; return 1f + (c + 1f) * k * k * k + c * k * k; }
+
+    // A moment over the world: dark glass, the words in the moment's colour, in with an
+    // overshoot; a big one flashes the frame first and carries a line underneath.
+    IEnumerator Moment(string text, string sub, Color colour, float seconds, bool big)
     {
-        var card = Ui.Box(bannerLayer, "Banner", new Color(1, 1, 1, 0.92f));
-        Ui.Place(card.rectTransform, 110, 360, 820, 110);
+        Image flash = null;
+        if (big)
+        {
+            flash = Ui.Box(bannerLayer, "Flash", new Color(colour.r, colour.g, colour.b, 0f), false);
+            Ui.Place(flash.rectTransform, 40, 104, 940, 600);
+            flash.raycastTarget = false;
+        }
+        var card = Ui.Box(bannerLayer, "Moment", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f));
+        float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : 92;
+        float w = big ? 760 : 620;
+        Ui.Place(card.rectTransform, 40 + (940 - w) / 2, 404 - h / 2, w, h);
         card.raycastTarget = false;
-        var t = Ui.Text(card.transform, text, 46, colour, true, TextAlignmentOptions.Center);
-        t.characterSpacing = 4;
-        Ui.Stretch(t.rectTransform);
+        var keyline = Ui.Box(card.transform, "Keyline", colour, false);
+        Ui.Place(keyline.rectTransform, 0, 0, 6, h);
+        var t = Ui.Text(card.transform, text, big ? (text.Length <= 2 ? 96 : 60) : 36, colour, true, TextAlignmentOptions.Center);
+        t.characterSpacing = big ? 6 : 4;
+        Ui.Place(t.rectTransform, 20, big ? 14 : 20, w - 40, big ? 100 : 52);
+        t.enableWordWrapping = false;
+        if (!string.IsNullOrEmpty(sub))
+        {
+            var st = Ui.Text(card.transform, sub, big ? 18 : 14, Look.AsphaltLine, false, TextAlignmentOptions.Center);
+            Ui.Place(st.rectTransform, 20, h - (big ? 52 : 32), w - 40, 26);
+            st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
+        }
         var group = Ui.Group(card);
         card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        card.rectTransform.anchoredPosition = new Vector2(110 + 410, -(360 + 55));
-        yield return Ui.Animate(0.18f, k => { group.alpha = k; card.rectTransform.localScale = Vector3.one * (1.15f - 0.15f * k); }, Ui.EaseOut);
+        card.rectTransform.anchoredPosition = new Vector2(510, -404);
+        if (big) Sfx.Sting(colour == Theme.Danger ? Sfx.Mood.Alarm : text == "GO" ? Sfx.Mood.Go : text.Length <= 1 ? Sfx.Mood.Beep : Sfx.Mood.Fanfare); else Sfx.Tick();
+        yield return Ui.Animate(big ? 0.34f : 0.2f, k =>
+        {
+            group.alpha = Mathf.Min(1f, k * 3f);
+            float sc = big ? Mathf.LerpUnclamped(0.6f, 1f, OutBack(k)) : Mathf.Lerp(1.12f, 1f, k);
+            card.rectTransform.localScale = Vector3.one * sc;
+            if (flash != null) flash.color = new Color(colour.r, colour.g, colour.b, 0.45f * Mathf.Max(0f, 1f - k * 2.5f));
+        });
+        if (flash != null) Object.Destroy(flash.gameObject);
         yield return new WaitForSecondsRealtime(seconds);
-        yield return Ui.Animate(0.25f, k => group.alpha = 1 - k);
+        yield return Ui.Animate(0.22f, k => { group.alpha = 1 - k; card.rectTransform.localScale = Vector3.one * (1f - 0.08f * k); });
         Object.Destroy(card.gameObject);
     }
 

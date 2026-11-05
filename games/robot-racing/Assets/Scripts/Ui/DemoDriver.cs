@@ -36,6 +36,7 @@ public class DemoDriver : MonoBehaviour
         if (CoverPath != null) { yield return Cover(app); yield break; }
         Directory.CreateDirectory(Folder);
         Luma.Voice = false;
+        AudioListener.volume = 0f; // the walk is silent: it runs on a desk, not in a class
         yield return new WaitForSeconds(1.2f);
         yield return Shot("1-title");
 
@@ -71,7 +72,7 @@ public class DemoDriver : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         yield return Shot("6-debrief-questions");
         ResultsScreen.Current?.SkipQuiz();
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(2.4f); // the medal has been revealed by then
         yield return Shot("7-debrief");
         yield return new WaitForSeconds(0.5f);
         Application.Quit();
@@ -82,6 +83,7 @@ public class DemoDriver : MonoBehaviour
     IEnumerator Cover(App app)
     {
         Luma.Voice = false;
+        AudioListener.volume = 0f;
         yield return null;
         var canvas = app.Stage.parent.GetComponent<Canvas>();
         var frame = Ui.Node("Cover", app.Stage.parent);

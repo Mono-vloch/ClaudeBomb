@@ -19,6 +19,8 @@ public class App : MonoBehaviour
     public Luma luma;
     public Circuit world;
     public SceneCamera view;
+    public Atmosphere atmosphere;
+    public CameraRig rig;
 
     const string PrefLevel = "robot_racing_level";
     const string PrefStars = "robot_racing_stars_";
@@ -44,7 +46,7 @@ public class App : MonoBehaviour
 
     void Awake()
     {
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = Maaloomatiia.Games.Platform.IsWeb ? -1 : 60; // the browser paces its own frames
         Application.runInBackground = true;
 #if UNITY_WEBGL && !UNITY_EDITOR
         WebGLInput.captureAllKeyboardInput = true;
@@ -53,11 +55,15 @@ public class App : MonoBehaviour
         BuildCanvas();
         Circuit.Setup();
         view = Camera.main.gameObject.AddComponent<SceneCamera>();
+        atmosphere = Camera.main.gameObject.AddComponent<Atmosphere>();
+        rig = Camera.main.gameObject.AddComponent<CameraRig>();
         world = new GameObject("World").AddComponent<Circuit>();
         world.cam = view;
+        world.rig = rig;
         world.gameObject.SetActive(false);
         luma = gameObject.AddComponent<Luma>();
         Sfx.Init(gameObject);
+        Sfx.luma = luma;
         if (DemoDriver.Wanted) gameObject.AddComponent<DemoDriver>();
     }
 
@@ -95,6 +101,7 @@ public class App : MonoBehaviour
         onLeave?.Invoke();
         onLeave = null;
         world.Hide();
+        atmosphere.MenuBlur(false); // a screen that wants the world soft asks for it
         if (screen != null) Destroy(screen.gameObject);
         screen = Ui.Node("Screen", stage);
         Ui.Stretch(screen);

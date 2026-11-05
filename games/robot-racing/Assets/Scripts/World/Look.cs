@@ -8,12 +8,12 @@ public static class Look
 {
     public static readonly Color SkyTop = Theme.Hex("#6FB3EA"), SkyHorizon = Theme.Hex("#E6F2FA"), SkyBottom = Theme.Hex("#B6D7BC"), Haze = Theme.Hex("#C4DAE8");
     public static readonly Color DuskTop = Theme.Ink, DuskHorizon = Theme.Hex("#F0915A"), DuskBottom = Theme.Hex("#2B3E52");
-    public static readonly Color SunDay = Theme.Hex("#FFF1DC"), SunDusk = Theme.Hex("#FFA868"), Lamp = Theme.Hex("#FFD27A");
+    public static readonly Color SunDay = Theme.Hex("#FFE3C0"), SunDusk = Theme.Hex("#FFA868"), Lamp = Theme.Hex("#FFD27A");
 
-    public static readonly Color Grass = Theme.Hex("#86BE76"), Asphalt = Theme.Hex("#4A4F5A"), AsphaltLine = Theme.Hex("#D9D6CC"), Oil = Theme.Hex("#23262E");
-    public static readonly Color KerbRed = Theme.Hex("#D6453D"), KerbWhite = Theme.Hex("#F4F6F7"), Barrier = Theme.Hex("#B9C2CC"), BarrierDark = Theme.Hex("#97A3AF");
+    public static readonly Color Grass = Theme.Hex("#8FBF6E"), GrassDark = Theme.Hex("#6FA35A"), Asphalt = Theme.Hex("#3F4654"), AsphaltLine = Theme.Hex("#E8E2D3"), Oil = Theme.Hex("#23262E");
+    public static readonly Color KerbRed = Theme.Hex("#D6453D"), KerbWhite = Theme.Hex("#F4F6F7"), Barrier = Theme.Hex("#D9D3C5"), BarrierDark = Theme.Hex("#BDB5A4");
     public static readonly Color Trunk = Theme.Hex("#7F5236"), Leaf = Theme.Hex("#4FA058"), LeafDark = Theme.Hex("#3F8C4A");
-    public static readonly Color Stand = Theme.Hex("#D8D2C4"), StandDark = Theme.Hex("#B6AE9D");
+    public static readonly Color Stand = Theme.Hex("#E6DFCF"), StandDark = Theme.Hex("#C7BFAD");
 
     public static readonly Color Car = Theme.Aqua, CarDark = Theme.Hex("#0E7A6E"), Cabin = Theme.Hex("#2B2440"), Wheel = Theme.Hex("#2A2E36"), Shell = Theme.Hex("#F1F4F6");
     public static readonly Color RayClear = Theme.Aqua, RayNear = Theme.Amber, RayWall = Theme.Danger, RayOff = new Color(0.6f, 0.65f, 0.7f, 0.25f);
@@ -30,19 +30,34 @@ public static class Look
         return cache;
     }
 
-    public static Material Mat(Color c) => Mat(c, Color.black);
+    public static Material Mat(Color c) => Mat(c, Color.black, 0f);
+    public static Material Mat(Color c, Color glow) => Mat(c, glow, 0f);
 
-    public static Material Mat(Color c, Color glow)
+    // gloss: the sheen, 0 for matte parts, up to 1 for the car's paint and its eyes.
+    public static Material Mat(Color c, Color glow, float gloss)
     {
-        string key = "f" + ColorUtility.ToHtmlStringRGBA(c) + ColorUtility.ToHtmlStringRGBA(glow);
+        string key = "f" + ColorUtility.ToHtmlStringRGBA(c) + ColorUtility.ToHtmlStringRGBA(glow) + gloss.ToString("0.00");
         if (materials.TryGetValue(key, out var m) && m != null) return m;
         m = new Material(Load("Flat", ref flat)) { name = key, color = c, enableInstancing = true };
         m.SetColor("_Emission", glow);
+        m.SetFloat("_Gloss", gloss);
         materials[key] = m;
         return m;
     }
 
-    public static Material Own(Color c) => new Material(Load("Flat", ref flat)) { color = c };
+    public static Material Own(Color c, float gloss = 0f)
+    {
+        var m = new Material(Load("Flat", ref flat)) { color = c };
+        m.SetFloat("_Gloss", gloss);
+        return m;
+    }
+
+    // The sky the sheen reflects: the Flat shader reads these globals.
+    public static void SetSky(Color top, Color horizon)
+    {
+        Shader.SetGlobalColor("_SkyTopColor", top);
+        Shader.SetGlobalColor("_SkyHorizonColor", horizon);
+    }
 
     public static Material Glass(Color c)
     {
