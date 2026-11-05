@@ -186,8 +186,12 @@ public class LoseSequence : MonoBehaviour
         Ui.Place((RectTransform)same.transform, new Vector2(1f, 0f), new Vector2(-304f, 40f), new Vector2(260f, 64f));
         var title = Ui.NewButton("Title", card, "Title screen", Ui.ButtonStyle.GhostOnDark, GameMenu.BackToTitle, 18f);
         Ui.Place((RectTransform)title.transform, new Vector2(0f, 0f), new Vector2(48f, 40f), new Vector2(180f, 64f));
-#if !UNITY_WEBGL || UNITY_EDITOR
-        var quit = Ui.NewButton("Quit", card, "Quit", Ui.ButtonStyle.GhostOnDark, OnQuitClicked, 18f); // a web page can't close its own tab
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // A web page can't close its own tab: the way out is the platform's menu of games.
+        var menu = Ui.NewButton("Menu", card, "Games menu", Ui.ButtonStyle.GhostOnDark, Maaloomatiia.Games.Platform.GoToMenu, 18f);
+        Ui.Place((RectTransform)menu.transform, new Vector2(0f, 0f), new Vector2(244f, 40f), new Vector2(170f, 64f));
+#else
+        var quit = Ui.NewButton("Quit", card, "Quit", Ui.ButtonStyle.GhostOnDark, OnQuitClicked, 18f);
         Ui.Place((RectTransform)quit.transform, new Vector2(0f, 0f), new Vector2(244f, 40f), new Vector2(120f, 64f));
 #endif
 

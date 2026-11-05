@@ -28,7 +28,7 @@ public static class WebBuild
             return BuildResult.Failed;
         }
 
-        PlayerSettings.WebGL.template = "PROJECT:ClaudeBomb";
+        Maaloomatiia.Games.Editor.WebTemplate.Install(); // the platform's page, from the kit
         PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
         // Lets the game load from any web host, whatever compression headers it sends.
         PlayerSettings.WebGL.decompressionFallback = true;

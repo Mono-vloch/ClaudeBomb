@@ -244,6 +244,12 @@ public class Opening : MonoBehaviour
         // The cover's wordmark, top-left of the title, with its clear space around it.
         var logo = Ui.NewLogo(title, dark: true, 300f);
         Ui.Place(logo.rectTransform, new Vector2(0f, 1f), Vector2.zero, logo.rectTransform.sizeDelta);
+        if (Maaloomatiia.Games.Platform.IsWeb)
+        {
+            // On the platform's site: out of this game, back to the menu of games.
+            var menu = Ui.NewButton("Menu", title, "Games menu", Ui.ButtonStyle.GhostOnDark, Maaloomatiia.Games.Platform.GoToMenu, 15f);
+            Ui.Place((RectTransform)menu.transform, new Vector2(1f, 1f), new Vector2(0f, 6f), new Vector2(150f, 40f));
+        }
         Piece(Ui.NewLabel("Kicker", title, "Night shift  /  Bay 3", 13f, Ui.Faint), -92f, 20f);
         var claude = Ui.NewHeading("Claude", title, "Claude", 120f, Color.white, TextAlignmentOptions.TopLeft);
         Piece(claude, -116f, 136f);
@@ -256,7 +262,7 @@ public class Opening : MonoBehaviour
         var brt = (RectTransform)begin.transform;
         Ui.Place(brt, new Vector2(0f, 1f), new Vector2(0f, -496f), new Vector2(280f, 68f));
         Piece(Ui.NewLabel("Hint", title, "Press Enter  /  Best with sound on", 11f, Ui.Faint), -586f, 16f);
-        Piece(Ui.NewText("Maker", title, "Game 03 of the Maaloomatiia Academy series. A simulation for practising work with Claude.", 16f, Ui.Faint), -616f, 24f);
+        Piece(Ui.NewText("Maker", title, "Game 01 of the Maaloomatiia Academy series. A simulation for practising work with Claude.", 16f, Ui.Faint), -616f, 24f);
     }
 
     void BuildBriefing()

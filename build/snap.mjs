@@ -3,7 +3,8 @@
 //
 //   node build/snap.mjs http://localhost:8080 /tmp/shots [code] [game-id]
 //
-// Pictures: door, door with a wrong code, menu (desktop and phone), and, with a game id,
+// Pictures: door, door with a wrong code, the stage (first game, then the next, then a
+// game's sheet), the whole menu, the stage and a sheet on a phone, and, with a game id,
 // that game's page after it has had a minute to load.
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -62,6 +63,8 @@ async function shot(name) {
 async function viewport(width, height, mobile = false) {
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile });
 }
+const click = (selector) => evaluate(`(() => { const n = document.querySelector(${JSON.stringify(selector)}); if (n) n.click(); return Boolean(n); })()`);
+const closeSheet = () => evaluate(`(() => { const s = document.querySelector('#sheet'); if (s && s.open) s.close(); })()`);
 
 await send("Page.enable");
 await send("Runtime.enable");
@@ -77,16 +80,28 @@ await evaluate(`(() => { const i = document.querySelector('#code'); i.value = 'w
 await wait(900);
 await shot("2-door-wrong-code");
 
-// 3. The right code, then the menu
+// 3. The right code, then the stage: the first game, the next one, and a game's sheet
 await evaluate(`(() => { const i = document.querySelector('#code'); i.value = ${JSON.stringify(code)}; document.querySelector('#signin').requestSubmit(); })()`);
-await wait(2200);
+await wait(2400);
 await shot("3-menu");
-await viewport(1440, 2300);
-await shot("3b-menu-full");
+await click("#next");
+await wait(1200);
+await shot("3a-menu-next-game");
+await click(".slide--active .btn--ghost");
+await wait(700);
+await shot("3b-menu-game-sheet");
+await closeSheet();
+await wait(300);
+await viewport(1440, 2000);
+await shot("3c-menu-full");
 await viewport(390, 844, true);
 await send("Page.navigate", { url: base + "/" });
-await wait(1800);
+await wait(2400);
 await shot("4-menu-phone");
+await click(".slide--active .btn--ghost");
+await wait(700);
+await shot("4a-menu-phone-game-sheet");
+await closeSheet();
 await viewport(1440, 900);
 
 // 4. A game, if asked: first the way back in after a sign-in has run out, then the game itself

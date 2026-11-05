@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(lsof -nP -iTCP:8080 -sTCP:LISTEN)",
+      "Bash(lsof -nP -iTCP:8085 -sTCP:LISTEN)",
+      "Bash(PORT=8085 node server/local.mjs)",
+      "Bash(curl -s -o /dev/null http://localhost:8085/)",
+      "Bash(perl -e 'select\\(undef,undef,undef,0.5\\)')",
+      "Bash(curl -s -o /dev/null -w \"menu %{http_code}\\\\n\" http://localhost:8085/)",
+      "Bash(curl -s -o /dev/null -w \"claude-bomb %{http_code}\\\\n\" http://localhost:8085/games/claude-bomb/)",
+      "Bash(curl -s -o /dev/null -w \"ai-arena %{http_code}\\\\n\" http://localhost:8085/games/ai-arena/)",
+      "Bash(git status *)"
+    ]
+  }
+}

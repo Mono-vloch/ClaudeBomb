@@ -379,8 +379,9 @@ public static class Ui
         };
         if (img != null)
         {
-            // Corners at the brand's 7% of the shorter side: crisp, not a pill.
-            Round(img, 6, outlineOnly: style == ButtonStyle.Ghost || style == ButtonStyle.GhostOnDark);
+            // A pill, as the brand draws buttons and the platform's menu has them: the corners
+            // are half the height whatever the height, since a 9-slice's borders shrink to fit.
+            Round(img, 40, outlineOnly: style == ButtonStyle.Ghost || style == ButtonStyle.GhostOnDark);
             img.color = fill;
         }
 

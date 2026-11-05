@@ -6,10 +6,10 @@ of this site; one key keeper serves them all, so a game never holds a key or a c
 
 | Game | Topic | Where |
 |---|---|---|
-| 01 AI Arena | Building an AI agent | `~/Desktop/ai-arena` for now (see below); its build is served at `/games/ai-arena/` |
-| 02 Robot Racing | Reinforcement learning | not started |
-| 03 Claude Bomb | Working with Claude | `games/claude-bomb/`, served at `/games/claude-bomb/` |
-| 04 Tech Escape | Cybersecurity | not started |
+| 01 Claude Bomb | Working with Claude | `games/claude-bomb/`, served at `/games/claude-bomb/` |
+| 02 AI Arena | Building an AI agent | `games/ai-arena/`, served at `/games/ai-arena/` |
+| 03 Robot Racing | How a machine learns from reward | `games/robot-racing/`, served at `/games/robot-racing/` |
+| 04 Tech Escape | Defending a real system | `games/tech-escape/`, served at `/games/tech-escape/` |
 
 ## Playing it on this computer
 
@@ -35,7 +35,8 @@ site/games/  one folder per built game (not committed; built in place, see below
 server/      the key keeper: Netlify edge functions (session, me, claude, progress) and
              local.mjs, the classroom twin; lib/ is what both share
 kit/         a Unity package every game uses: Platform (where the menu is, how to go back,
-             how to sign in again) and Relay (Claude through the keeper)
+             how to sign in again), Relay (Claude through the keeper) and the web page every
+             game loads in (WebGLTemplates~/Maaloomatiia, copied in by each web build)
 games/       the Unity projects, one folder each
 build/       helper scripts
 ```
@@ -59,7 +60,11 @@ effort per agent. The answer goes back in the Messages API's shape.
 **The kit** (`kit/`) is referenced from each game's `Packages/manifest.json` as
 `"com.maaloomatiia.games-kit": "file:../../../kit"`. `Platform.GoToMenu()` leaves the game
 in the same tab; `Platform.SignInAgain()` is what a 401 leads to; `Relay.Send(...)` is the
-Claude call; `Platform.ReportProgress(...)` tells the platform how a run ended.
+Claude call; `Platform.ReportProgress(...)` tells the platform how a run ended. The kit's
+`WebTemplate.Install()`, called by each game's build script, copies the shared web page
+into `Assets/WebGLTemplates/Maaloomatiia`: the platform's cover while the game downloads,
+a guard for phones and upright tablets (every game is a 16:9 stage), and the way back to
+the menu. Edit the page in the kit, never in a game.
 
 ## Building a game into the site
 
@@ -72,28 +77,33 @@ UNITY=/Applications/Unity/Hub/Editor/6000.3.9f1/Unity.app/Contents/MacOS/Unity
   -executeMethod WebBuild.BuildFromCommandLine -logFile games/claude-bomb/Logs/web-build.log
 ```
 
-(or, in the Editor, **Claude Bomb > Build Web Version**). Builds take 10 to 40 minutes.
-Without Unity installed, `docker compose run --rm unity build` does the same in a container
-(see `compose.yaml`).
+(or, in the Editor, **Claude Bomb > Build Web Version**). AI Arena builds the same way, with
+`-projectPath "$PWD/games/ai-arena"` and its log in `games/ai-arena/Logs/` (or, in the Editor,
+**AI Arena > Build web**). Builds take 10 to 40 minutes. Without Unity installed,
+`docker compose run --rm unity build` does the same in a container, `GAME=ai-arena` for the
+other game (see `compose.yaml`).
 
 ## AI Arena
 
-The AI Arena project is still being worked on in `~/Desktop/ai-arena`, so it was not moved
-in yet; the menu serves a copy of its current web build from `site/games/ai-arena/`. When
-that work is done, move the project to `games/ai-arena/` and make these changes, the same
-ones Claude Bomb got:
+Wired to the platform the same way as Claude Bomb: the kit in `Packages/manifest.json`,
+`Scripts/Claude/ClaudeProxy.cs` through the kit's Relay (a 401 from the keeper sends the
+player to sign in again, and the menu brings them back), a "Games menu" button on the title
+and debrief screens, a progress report when the robots are home, and `Editor/Builder.cs`
+building into `site/games/ai-arena`. Its old `Web/serve-local.mjs` is gone: `server/local.mjs`
+answers the same `{model, effort, system, messages}` request with the same reply shape.
 
-1. `Packages/manifest.json`: add `"com.maaloomatiia.games-kit": "file:../../../kit"`.
-2. `Assets/Scripts/Claude/ClaudeProxy.cs`: on a 401 from the server, call
-   `Maaloomatiia.Games.Platform.SignInAgain()`; the URL can stay as it is (it is already
-   relative to the page).
-3. `TitleScreen.cs` and `ResultsScreen.cs`: a "Back to the games menu" button that calls
-   `Platform.GoToMenu()` when `Platform.IsWeb`.
-4. `ResultsScreen.cs`: `app.StartCoroutine(Platform.ReportProgress("finished", 0, ...))`.
-5. `Editor/Builder.cs` `BuildWeb`: output to `../../site/games/ai-arena` (absolute, from
-   `Application.dataPath`), as `WebBuild.cs` does in Claude Bomb.
-6. Delete `Web/serve-local.mjs`; the platform's server answers `/api/claude` with the same
-   `{model, effort, system, messages}` request and the same reply shape.
+## Robot Racing and Tech Escape
+
+Two more games on the same kit, each its own Unity project (`games/robot-racing`,
+`games/tech-escape`) with its own README. Neither calls Claude: the robot learns on the
+machine and the attacks are written into the rooms, so they need no key keeper, only the
+sign-in, the "Games menu" button and the progress report (`Platform.ReportProgress`, in the
+curriculum's form: `2.3:complete`, `:partial` or `:incomplete`). Their `Editor/Builder.cs`
+builds into `site/games/robot-racing` and `site/games/tech-escape`
+(`-executeMethod Builder.BuildWeb -buildTarget WebGL`, or **Robot Racing > Build web** and
+**Tech Escape > Build web** in the Editor). The three Unity games share their world and UI
+code by copy for now (`MeshKit`, `Look`, `SceneCamera`, `UiKit`, `Theme`, `Luma`); moving
+that into the kit is the next step once the games settle.
 
 ## Publishing
 

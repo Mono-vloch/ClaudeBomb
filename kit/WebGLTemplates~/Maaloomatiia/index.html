@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>{{{ PRODUCT_NAME }}} · Maaloomatiia Games</title>
+    <link rel="icon" type="image/png" href="maaloomatiia-emblem.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      /* The page every game on the Maaloomatiia Games platform loads in. It lives in the
+         kit (kit/WebGLTemplates~/Maaloomatiia) and is copied into each game at build time.
+         The same cover as the menu's launch screen: Deep Knowledge Blue, the wordmark,
+         the game's name with its last word in teal, so the hand-off is seamless. */
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1536; }
+      #unity-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #0b1536; outline: none; }
+      .cover { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px;
+               color: #ffffff; font: 400 16px/1.5 Inter, system-ui, sans-serif; text-align: center;
+               background: linear-gradient(135deg, #0b1536 0%, #0b1536 55%, #0e3556 100%); }
+      .cover .logo { width: min(260px, 60vw); height: auto; margin-bottom: 6px; }
+      .cover .kicker { color: #9eaebb; font-weight: 500; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+      .cover h1 { margin: 0; font-weight: 700; font-size: clamp(40px, 9vw, 96px); line-height: 1; letter-spacing: -0.01em; }
+      .cover h1 span { color: #24e0c0; }
+      .cover p { margin: 0; color: #9eaebb; font-size: 15px; max-width: 34em; }
+      .cover a { color: #ffffff; font-weight: 600; font-size: 15px; text-decoration: none; padding: 10px 22px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.28); }
+      .cover a:hover { box-shadow: inset 0 0 0 1.5px #24e0c0; }
+      .cover a:focus-visible { outline: 3px solid #24e0c0; outline-offset: 2px; }
+      #bar { width: min(360px, 80vw); height: 4px; background: #0e3556; border-radius: 2px; overflow: hidden; }
+      #fill { width: 0%; height: 100%; background: #24e0c0; transition: width 0.2s; }
+      #loading { transition: opacity 0.6s; }
+      /* Every game is a 16:9 stage that needs the room: not a phone, not a tablet held upright. */
+      #small { display: none; z-index: 2; }
+      @media (max-width: 899px), (orientation: portrait) and (max-width: 1199px) { #small { display: flex; } #loading { display: none; } }
+      /* For keyboard and screen-reader users, who cannot reach into the canvas: the way out, shown when focused. */
+      .skip { position: fixed; top: 10px; left: 10px; z-index: 3; padding: 8px 14px; border-radius: 999px; background: #24e0c0; color: #0b1536;
+              font: 600 14px Inter, system-ui, sans-serif; text-decoration: none; transform: translateY(-200%); }
+      .skip:focus { transform: none; outline: 3px solid #ffffff; outline-offset: 2px; }
+      #banner { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; font: 14px system-ui, sans-serif; color: #ffffff; background: #a33; display: none; }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="/">Back to the games menu</a>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="loading" class="cover">
+      <img class="logo" src="maaloomatiia-logo.png" alt="Maaloomatiia">
+      <div class="kicker">Maaloomatiia Games</div>
+      <h1>{{{ PRODUCT_NAME }}}</h1>
+      <div id="bar"><div id="fill"></div></div>
+      <p id="status">Loading. The first time can take a minute, and it's best with sound on.</p>
+      <a href="/">Back to the games</a>
+    </div>
+    <div id="small" class="cover">
+      <img class="logo" src="maaloomatiia-logo.png" alt="Maaloomatiia">
+      <div class="kicker">Maaloomatiia Games</div>
+      <h1>{{{ PRODUCT_NAME }}}</h1>
+      <p>This game needs a computer, or a tablet held sideways. Turn your tablet, or open this page on a computer, and it starts by itself.</p>
+      <a href="/">Back to the games</a>
+    </div>
+    <div id="banner"></div>
+    <script>
+      // The last word of the game's name in teal, as on the menu.
+      document.querySelectorAll(".cover h1").forEach(function (h) {
+        var words = h.textContent.trim().split(" ");
+        if (words.length > 1) h.innerHTML = words.slice(0, -1).join(" ") + " <span>" + words[words.length - 1] + "</span>";
+      });
+
+      var canvas = document.querySelector("#unity-canvas");
+      // Some games rotate things with the right button, so the browser's right-click menu stays closed.
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      function showBanner(msg, type) {
+        if (type !== "error") { console.warn(msg); return; }
+        var banner = document.querySelector("#banner");
+        banner.textContent = msg;
+        banner.style.display = "block";
+      }
+
+      var buildUrl = "Build";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+        frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+        workerUrl: buildUrl + "/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+        codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        showBanner: showBanner,
+      };
+
+      // The game only downloads once there is room to play it; turning a tablet is enough.
+      var small = window.matchMedia("(max-width: 899px), (orientation: portrait) and (max-width: 1199px)");
+      var started = false;
+      function start() {
+        if (started || small.matches) return;
+        started = true;
+        var status = document.querySelector("#status");
+        var script = document.createElement("script");
+        script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+        script.onload = function () {
+          createUnityInstance(canvas, config, function (progress) {
+            document.querySelector("#fill").style.width = (100 * progress) + "%";
+            status.textContent = progress < 0.9 ? "Loading, " + Math.round(progress * 100) + "%. The first time can take a minute, and it's best with sound on." : "Starting.";
+          }).then(function (unityInstance) {
+            var loading = document.querySelector("#loading");
+            loading.style.opacity = "0";
+            setTimeout(function () { loading.style.display = "none"; }, 600);
+            window.unityInstance = unityInstance;
+            canvas.focus();
+            canvas.addEventListener("pointerdown", function () { canvas.focus(); });
+          }).catch(function (message) {
+            showBanner(String(message), "error");
+          });
+        };
+        document.body.appendChild(script);
+      }
+      small.addEventListener("change", start);
+      start();
+    </script>
+  </body>
+</html>

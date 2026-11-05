@@ -83,3 +83,7 @@ Thumbs.db
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
 /Tools/LumaVoice/lines.json
+
+# The web page comes from the kit at build time (kit/WebGLTemplates~/Maaloomatiia)
+/Assets/WebGLTemplates/Maaloomatiia/
+/Assets/WebGLTemplates/Maaloomatiia.meta

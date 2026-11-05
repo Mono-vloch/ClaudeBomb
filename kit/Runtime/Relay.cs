@@ -16,6 +16,7 @@ namespace Maaloomatiia.Games.Claude
         public long status;        // HTTP status, 0 when nothing answered
         public bool unauthorized;  // the keeper refused the session: Platform.SignInAgain()
         public bool busy;          // 429: too many calls at once
+        public bool claude;        // on Check: whether the keeper can reach Claude at all
         public long inputTokens, outputTokens;
     }
 
@@ -79,7 +80,12 @@ namespace Maaloomatiia.Games.Claude
             try
             {
                 var root = JObject.Parse(text);
-                if (root["check"] != null || root["ok"] != null && root["content"] == null) { reply.ok = true; return reply; }
+                if (root["check"] != null || root["ok"] != null && root["content"] == null)
+                {
+                    reply.ok = true;
+                    reply.claude = (bool?)root["claude"] ?? true;
+                    return reply;
+                }
                 var sb = new StringBuilder();
                 foreach (var block in root["content"] as JArray ?? new JArray())
                     if ((string)block["type"] == "text") sb.Append((string)block["text"]);
