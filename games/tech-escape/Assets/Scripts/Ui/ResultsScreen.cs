@@ -5,10 +5,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using Maaloomatiia.Games;
 
-// The debrief: the attack's lines (what got through, what held), the level's
-// checks ticked or missed, a medal, LUMA's takeaway and the question to take back
-// to work, the record so far, the next room's unlock, and on a capstone the two
-// if-then plans.
+// The debrief: the facility turning slowly in a window, the door that gave way still
+// scarlet; the attack's lines (what got through, what held), the level's checks ticked
+// or missed, the medal revealed with its stars, LUMA's takeaway and the question to
+// take back to work, the record so far, the next room's unlock, and on a capstone the
+// two if-then plans.
 public class ResultsScreen
 {
     public readonly RectTransform root;
@@ -25,52 +26,65 @@ public class ResultsScreen
         bool training = app.Training, counts = !training;
         root = Ui.Node("Results", parent);
         Ui.Stretch(root);
-        app.Paper(Theme.Page);
+        app.Paper(Color.clear);
+
+        // The world behind the screen: the facility as the attack left it, turning slowly, soft.
+        var window = Ui.Node("Window", root);
+        Ui.Place(window, 1000, 100, 860, 300);
+        app.world.Build();
+        for (int i = 0; i < 12; i++) app.world.SetDoor(i, i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
+        if (a != null)
+            foreach (var line in a.lines)
+            {
+                int index = Facility.RoomIndex(line.room);
+                if (index >= 0) app.world.SetDoor(index, line.held ? Building.DoorState.Held : Building.DoorState.Breached);
+            }
+        if (l.Exit && a != null && !a.AnyThrough) app.world.SetExit(true);
+        app.world.ShowOrbit(window);
+        app.atmosphere.MenuBlur(true, 36f, 80f); // the facility (24 units off) sharp, the far end soft
+        Sfx.Ambient(true);
+        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.14f), false);
+        Ui.Stretch(scrim.rectTransform);
+        scrim.raycastTarget = false;
 
         var title = Ui.Text(root, $"Debrief · Level {l.id} · {app.StepName}", 44, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 80, 40, 1300, 56);
+        Ui.Place(title.rectTransform, 80, 36, 900, 56);
         var sub = Ui.Text(root, $"{l.room}: {l.title}", 18, Theme.Text2);
-        Ui.Place(sub.rectTransform, 80, 100, 1600, 28);
+        Ui.Place(sub.rectTransform, 80, 100, 880, 28);
 
         // What the attack found
         var found = Ui.Card(root, "Attack", Theme.Panel, Theme.Border1);
-        Ui.Place(found.rectTransform, 80, 140, 860, 330);
+        Ui.Place(found.rectTransform, 80, 140, 860, 290);
         var fh = Ui.Eyebrow(found.transform, "THE ATTACK  ·  WHAT GOT THROUGH, WHAT HELD", Theme.TealDeep); Ui.Place(fh.rectTransform, 16, 10, 800, 16);
         float fy = 32;
         if (a != null)
-            foreach (var line in a.lines.Take(7))
+            foreach (var line in a.lines.Take(6))
             {
                 var w = Ui.Text(found.transform, line.held ? "Held" : "Through", 13, line.held ? Theme.TealDeep : Theme.Danger, true);
                 Ui.Place(w.rectTransform, 16, fy + 1, 70, 20);
                 var tx = Ui.Text(found.transform, (line.held ? line.reached : line.gap + ": " + line.reached), 13, Theme.Ink);
-                Ui.Place(tx.rectTransform, 90, fy, 750, 40);
+                Ui.Place(tx.rectTransform, 90, fy, 750, 38);
                 tx.overflowMode = TextOverflowModes.Ellipsis;
-                fy += 40;
+                fy += 38;
             }
         var sm = Ui.Text(found.transform, a?.summary ?? "", 14, Theme.Ink, true);
-        Ui.Place(sm.rectTransform, 16, 300, 820, 24);
+        Ui.Place(sm.rectTransform, 16, 262, 820, 24);
 
         // The checks
         var checks = l.check(app.state, app.session, a);
         int ticked = checks.Count(c => c.result == Practised.Yes), needed = checks.Count(c => c.result != Practised.NotNeeded);
         int medal = needed > 0 && ticked == needed ? 3 : ticked * 2 >= needed && needed > 0 ? 2 : a != null && !a.AnyThrough ? 1 : 0;
         var card = Ui.Card(root, "Checks", Theme.Panel, Theme.Border1);
-        Ui.Place(card.rectTransform, 960, 140, 880, 330);
+        Ui.Place(card.rectTransform, 1000, 420, 860, 300);
         var ch = Ui.Eyebrow(card.transform, "THE CHECKS  ·  WHAT YOU DID", Theme.TealDeep); Ui.Place(ch.rectTransform, 16, 10, 400, 16);
-        if (medal > 0)
-        {
-            var pill = Ui.Box(card.transform, "Medal", medal == 3 ? Gold : medal == 2 ? Silver : Bronze);
-            Ui.Place(pill.rectTransform, 780, 8, 84, 24);
-            var mt = Ui.Text(pill.transform, MedalNames[medal], 11, Color.white, true, TextAlignmentOptions.Center); mt.characterSpacing = 3; Ui.Stretch(mt.rectTransform);
-        }
         float cy = 34;
         foreach (var (result, label) in checks)
         {
             var word = Ui.Text(card.transform, result == Practised.Yes ? "Done" : result == Practised.Missed ? "Missed" : "n/a", 14, result == Practised.Yes ? Theme.TealDeep : result == Practised.Missed ? Theme.Danger : Theme.Muted, true);
             Ui.Place(word.rectTransform, 16, cy + 1, 60, 22);
             var lab = Ui.Text(card.transform, label, 15, Theme.Ink);
-            Ui.Place(lab.rectTransform, 84, cy, 780, 44);
-            cy += checks.Count > 5 ? 44 : 52;
+            Ui.Place(lab.rectTransform, 84, cy, 760, 44);
+            cy += checks.Count > 5 ? 42 : 50;
         }
 
         if (counts)
@@ -82,7 +96,7 @@ public class ResultsScreen
 
         // The record so far: the spine the exit will ask for.
         var rec = Ui.Card(root, "Record", Theme.Surface1, Theme.Border);
-        Ui.Place(rec.rectTransform, 80, 486, 860, 150);
+        Ui.Place(rec.rectTransform, 80, 446, 860, 150);
         var rh = Ui.Eyebrow(rec.transform, "THE FACILITY'S RECORD  ·  WHAT THE EXIT WILL ASK FOR", Theme.Muted); Ui.Place(rh.rectTransform, 16, 10, 800, 16);
         string record = app.session.record.Count == 0 ? "Nothing yet: the record starts in tier 2, one line per room."
                       : string.Join("\n", app.session.record.Take(5).Select(r => r.gap == "held" ? $"{r.room}: held" : $"{r.room}: {r.gap}, reached {r.reached}"));
@@ -93,8 +107,9 @@ public class ResultsScreen
         app.luma.Say("recap");
         bool unlock = counts && l.number < Rooms.Count;
         string standards = l.number == 2 ? " (The method comes from ISO/IEC 27002 and NIST CSF 2.0.)" : l.number == 13 ? " (The phases come from NIST SP 800-61.)" : l.number == 15 ? " (The register follows ISO/IEC 27005.)" : "";
-        Luma.Card(root, 960, 486, unlock ? 460 : 880, 150, l.takeaway + standards, 15, "Ask back at work: " + l.ask);
-        if (unlock) Unlock(486, Rooms.Get(l.number + 1), medal);
+        Luma.Card(root, 80, 612, 860, 150, l.takeaway + standards, 15, "Ask back at work: " + l.ask);
+        Medal(medal, a, l);
+        if (unlock) Unlock(736, Rooms.Get(l.number + 1), medal);
 
         float bx = 80;
         Button Add(string label, System.Action act, Ui.ButtonStyle style, float w)
@@ -126,17 +141,73 @@ public class ResultsScreen
         Ui.Emblem(root);
     }
 
+    // The medal, revealed over the turning facility: the badge comes in with an overshoot,
+    // the stars light one by one, confetti over the exit and a fanfare for silver and gold.
+    void Medal(int medal, Attack a, Room l)
+    {
+        var cap = Ui.Glass(root, "Window caption", 1000, 100, 860, 40);
+        int through = a?.lines.Count(x => !x.held) ?? 0, held = a?.lines.Count(x => x.held) ?? 0;
+        var caption = Ui.Eyebrow(cap.transform, $"{l.room.ToUpperInvariant()}  ·  THROUGH {through}  ·  HELD {held}", Theme.Teal);
+        Ui.Place(caption.rectTransform, 20, 12, 820, 18);
+        Color colour = medal == 3 ? Gold : medal == 2 ? Silver : medal == 1 ? Bronze : Theme.Ink;
+        var badge = Ui.Glass(root, "Medal", 1230, 215, 400, 150, true, colour);
+        var b = badge.transform;
+        var tag = Ui.Eyebrow(b, app.Training ? "A TRAINING RUN" : "THE MEDAL", Theme.Teal);
+        Ui.Place(tag.rectTransform, 0, 14, 400, 18); tag.alignment = TextAlignmentOptions.Top;
+        var name = Ui.Text(b, medal > 0 ? MedalNames[medal] : "NO MEDAL YET", medal > 0 ? 44 : 28, medal > 0 ? colour : Look.Chalk, true, TextAlignmentOptions.Center);
+        name.characterSpacing = 6;
+        Ui.Place(name.rectTransform, 0, 34, 400, 60);
+        var stars = new Image[3];
+        for (int s = 0; s < 3; s++)
+        {
+            stars[s] = Ui.Box(b, "Star", s < medal ? colour : new Color(1, 1, 1, 0.16f));
+            Ui.Place(stars[s].rectTransform, 155 + s * 32, 98, 26, 26);
+            stars[s].raycastTarget = false;
+        }
+        var rank = Ui.Text(b, app.Training ? "the stars count on your own run" : $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Look.Chalk, false, TextAlignmentOptions.Center);
+        Ui.Place(rank.rectTransform, 0, 122, 400, 20);
+        app.StartCoroutine(Reveal(badge, stars, medal, colour));
+    }
+
+    System.Collections.IEnumerator Reveal(Image badge, Image[] stars, int medal, Color colour)
+    {
+        var group = Ui.Group(badge);
+        group.alpha = 0f;
+        badge.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        badge.rectTransform.anchoredPosition = new Vector2(1230 + 200, -(215 + 75));
+        foreach (var s in stars) s.transform.localScale = Vector3.zero;
+        yield return new WaitForSecondsRealtime(0.55f);
+        if (badge == null) yield break;
+        if (medal > 0) Sfx.Sting(Sfx.Mood.Fanfare); else Sfx.Tick();
+        yield return Ui.Animate(0.45f, k =>
+        {
+            if (badge == null) return;
+            group.alpha = Mathf.Min(1f, k * 3f);
+            badge.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.5f, 1f, Ui.EaseOutBack(k));
+        });
+        for (int s = 0; s < medal; s++)
+        {
+            int i = s;
+            Sfx.Chime();
+            yield return Ui.Animate(0.22f, k => { if (stars[i] != null) stars[i].transform.localScale = Vector3.one * Mathf.LerpUnclamped(0f, 1f, Ui.EaseOutBack(k)); });
+            if (medal >= 2 && app.world.gameObject.activeSelf) app.effects.Confetti(app.world.Bounds.center + Vector3.up * 1.5f, 30);
+            yield return new WaitForSecondsRealtime(0.1f);
+        }
+        for (int s = medal; s < 3; s++) if (stars[s] != null) stars[s].transform.localScale = Vector3.one;
+    }
+
     void Unlock(float y, Room next, int stars)
     {
         var card = Ui.Card(root, "Unlock", Theme.TealDeep, Theme.TealDeep);
-        Ui.Place(card.rectTransform, 1420, y, 420, 150);
+        Ui.Place(card.rectTransform, 1000, y, 860, 100);
         var t = card.transform;
         var tag = Ui.Eyebrow(t, $"UNLOCKED  ·  LEVEL {next.id}", Theme.Teal); tag.font = Theme.Bold;
-        Ui.Place(tag.rectTransform, 20, 14, 380, 20);
-        var body = Ui.Text(t, $"{next.room}: {next.title}", 17, Color.white, true);
-        Ui.Place(body.rectTransform, 20, 38, 380, 70);
+        Ui.Place(tag.rectTransform, 20, 12, 600, 20);
+        var body = Ui.Text(t, $"{next.room}: {next.title}", 18, Color.white, true);
+        Ui.Place(body.rectTransform, 20, 36, 820, 30);
+        body.enableWordWrapping = false; body.overflowMode = TextOverflowModes.Ellipsis;
         var starsLine = Ui.Text(t, $"{stars} of 3 stars banked  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Theme.Teal);
-        Ui.Place(starsLine.rectTransform, 20, 114, 380, 24);
+        Ui.Place(starsLine.rectTransform, 20, 68, 820, 24);
     }
 
     void ShowPlans()

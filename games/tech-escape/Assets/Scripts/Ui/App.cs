@@ -20,6 +20,9 @@ public class App : MonoBehaviour
     public Luma luma;
     public Building world;
     public SceneCamera view;
+    public Atmosphere atmosphere;
+    public CameraRig rig;
+    public Effects effects;
 
     const string PrefLevel = "tech_escape_level", PrefStars = "tech_escape_stars_", PrefRoom = "tech_escape_room_", PrefRecord = "tech_escape_record";
     Image page;
@@ -38,20 +41,25 @@ public class App : MonoBehaviour
 
     void Awake()
     {
-        Application.targetFrameRate = 60;
+        Application.targetFrameRate = Maaloomatiia.Games.Platform.IsWeb ? -1 : 60; // the browser paces its own frames
         Application.runInBackground = true;
 #if UNITY_WEBGL && !UNITY_EDITOR
         WebGLInput.captureAllKeyboardInput = true;
 #endif
         Maaloomatiia.Games.Platform.GameId = "tech-escape";
         BuildCanvas();
-        Building.Setup();
         view = Camera.main.gameObject.AddComponent<SceneCamera>();
+        atmosphere = Camera.main.gameObject.AddComponent<Atmosphere>();
+        rig = Camera.main.gameObject.AddComponent<CameraRig>();
         world = new GameObject("World").AddComponent<Building>();
         world.cam = view;
+        world.rig = rig;
+        effects = new GameObject("Effects").AddComponent<Effects>();
+        world.effects = effects;
         world.gameObject.SetActive(false);
         luma = gameObject.AddComponent<Luma>();
         Sfx.Init(gameObject);
+        Sfx.luma = luma;
         LoadSession();
         if (DemoDriver.Wanted) gameObject.AddComponent<DemoDriver>();
     }
@@ -89,6 +97,9 @@ public class App : MonoBehaviour
         luma.Hush();
         onLeave?.Invoke();
         onLeave = null;
+        rig.Release();
+        Time.timeScale = 1f;
+        atmosphere.MenuBlur(false);
         world.Hide();
         if (screen != null) Destroy(screen.gameObject);
         screen = Ui.Node("Screen", stage);

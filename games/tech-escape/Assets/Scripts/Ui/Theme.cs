@@ -37,10 +37,6 @@ public static class Theme
     public static readonly Color Amber = Hex("#E09B1A");
     public static readonly Color AmberSoft = Hex("#FFF4DB");
 
-    // The market square
-    public static readonly Color Cobbles = Hex("#E9EDF0");
-    public static readonly Color Tile = Hex("#F5F7F8");
-
     public static readonly Color[] Team =
     {
         Hex("#FF6B5E"), Hex("#4F8EF7"), Hex("#6CC24A"), Hex("#FFB020"), Hex("#9B6BFF"),
@@ -54,6 +50,8 @@ public static class Theme
 
     static TMP_FontAsset Make(string resource)
     {
+        var baked = Resources.Load<TMP_FontAsset>(resource + " SDF"); // Tech Escape > Bake Fonts
+        if (baked != null) return baked;
         var font = Resources.Load<Font>(resource);
         if (font == null) { Debug.LogWarning($"Font {resource} missing, using the TextMesh Pro default."); return TMP_Settings.defaultFontAsset; }
         var asset = TMP_FontAsset.CreateFontAsset(font);
@@ -64,7 +62,7 @@ public static class Theme
     public static Sprite Sprite(string name)
     {
         var s = Resources.Load<Sprite>("Sprites/" + name);
-        if (s == null) Debug.LogWarning($"Sprite {name} missing. Run AI Arena > Bake Sprites in the Editor.");
+        if (s == null) Debug.LogWarning($"Sprite {name} missing. Run Tech Escape > Bake Sprites in the Editor.");
         return s;
     }
     public static Sprite Round => Sprite("ui_round");

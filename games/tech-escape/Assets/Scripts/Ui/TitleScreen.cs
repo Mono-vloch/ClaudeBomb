@@ -18,9 +18,11 @@ public class TitleScreen
 
         var frame = Ui.Node("Frame", root);
         Ui.Place(frame, 1000, 40, 920, 960);
-        app.world.Build(true);
+        app.world.Build();
         app.world.ShowOrbit(frame);
         app.world.Demo(true);
+        app.atmosphere.MenuBlur(false);
+        Sfx.Ambient(true);
         for (int i = 0; i < 12; i++) app.world.SetDoor(i, i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
 
         var shade = Ui.Box(root, "Shade", Theme.Ink, false);
@@ -36,6 +38,9 @@ public class TitleScreen
             var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 18);
             Ui.Place(menu.GetComponent<RectTransform>(), 1600, 58, 200, 52);
         }
+        Button sound = null;
+        sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(sound.GetComponent<RectTransform>(), 1460, 58, 124, 52);
 
         var eyebrow = Ui.Eyebrow(root, "TECH ESCAPE  ·  GAME 04", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
@@ -71,15 +76,15 @@ public class TitleScreen
                 var l = levels[i];
                 bool isNext = l.number == next, isDone = l.number <= done;
                 float x = x0 + i * step;
-                if (isNext) { var halo = Ui.Dot(root, new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f), 46); Ui.Place(halo.rectTransform, x - 23, ty - 23, 46, 46); halo.raycastTarget = false; }
-                var rim = Ui.Dot(root, isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f), 34);
+                if (isNext) { var halo = Ui.Box(root, "Halo", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f)); Ui.Place(halo.rectTransform, x - 23, ty - 23, 46, 46); halo.raycastTarget = false; }
+                var rim = Ui.Box(root, "Rim", isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f));
                 Ui.Place(rim.rectTransform, x - 17, ty - 17, 34, 34);
-                var stop = Ui.Dot(root, isDone || isNext ? Theme.Teal : Theme.Ink, 30);
+                var stop = Ui.Box(root, "Stop", isDone || isNext ? Theme.Teal : Theme.Ink);
                 Ui.Place(stop.rectTransform, x - 15, ty - 15, 30, 30);
                 var num = Ui.Text(stop.transform, l.id, 10, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
                 Ui.Stretch(num.rectTransform);
                 int stars = app.StarsOf(l.number);
-                for (int s = 0; s < 3; s++) { var star = Ui.Dot(root, s < stars ? Theme.Teal : new Color(1, 1, 1, 0.18f), 6); Ui.Place(star.rectTransform, x - 11 + s * 9, ty + 22, 6, 6); star.raycastTarget = false; }
+                for (int s = 0; s < 3; s++) { var star = Ui.Box(root, "Star", s < stars ? Theme.Teal : new Color(1, 1, 1, 0.18f), false); Ui.Place(star.rectTransform, x - 11 + s * 9, ty + 22, 6, 6); star.raycastTarget = false; }
                 var hit = Ui.Box(root, "Level " + l.id, Color.clear, false);
                 Ui.Place(hit.rectTransform, x - step / 2, ty - 26, step, 60);
                 var button = hit.gameObject.AddComponent<Button>();

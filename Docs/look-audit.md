@@ -478,3 +478,121 @@ The board for the game:
 The same shape as Robot Racing: the data file grew (the baked Inter atlases and URP's
 resources), the code shrank with the release settings. Well under the 25 MB budget, and the
 game loads and runs on the platform (`games/ai-arena/Builds/look-audit/platform/`).
+
+---
+
+# Phase 3b: Tech Escape
+
+5 November 2026, branch `look-and-feel`, after AI Arena was approved. The same floors, adapted
+to the facility: every step checked in the live Editor (muted) before the next, the Mac build's
+own walk made the "after" set in `games/tech-escape/Builds/look-audit/after/`, and the web build
+was measured on the platform. LUMA's lines, the curriculum text and the exact words the agent
+reads are unchanged.
+
+## What changed
+
+1. **Art bible**: `games/tech-escape/Docs/art-bible.md`. A permit office in lockdown, cut open
+   from above: concrete in lockdown blue, the four door colours the only saturated colours on the
+   set (red locked, amber current, teal held, scarlet breached), the light coming from the
+   facility itself (the strips, the screens, the LEDs, the exit sign) under a cool moon. Lockdown
+   on every screen, not only the title.
+2. **URP 17.3.0 and Cinemachine 2.10.5**, the same `RenderSetup` as the other two (`Assets/
+   Settings/TechEscape_RPAsset` + `Renderer`, all quality levels, linear colour), the same four
+   URP shaders, `Look.cs` rewritten for the bible with gloss and the sky globals. No material went
+   pink or grey.
+3. **Lockdown lighting** (`Building.BuildLight`): one cool key at 50 degrees, full soft shadows,
+   gradient ambient in blues, fog from 50 to 160; every door's strip is a real point light on the
+   corridor (the floor cut into one piece per door so each piece takes its own strips); the
+   room on screen has its own cool ceiling lamp and a warm one on the desk; the door frames and
+   the floor lines glow faintly; bloom on the strips, the screens and the visor. The web's limit
+   of visible additional lights (16) is respected: 12 strips, the exit, the attacker's light.
+4. **Each room's misconfiguration readable**: every room has the one prop that says what it is
+   (a register board and a filing cabinet, a mail sorter with one red envelope, a safe with a
+   teal dial, a glass cell with something red in it, a badge gate, a workbench of small servers
+   with one amber light, patch panels and cables, a wall of switches with one red, a lockbox with
+   a padlock and the key beside it, a cloud over a pedestal, a wall of screens, shelves of tapes),
+   and a board of lamps on its back wall, one per row of the system, teal when every decision in
+   that row is made and amber while one is still "?"; the sheet's rows carry the same lamp. The
+   room screen is the world full-screen with the HUD, the runs, YOU FIX and LUMA in dark glass.
+5. **Post-processing**: `Atmosphere` on the camera (ACES, bloom, vignette, grading, SMAA, depth
+   of field behind the briefing, the warm-up and the debrief with its distances set per window so
+   the subject stays sharp, the red pulse and the hit-stop when a door gives way).
+6. **The attack replay** (`CameraRig`, `Building.Visit`, `AttackScreen`): THE ATTACK BEGINS with
+   a siren, a red pulse and the alarm (every locked door's strip strobes scarlet), the camera
+   flying in high over the entrance and blending into a chase behind the attacker down the
+   corridor (world-space, following a point kept to the corridor's middle band, so it never
+   leaves the corridor for a room when the attacker turns to a door; the corridor itself was
+   extended five units before the first door to give the camera room, and the old solid end
+   wall became an open entrance); the attacker, lighter and glossy with a scarlet band on its
+   shoulders and a scarlet ring on the floor under it, leaves a scarlet trail and dust under
+   its feet; a door that gives way is
+   sparks, an impulse shake, the hit-stop, the crash and a big THROUGH in scarlet with the gap
+   under it; one that holds is a teal flash of motes, a clack and HELD; the HUD carries the
+   twelve doors as lamps and THROUGH · HELD counts, the lines fill a glass column; the end is a
+   slow turn in slow motion around the last door (ONE DOOR GAVE WAY / n DOORS GAVE WAY, NOTHING
+   GOT THROUGH) or around the exit as it opens (THE EXIT OPENS, fanfare, confetti), then back to
+   the overview, the breached door still scarlet and the trail still on the floor.
+7. **Sound**: the shared layer (chime, buzz, beeps, fanfare, alarm) plus the siren, the clack of
+   a door that held, the crash of one that gave, and the low hum of a facility in lockdown while
+   the world shows; a sound switch on the title; ducking under LUMA. Plain waves only.
+8. **Screens**: baked Inter atlases, 12 px corners everywhere (the title's level stops and stars
+   are rounded squares), the briefing rebuilt around a window on this level's door lit amber with
+   the ladder in glass over it and the facility room by room under it, the debrief over the
+   facility turning slowly with the breached door scarlet, the medal badge revealed with its
+   stars, confetti and a fanfare, the unlock card beside the checks; the warm-up over the soft
+   facility. `Ui.Group` fixed for the Editor; the walk and the cover are silent.
+9. **Web release settings** in the build script (strip engine code, IL2CPP for size, no debug
+   symbols, DiskSize+LTO); the frame rate left to the browser.
+
+## Scores after
+
+Same walk (the seven screens, plus the end of the attack as an eighth frame), same six axes,
+same reference. Frames in `games/tech-escape/Builds/look-audit/after/`; the "before" set is still
+in `before/`.
+
+| Screen | Palette | Style | Lighting | Silhouette | UI | Feedback | Mean | Before |
+|---|---|---|---|---|---|---|---|---|
+| 1-title | 4 | 4 | 4 | 3 | 4 | 3 | 3.7 | 3.0 |
+| 2-briefing | 4 | 4 | 4 | 2 | 4 | 2 | 3.3 | 1.8 |
+| 2b-warm-up | 4 | 4 | 3 | 2 | 4 | 2 | 3.2 | 1.8 |
+| 3-room | 4 | 4 | 4 | 3 | 4 | 3 | 3.7 | 1.8 |
+| 4-attack | 4 | 4 | 4 | 3 | 4 | 5 | 4.0 | 1.8 |
+| 4b-attack-end | 4 | 4 | 4 | 3 | 4 | 4 | 3.8 | – |
+| 5-debrief | 4 | 4 | 3 | 3 | 4 | 4 | 3.7 | 1.7 |
+| 6-room-ordered | 4 | 4 | 4 | 3 | 4 | 3 | 3.7 | 1.8 |
+| **mean** | | | | | | | **3.6** | **1.9** |
+
+The board for the game:
+
+- palette: 4/5 — the bible's lockdown blues on every surface, the four door colours the only
+  saturated ones and each meaning one thing, scarlet for the attacker and the alarm, teal where
+  the lesson points; no default material, sky or UI.
+- style: 4/5 — one cut-open facility from the entrance to the exit, every room furnished for its
+  job, the glass HUD and the moments part of it; the white cards of the briefing and the debrief
+  are the one other register, kept on purpose and always with the facility behind them.
+- lighting: 4/5 — the strips light the corridor, the room on screen has its own lamps, the moon
+  catches the wall tops, bloom on everything that glows, fog, a vignette; 3 behind the warm-up
+  and the debrief, where the depth of field and the scrim do their job.
+- silhouette: 3/5 — the attacker is a capsule under a hood, now with a sheen, a scarlet visor and
+  band and a ring on the floor, so it reads over its shoulder and from above; the rooms' props
+  read at a glance. The character pass stays the axis at the floor, as in the other two.
+- UI: 4/5 — 12 px corners everywhere, the level stops rounded squares, the HUD, the ladder, the
+  lines and the moments in dark glass, the medal badge, baked Inter.
+- feedback: 4/5 — the siren and the alarm strobe, the chase, the trail, sparks, shake, pulse and
+  hit-stop on a breach, the teal flash and clack on a hold, THROUGH and HELD at every door, the
+  door lamps and counts in the HUD, the slow turn at the end, the medal reveal; 2 on the briefing
+  and the warm-up, which show the world but do not answer the player.
+
+## Web after
+
+| | Before | After |
+|---|---|---|
+| Build on disk | 19.9 MB | 21 MB |
+| Transferred | 19.5 MB | 21.4 MB |
+| Load time | 2.6 s | 3.7 s |
+| data file | – | 12.8 MB |
+| wasm | – | 9.3 MB |
+
+The same shape as the other two: the data file carries the baked Inter atlases and URP's
+resources, the code shrank with the release settings. Under the 25 MB budget, and the game loads
+and runs on the platform (`games/tech-escape/Builds/look-audit/platform/6-game-tech-escape.png`).

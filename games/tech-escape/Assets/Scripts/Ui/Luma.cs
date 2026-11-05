@@ -74,6 +74,8 @@ public class Luma : MonoBehaviour
         speaking = null;
     }
 
+    public bool Speaking => speaking != null || (voice != null && voice.isPlaying);
+
     public void Hush()
     {
         if (speaking != null) { StopCoroutine(speaking); speaking = null; }

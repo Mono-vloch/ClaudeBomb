@@ -4,10 +4,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Inside a room: the room itself in three dimensions on the left, its door open,
-// and on the right the system as it was handed over: the rows (assets, accounts,
-// messages, rules, steps) and for each the decisions to make, as chips that
-// cycle through their options. Rows that must be ordered have arrows. A record
+// Inside a room: the room itself in three dimensions on the left, in lockdown, its
+// door open and its lamps on, a board of lamps on its wall saying which rows are
+// decided; and on the right the system as it was handed over: the rows (assets,
+// accounts, messages, rules, steps) and for each the decisions to make, as chips
+// that cycle through their options. Rows that must be ordered have arrows. A record
 // that must be signed has a signature line. Then: run the attack.
 public class RoomScreen
 {
@@ -16,7 +17,8 @@ public class RoomScreen
     readonly Room room;
     readonly RoomState st;
     readonly RectTransform frame, panel;
-    readonly TextMeshProUGUI note, stepNote;
+    readonly TextMeshProUGUI note;
+    readonly int index;
     RectTransform content;
     bool locked;
 
@@ -30,61 +32,58 @@ public class RoomScreen
         Ui.Stretch(root);
         app.Paper(Color.clear);
 
-        frame = Ui.Node("Frame", root);
-        Ui.Place(frame, 60, 300, 660, 600);
-        app.world.Build(false);
-        int index = Facility.RoomIndex(room.room);
-        for (int i = 0; i < 12; i++) app.world.SetDoor(i, i == index ? Building.DoorState.Open : i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
-        app.world.ShowRoom(frame, index);
-
-        var top = Ui.Box(root, "Top", new Color(1, 1, 1, 0.86f), false);
-        Ui.Place(top.rectTransform, -400, -300, 2800, 460);
-        top.raycastTarget = false;
-        var eyebrow = Ui.Eyebrow(root, $"LEVEL {room.id}  ·  {room.room.ToUpperInvariant()}", Theme.TealDeep);
-        Ui.Place(eyebrow.rectTransform, 60, 24, 600, 20);
-        var title = Ui.Text(root, room.title, 30, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 60, 46, 1000, 40);
-        title.enableWordWrapping = false;
-        var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.Quiet, 15);
-        Ui.Place(back.GetComponent<RectTransform>(), 1080, 44, 100, 42);
-        var run = Ui.Button(root, "RUN THE ATTACK", () => { if (Ready()) app.RunAttack(); }, Ui.ButtonStyle.Accent, 20);
-        Ui.Place(run.GetComponent<RectTransform>(), 1600, 32, 260, 64);
-
         var labels = new List<string>(); var steps = new List<App.Step>();
         if (room.ready.Count > 0) { labels.Add("Watch the pro"); steps.Add(App.Step.SeeItWork); }
         if (room.broken.Count > 0) { labels.Add("Fix the broken room"); steps.Add(App.Step.FixIt); }
         labels.Add("Your run"); steps.Add(App.Step.YourTurn);
-        if (labels.Count > 1)
+        bool runs = labels.Count > 1;
+
+        frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 40, runs ? 196 : 128, 780, runs ? 690 : 758);
+        app.world.Build();
+        index = Facility.RoomIndex(room.room);
+        for (int i = 0; i < 12; i++) app.world.SetDoor(i, i == index ? Building.DoorState.Open : i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
+        app.world.ShowRoom(frame, index);
+        Sfx.Ambient(true);
+
+        // The HUD, in dark glass: the level, the room, the step.
+        var hud = Ui.Glass(root, "Hud", 40, 16, 1140, 100);
+        var eyebrow = Ui.Eyebrow(hud.transform, $"LEVEL {room.id}  ·  {room.room.ToUpperInvariant()}  ·  {app.StepName.ToUpperInvariant()}", Theme.Teal);
+        Ui.Place(eyebrow.rectTransform, 24, 14, 1000, 20);
+        var title = Ui.Text(hud.transform, room.title, 28, Color.white, true);
+        Ui.Place(title.rectTransform, 24, 36, 1090, 40);
+        title.enableWordWrapping = false;
+        var stepNote = Ui.Text(hud.transform, app.step == App.Step.SeeItWork ? "The room as it should be. Read it, then run the attack and watch it hold."
+                      : app.step == App.Step.FixIt ? "Fix it: " + room.mistake + ". " + room.why
+                      : "Your own decisions. This is the run that counts; it goes to the record.", 13, Look.Chalk);
+        Ui.Place(stepNote.rectTransform, 24, 72, 1090, 22);
+        stepNote.enableWordWrapping = false; stepNote.overflowMode = TextOverflowModes.Ellipsis;
+        var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.GhostOnDark, 15);
+        Ui.Place(back.GetComponent<RectTransform>(), 1200, 40, 120, 52);
+        var run = Ui.Button(root, "RUN THE ATTACK", () => { if (Ready()) app.RunAttack(); }, Ui.ButtonStyle.Accent, 20);
+        Ui.Place(run.GetComponent<RectTransform>(), 1620, 32, 260, 64);
+
+        if (runs)
         {
-            var stepsLabel = Ui.Eyebrow(root, "THE RUNS", Theme.Muted);
-            Ui.Place(stepsLabel.rectTransform, 60, 104, 100, 20);
-            var seg = new Ui.Segmented(root, labels.ToArray(), steps.IndexOf(app.step), 600, 40, 14);
-            Ui.Place(seg.root, 150, 100, 600, 40);
+            var strip = Ui.Glass(root, "Runs", 40, 128, 780, 58, false);
+            var stepsLabel = Ui.Eyebrow(strip.transform, "THE RUNS", Theme.Teal);
+            Ui.Place(stepsLabel.rectTransform, 20, 20, 100, 20);
+            var seg = new Ui.Segmented(strip.transform, labels.ToArray(), steps.IndexOf(app.step), 640, 40, 14);
+            Ui.Place(seg.root, 120, 9, 640, 40);
             seg.OnSelect = i => { app.SetStep(steps[i]); app.ShowRoom(); };
         }
-        stepNote = Ui.Text(root, "", 13, Theme.Text2);
-        Ui.Place(stepNote.rectTransform, 770, 100, 800, 44);
-        stepNote.text = app.step == App.Step.SeeItWork ? "The room as it should be. Read it, then run the attack and watch it hold."
-                      : app.step == App.Step.FixIt ? "Fix it: " + room.mistake + ". " + room.why
-                      : "Your own decisions. This is the run that counts; it goes to the record.";
 
-        var card = Ui.Soft(root, "Fixes");
-        Ui.Place(card.rectTransform, 60, 176, 1800, 108);
-        var tag = Ui.Eyebrow(card.transform, "YOU FIX", Theme.TealDeep);
-        Ui.Place(tag.rectTransform, 24, 12, 900, 22);
-        note = Ui.Text(card.transform, room.fixes, 18, Theme.Ink);
-        Ui.Place(note.rectTransform, 24, 36, 1750, 64);
-
-        var captionCard = Ui.Box(root, "Caption", new Color(1, 1, 1, 0.86f));
-        Ui.Place(captionCard.rectTransform, 60, 910, 660, 150);
-        captionCard.raycastTarget = false;
-        var caption = Ui.Text(captionCard.transform, app.luma.Say("live-" + room.number), 14, Theme.Text2);
-        Ui.Place(caption.rectTransform, 16, 12, 628, 126);
+        // What the student fixes here, and LUMA's line, in glass under the room.
+        var card = Ui.Glass(root, "Fixes", 40, 896, 780, 76);
+        var tag = Ui.Eyebrow(card.transform, "YOU FIX", Theme.Teal);
+        Ui.Place(tag.rectTransform, 20, 10, 700, 20);
+        note = Ui.Text(card.transform, room.fixes, 14, Look.Chalk);
+        Ui.Place(note.rectTransform, 20, 30, 744, 44);
+        Luma.Card(root, 40, 980, 780, 84, app.luma.Say("live-" + room.number), 13, null, null, true, 56);
 
         panel = Ui.Node("Panel", root);
-        Ui.Place(panel, 760, 300, 1100, 760);
+        Ui.Place(panel, 840, 128, 1040, 936);
         Build();
-        Ui.Emblem(root);
     }
 
     bool Ready()
@@ -96,57 +95,64 @@ public class RoomScreen
     void Build()
     {
         Ui.Clear(panel);
-        var card = Ui.Float(panel, "Card", 0, 0, 1100, 760);
+        var card = Ui.Float(panel, "Card", 0, 0, 1040, 936);
         var t = card.transform;
         var head = Ui.Eyebrow(t, room.ordered ? "THE SYSTEM  ·  PUT THE ROWS IN ORDER, AND DECIDE EACH" : "THE SYSTEM  ·  DECIDE EACH ROW", Theme.TealDeep);
         head.font = Theme.Bold;
-        Ui.Place(head.rectTransform, 24, 16, 800, 18);
-        if (locked) { var l = Ui.Eyebrow(t, "READ ONLY  ·  THE READY ROOM", Theme.Muted); Ui.Place(l.rectTransform, 800, 16, 276, 18); l.alignment = TextAlignmentOptions.TopRight; }
+        Ui.Place(head.rectTransform, 24, 16, 700, 18);
+        if (locked) { var l = Ui.Eyebrow(t, "READ ONLY  ·  THE READY ROOM", Theme.Muted); Ui.Place(l.rectTransform, 740, 16, 276, 18); l.alignment = TextAlignmentOptions.TopRight; }
         var scroll = Ui.Scroll(t, "Scroll", out content);
-        Ui.Place(scroll.GetComponent<RectTransform>(), 16, 40, 1068, 704);
+        Ui.Place(scroll.GetComponent<RectTransform>(), 16, 44, 1008, 876);
 
+        const float W = 990;
         float y = 0;
         var perRow = room.fields.Where(f => !f.once).ToList();
         var once = room.fields.Where(f => f.once).ToList();
         var rows = st.order.Where(k => room.items.Any(i => i.key == k)).ToList();
         foreach (var added in st.added) if (!rows.Contains(added)) rows.Add(added);
+        var decided = new List<bool>();
         for (int r = 0; r < rows.Count; r++)
         {
             var item = room.items.First(i => i.key == rows[r]);
+            decided.Add(perRow.All(f => { int p = st.Pick(item.key, f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; }));
             float h = 62 + Mathf.CeilToInt(perRow.Count / 2f) * 44 + (perRow.Any(f => Wide(f)) ? 44 * perRow.Count(Wide) : 0);
             if (perRow.Count == 0) h = 62;
-            var row = Ui.Card(content, item.key, Theme.Panel, Theme.Border1);
-            Ui.Place(row.rectTransform, 0, y, 1040, h);
+            var row = Ui.Card(content, item.key, Theme.Panel, decided[r] ? Theme.BorderTeal : Theme.Border1);
+            Ui.Place(row.rectTransform, 0, y, W, h);
             var rt = row.transform;
+            var lamp = Ui.Box(rt, "Lamp", decided[r] ? Theme.Aqua : Theme.Amber, false);
+            Ui.Place(lamp.rectTransform, W - 26, 12, 12, 12);
+            lamp.raycastTarget = false;
             if (room.ordered)
             {
                 var num = Ui.Text(rt, (r + 1).ToString(), 22, Theme.Aqua, true, TextAlignmentOptions.Center);
                 Ui.Place(num.rectTransform, 10, 12, 36, 30);
                 if (!locked)
                 {
-                    int index = r;
-                    var up = Ui.Button(rt, "▲", () => Move(index, -1), Ui.ButtonStyle.Quiet, 12); Ui.Place(up.GetComponent<RectTransform>(), 6, 42, 44, 24);
-                    var down = Ui.Button(rt, "▼", () => Move(index, 1), Ui.ButtonStyle.Quiet, 12); Ui.Place(down.GetComponent<RectTransform>(), 6, 66, 44, 24);
+                    int at = r;
+                    var up = Ui.Button(rt, "▲", () => Move(at, -1), Ui.ButtonStyle.Quiet, 12); Ui.Place(up.GetComponent<RectTransform>(), 6, 42, 44, 24);
+                    var down = Ui.Button(rt, "▼", () => Move(at, 1), Ui.ButtonStyle.Quiet, 12); Ui.Place(down.GetComponent<RectTransform>(), 6, 66, 44, 24);
                 }
             }
             float x0 = room.ordered ? 56 : 16;
             var name = Ui.Text(rt, item.name, 16, Theme.Ink, true);
-            Ui.Place(name.rectTransform, x0, 10, 1040 - x0 - 16, 24);
+            Ui.Place(name.rectTransform, x0, 10, W - x0 - 40, 24);
             name.enableWordWrapping = false; name.overflowMode = TextOverflowModes.Ellipsis;
             var detail = Ui.Text(rt, item.detail, 13, Theme.Text2);
-            Ui.Place(detail.rectTransform, x0, 34, 1040 - x0 - 16, 22);
+            Ui.Place(detail.rectTransform, x0, 34, W - x0 - 16, 22);
             detail.enableWordWrapping = false; detail.overflowMode = TextOverflowModes.Ellipsis;
             float fy = 60; int col = 0;
             foreach (var f in perRow)
             {
                 bool wide = Wide(f);
-                float fx = wide ? x0 : x0 + col * 500;
-                Chip(rt, fx, fy, wide ? 1040 - x0 - 16 : 480, f, item.key);
+                float fx = wide ? x0 : x0 + col * 476;
+                Chip(rt, fx, fy, wide ? W - x0 - 16 : 460, f, item.key);
                 if (wide) { fy += 44; col = 0; }
                 else { col++; if (col == 2) { col = 0; fy += 44; } }
             }
             y += h + 8;
         }
+        app.world.ShowConfig(index, decided);
         // Things not listed yet, to add (the asset nobody listed).
         var hidden = room.items.Where(i => i.hidden && !st.added.Contains(i.key)).ToList();
         if (hidden.Count > 0 && !locked)
@@ -157,9 +163,9 @@ public class RoomScreen
             foreach (var h in hidden)
             {
                 string key = h.key;
-                var b = Ui.Button(content, "+ " + h.name, () => { st.added.Add(key); st.order.Add(key); Build(); }, Ui.ButtonStyle.Secondary, 13);
-                Ui.Place(b.GetComponent<RectTransform>(), ax, y + 28, 340, 36);
-                ax += 350;
+                var b = Ui.Button(content, "+ " + h.name, () => { st.added.Add(key); st.order.Add(key); Sfx.Chime(); Build(); }, Ui.ButtonStyle.Secondary, 13);
+                Ui.Place(b.GetComponent<RectTransform>(), ax, y + 28, 320, 36);
+                ax += 330;
             }
             y += 76;
         }
@@ -169,18 +175,18 @@ public class RoomScreen
             var oh = Ui.Eyebrow(content, "FOR THE WHOLE ROOM", Theme.TealDeep);
             Ui.Place(oh.rectTransform, 0, y + 8, 600, 18);
             y += 30;
-            foreach (var f in once) { Chip(content, 0, y, 1040, f, "room"); y += 48; }
+            foreach (var f in once) { Chip(content, 0, y, W, f, "room"); y += 48; }
         }
         if (room.signable)
         {
             var sh = Ui.Eyebrow(content, "THE RECORD", Theme.TealDeep);
             Ui.Place(sh.rectTransform, 0, y + 8, 600, 18);
             var sig = Ui.Text(content, st.signed ? $"Signed by {st.signedBy} on {st.signedOn}." : "Not signed. A review that is not written down, dated and signed is not done.", 14, st.signed ? Theme.TealDeep : Theme.Text2);
-            Ui.Place(sig.rectTransform, 0, y + 30, 700, 24);
+            Ui.Place(sig.rectTransform, 0, y + 30, 660, 24);
             if (!locked)
             {
                 var sign = Ui.Button(content, st.signed ? "Signed" : "Sign and date the record", () => { st.signed = true; st.signedBy = "You, as the reviewer"; st.signedOn = System.DateTime.Now.ToString("d MMM yyyy"); Sfx.Buy(); Build(); }, st.signed ? Ui.ButtonStyle.Secondary : Ui.ButtonStyle.Primary, 14);
-                Ui.Place(sign.GetComponent<RectTransform>(), 720, y + 22, 300, 40);
+                Ui.Place(sign.GetComponent<RectTransform>(), W - 300, y + 22, 300, 40);
             }
             y += 72;
         }
@@ -216,11 +222,11 @@ public class RoomScreen
         Ui.Stretch(tl.rectTransform, 14, 0, 14, 0);
     }
 
-    void Move(int index, int by)
+    void Move(int at, int by)
     {
-        int to = index + by;
+        int to = at + by;
         if (to < 0 || to >= st.order.Count) return;
-        (st.order[index], st.order[to]) = (st.order[to], st.order[index]);
+        (st.order[at], st.order[to]) = (st.order[to], st.order[at]);
         Sfx.Tick();
         Build();
     }
