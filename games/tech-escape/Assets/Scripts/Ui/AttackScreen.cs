@@ -65,7 +65,7 @@ public class AttackScreen
 
         // The lines, in glass on the right.
         var column = Ui.Glass(root, "Lines", 1240, 110, 640, 700);
-        var head = Ui.Eyebrow(column.transform, "WHAT IT TRIED, AND WHAT GOT THROUGH", Theme.Teal);
+        var head = Ui.Eyebrow(column.transform, "WHAT IT TRIED", Theme.Teal);
         head.font = Theme.Bold;
         Ui.Place(head.rectTransform, 20, 14, 600, 18);
         linesLayer = Ui.Node("Lines", column.transform);
@@ -73,7 +73,7 @@ public class AttackScreen
         var sumBox = Ui.Glass(root, "Summary", 1240, 820, 640, 60);
         summary = Ui.Text(sumBox.transform, "", 16, Look.Chalk, true, TextAlignmentOptions.MidlineLeft);
         Ui.Place(summary.rectTransform, 20, 0, 600, 60);
-        Luma.Card(root, 1240, 890, 640, 110, app.luma.Say("live-" + room.number), 14, null, null, true, 80);
+        app.luma.Line(root, 1240, 890, 640, app.luma.Say("live-" + room.number), true, true, 14);
         results = Ui.Button(root, "See the debrief", app.ShowResults, Ui.ButtonStyle.Primary, 18);
         Ui.Place(results.GetComponent<RectTransform>(), 1640, 1012, 240, 52);
         results.gameObject.SetActive(false);
@@ -111,7 +111,7 @@ public class AttackScreen
             if (index >= 0) { yield return app.world.Visit(index, !line.held, 1.0f); last = app.world.DoorTransform(index); }
             else if (!line.held) { Sfx.Crash(); app.atmosphere.Pulse(Theme.Danger, 0.5f, 0.6f); app.world.Alarm(2f); }
             else Sfx.Clack();
-            Line(line.room, line.held ? "HELD" : "THROUGH", line.held ? line.reached : line.gap + ": " + line.reached, line.held);
+            Line(line.room, line.held ? "HELD" : "THROUGH", line.held ? "" : line.gap, line.held);
             if (line.held) held++; else through++;
             Lamps();
             yield return Moment(line.held ? "HELD" : "THROUGH", line.room + "  ·  " + (line.held ? line.reached : line.gap), line.held ? Theme.Teal : Look.Breached, line.held ? 0.7f : 1.1f, !line.held, line.held ? Sfx.Mood.Beep : Sfx.Mood.Alarm);

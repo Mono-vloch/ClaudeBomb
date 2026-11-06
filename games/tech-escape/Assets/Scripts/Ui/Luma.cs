@@ -77,6 +77,48 @@ public class Luma : MonoBehaviour
 
     public bool Speaking => speaking != null || (voice != null && voice.isPlaying);
 
+    // One line of coaching over a screen: her small portrait and the line typed out as she
+    // says it (or at reading speed when there is no recording). The strip fades once she is
+    // done unless it is to stay. Returns the strip, so a screen can replace the line.
+    public RectTransform Line(Transform parent, float x, float y, float w, string text, bool dark, bool stay = false, float size = 17)
+    {
+        var card = Ui.Box(parent, "Luma line", dark ? new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f) : Theme.Panel);
+        card.raycastTarget = false;
+        var t = card.transform;
+        var body = Ui.Text(t, "", size, dark ? Color.white : Theme.Ink);
+        float textH = body.GetPreferredValues(text ?? "", w - 110, 0).y;
+        float h = Mathf.Max(64f, textH + 38f);
+        Ui.Place(card.rectTransform, x, y, w, h);
+        var frame = Ui.Box(t, "Portrait", dark ? Theme.Ink : Theme.Surface2);
+        Ui.Place(frame.rectTransform, 10, 10, h - 20, h - 20);
+        var sprite = Portrait;
+        if (sprite != null)
+        {
+            var img = Ui.Node("Picture", frame.transform).gameObject.AddComponent<Image>();
+            img.sprite = sprite; img.preserveAspect = true; img.raycastTarget = false;
+            Ui.Stretch(img.rectTransform, 4, 4, 4, 4);
+        }
+        var name = Ui.Eyebrow(t, "LUMA", dark ? Theme.Teal : Theme.TealDeep);
+        name.font = Theme.Bold;
+        Ui.Place(name.rectTransform, h + 2, 9, 100, 18);
+        Ui.Place(body.rectTransform, h + 2, 28, w - h - 16, h - 32);
+        var group = Ui.Group(card);
+        StartCoroutine(RunLine(card, group, body, text ?? "", stay));
+        return card.rectTransform;
+    }
+
+    System.Collections.IEnumerator RunLine(Image card, CanvasGroup group, TMP_Text body, string text, bool stay)
+    {
+        yield return Ui.Type(body, text, 45f);
+        float waited = 0f;
+        while (card != null && Speaking && waited < 30f) { waited += Time.unscaledDeltaTime; yield return null; }
+        if (stay || card == null) yield break;
+        yield return new WaitForSecondsRealtime(2.5f);
+        if (card == null) yield break;
+        yield return Ui.Fade(group, 0f, 0.6f);
+        if (card != null) card.gameObject.SetActive(false);
+    }
+
     public void Hush()
     {
         if (speaking != null) { StopCoroutine(speaking); speaking = null; }

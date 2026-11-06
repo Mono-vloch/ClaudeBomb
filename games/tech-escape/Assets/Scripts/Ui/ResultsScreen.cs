@@ -55,20 +55,25 @@ public class ResultsScreen
         // What the attack found
         var found = Ui.Card(root, "Attack", Theme.Panel, Theme.Border1);
         Ui.Place(found.rectTransform, 80, 140, 860, 290);
-        var fh = Ui.Eyebrow(found.transform, "THE ATTACK  ·  WHAT GOT THROUGH, WHAT HELD", Theme.TealDeep); Ui.Place(fh.rectTransform, 16, 10, 800, 16);
+        var fh = Ui.Eyebrow(found.transform, "THE ATTACK", Theme.TealDeep); Ui.Place(fh.rectTransform, 16, 10, 800, 16);
+        var extras = new List<(string head, string body)>(); // the attack's full lines and the checks, for the file
         float fy = 32;
         if (a != null)
+        {
             foreach (var line in a.lines.Take(6))
             {
-                var w = Ui.Text(found.transform, line.held ? "Held" : "Through", 13, line.held ? Theme.TealDeep : Theme.Danger, true);
-                Ui.Place(w.rectTransform, 16, fy + 1, 70, 20);
-                var tx = Ui.Text(found.transform, (line.held ? line.reached : line.gap + ": " + line.reached), 13, Theme.Ink);
-                Ui.Place(tx.rectTransform, 90, fy, 750, 38);
-                tx.overflowMode = TextOverflowModes.Ellipsis;
-                fy += 38;
+                var lamp = Ui.Box(found.transform, "Lamp", line.held ? Theme.Aqua : Theme.Danger, false);
+                Ui.Place(lamp.rectTransform, 18, fy + 5, 12, 12);
+                lamp.raycastTarget = false;
+                var tx = Ui.Text(found.transform, line.held ? $"<b>Held</b>  ·  {line.room}" : $"<b>Through</b>  ·  {line.room}  ·  {line.gap}", 14, line.held ? Theme.Ink : Theme.Danger);
+                Ui.Place(tx.rectTransform, 42, fy, 800, 24);
+                tx.enableWordWrapping = false; tx.overflowMode = TextOverflowModes.Ellipsis;
+                fy += 34;
             }
-        var sm = Ui.Text(found.transform, a?.summary ?? "", 14, Theme.Ink, true);
-        Ui.Place(sm.rectTransform, 16, 262, 820, 24);
+            extras.Add(("THE ATTACK  ·  WHAT GOT THROUGH, WHAT HELD", string.Join("\n", a.lines.Select(x => (x.held ? "Held: " : "Through: ") + x.room + ", " + (x.held ? x.reached : x.gap + ": " + x.reached))) + "\n\n" + a.summary));
+        }
+        var sm = Ui.Text(found.transform, a?.summary ?? "", 15, Theme.Ink, true);
+        Ui.Place(sm.rectTransform, 16, 258, 820, 26);
 
         // The checks
         var checks = l.check(app.state, app.session, a);
@@ -76,16 +81,20 @@ public class ResultsScreen
         int medal = needed > 0 && ticked == needed ? 3 : ticked * 2 >= needed && needed > 0 ? 2 : a != null && !a.AnyThrough ? 1 : 0;
         var card = Ui.Card(root, "Checks", Theme.Panel, Theme.Border1);
         Ui.Place(card.rectTransform, 1000, 420, 860, 300);
-        var ch = Ui.Eyebrow(card.transform, "THE CHECKS  ·  WHAT YOU DID", Theme.TealDeep); Ui.Place(ch.rectTransform, 16, 10, 400, 16);
+        var ch = Ui.Eyebrow(card.transform, "THE CHECKS", Theme.TealDeep); Ui.Place(ch.rectTransform, 16, 10, 400, 16);
         float cy = 34;
         foreach (var (result, label) in checks)
         {
-            var word = Ui.Text(card.transform, result == Practised.Yes ? "Done" : result == Practised.Missed ? "Missed" : "n/a", 14, result == Practised.Yes ? Theme.TealDeep : result == Practised.Missed ? Theme.Danger : Theme.Muted, true);
-            Ui.Place(word.rectTransform, 16, cy + 1, 60, 22);
-            var lab = Ui.Text(card.transform, label, 15, Theme.Ink);
-            Ui.Place(lab.rectTransform, 84, cy, 760, 44);
-            cy += checks.Count > 5 ? 42 : 50;
+            // A lamp and a short label; the full label is in the file.
+            var lamp = Ui.Box(card.transform, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : Theme.Border, false);
+            Ui.Place(lamp.rectTransform, 18, cy + 6, 12, 12);
+            lamp.raycastTarget = false;
+            var lab = Ui.Text(card.transform, Labels.Of(label), 16, result == Practised.NotNeeded ? Theme.Muted : Theme.Ink);
+            Ui.Place(lab.rectTransform, 42, cy, 800, 26);
+            lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Ellipsis;
+            cy += checks.Count > 5 ? 38 : 46;
         }
+        extras.Add(("THE CHECKS", string.Join("\n", checks.Select(c => (c.result == Practised.Yes ? "Done: " : c.result == Practised.Missed ? "Missed: " : "Not needed: ") + c.label))));
 
         if (counts)
         {
@@ -94,20 +103,9 @@ public class ResultsScreen
             app.StartCoroutine(Platform.ReportProgress($"{l.id}:{result}", medal, string.Join("; ", checks.Where(c => c.result != Practised.NotNeeded).Select(c => $"{c.label}: {(c.result == Practised.Yes ? "done" : "missed")}"))));
         }
 
-        // The record so far: the spine the exit will ask for.
-        var rec = Ui.Card(root, "Record", Theme.Surface1, Theme.Border);
-        Ui.Place(rec.rectTransform, 80, 446, 860, 150);
-        var rh = Ui.Eyebrow(rec.transform, "THE FACILITY'S RECORD  ·  WHAT THE EXIT WILL ASK FOR", Theme.Muted); Ui.Place(rh.rectTransform, 16, 10, 800, 16);
-        string record = app.session.record.Count == 0 ? "Nothing yet: the record starts in tier 2, one line per room."
-                      : string.Join("\n", app.session.record.Take(5).Select(r => r.gap == "held" ? $"{r.room}: held" : $"{r.room}: {r.gap}, reached {r.reached}"));
-        var rt = Ui.Text(rec.transform, record, 13, Theme.Text2);
-        Ui.Place(rt.rectTransform, 16, 30, 828, 116);
-        rt.overflowMode = TextOverflowModes.Ellipsis;
-
         app.luma.Say("recap");
         bool unlock = counts && l.number < Rooms.Count;
-        string standards = l.number == 2 ? " (The method comes from ISO/IEC 27002 and NIST CSF 2.0.)" : l.number == 13 ? " (The phases come from NIST SP 800-61.)" : l.number == 15 ? " (The register follows ISO/IEC 27005.)" : "";
-        Luma.Card(root, 80, 612, 860, 150, l.takeaway + standards, 15, "Ask back at work: " + l.ask);
+        app.luma.Line(root, 80, 446, 860, l.takeaway, false, true, 17);
         Medal(medal, a, l);
         if (unlock) Unlock(736, Rooms.Get(l.number + 1), medal);
 
@@ -136,6 +134,7 @@ public class ResultsScreen
             Add("This room again", app.ShowRoom, Ui.ButtonStyle.Secondary, 200);
             if (l.Capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.Secondary, 180);
         }
+        Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.Secondary, 130);
         Add("Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 160);
         if (Platform.IsWeb) Add("Games menu", Platform.GoToMenu, Ui.ButtonStyle.Quiet, 160);
         Ui.Emblem(root);

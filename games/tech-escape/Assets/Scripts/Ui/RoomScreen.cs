@@ -53,13 +53,13 @@ public class RoomScreen
         var title = Ui.Text(hud.transform, room.title, 28, Color.white, true);
         Ui.Place(title.rectTransform, 24, 36, 1090, 40);
         title.enableWordWrapping = false;
-        var stepNote = Ui.Text(hud.transform, app.step == App.Step.SeeItWork ? "The room as it should be. Read it, then run the attack and watch it hold."
-                      : app.step == App.Step.FixIt ? "Fix it: " + room.mistake + ". " + room.why
-                      : "Your own decisions. This is the run that counts; it goes to the record.", 13, Look.Chalk);
+        var stepNote = Ui.Text(hud.transform, app.step == App.Step.SeeItWork ? "The room as it should be" : app.step == App.Step.FixIt ? "Fix it: " + room.mistake : "Your run: it goes to the record", 13, Look.Chalk);
         Ui.Place(stepNote.rectTransform, 24, 72, 1090, 22);
         stepNote.enableWordWrapping = false; stepNote.overflowMode = TextOverflowModes.Ellipsis;
         var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.GhostOnDark, 15);
         Ui.Place(back.GetComponent<RectTransform>(), 1200, 40, 120, 52);
+        var file = Ui.Button(root, "The file", () => app.ShowFile(), Ui.ButtonStyle.GhostOnDark, 15);
+        Ui.Place(file.GetComponent<RectTransform>(), 1330, 40, 120, 52);
         var run = Ui.Button(root, "RUN THE ATTACK", () => { if (Ready()) app.RunAttack(); }, Ui.ButtonStyle.Accent, 20);
         Ui.Place(run.GetComponent<RectTransform>(), 1620, 32, 260, 64);
 
@@ -79,7 +79,7 @@ public class RoomScreen
         Ui.Place(tag.rectTransform, 20, 10, 700, 20);
         note = Ui.Text(card.transform, room.fixes, 14, Look.Chalk);
         Ui.Place(note.rectTransform, 20, 30, 744, 44);
-        Luma.Card(root, 40, 980, 780, 84, app.luma.Say("live-" + room.number), 13, null, null, true, 56);
+        app.luma.Line(root, 40, 980, 780, app.luma.Say("live-" + room.number), true, false, 14);
 
         panel = Ui.Node("Panel", root);
         Ui.Place(panel, 840, 128, 1040, 936);

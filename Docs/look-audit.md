@@ -741,3 +741,96 @@ Frames: `games/robot-racing/Builds/look-audit/text/` (the same walk as `after/`,
 ## Web after the text pass
 
 loaded in 4.2 s, 20.5 MB transferred (was 19.5 MB / 4.0 s after the look pass). Loads and runs on the platform.
+
+---
+
+# Phase 4c: Tech Escape, the text pass
+
+6 November 2026, the same rule, applied to the facility. The file's standing section here is
+"How a room works" (the rows and their chips, the lamps on the rows and on the room's wall,
+adding what is not listed, signing a record, the three runs, and what the attack does with it);
+the file also carries the facility's record, which used to be a card on the debrief.
+
+## What left each screen
+
+| Screen | Was | Is |
+|---|---|---|
+| Title | a 45-word blurb, LUMA's card, each tier's room names, a footer | title, tagline, LUMA's one line, three tiers of numbered stops with stars; the voice and sound switches |
+| Briefing | kicker, LUMA, the 70-word idea, YOU FIX, FIX IT with its why, the twelve rooms as rows with "a gap: …" texts, a caption | in dark glass over the sharp corridor with this level's door lit amber: the question, the headline, LUMA's intro spoken, YOU FIX in one line, the mistake's name, the twelve rooms as lamps (held, a gap, this one, not yet), the ladder; the idea, the why and the record in the file |
+| Warm-up | "Right. That is from level 1.1." | "Right." / "Not quite." with the answer lit |
+| Room | "Fix it: an asset nobody listed. The ready register misses the working copy…" in the HUD; LUMA's card | "Fix it: An asset nobody listed"; her line, gone when she is done; the rows, their lamps and YOU FIX as they were |
+| Attack | each line's full sentence in the column; LUMA's card | HELD · room, or THROUGH · room · the gap; her line; the moments as they were |
+| Debrief | Held/Through with every sentence, Done/Missed with the full check labels, the record card, LUMA's takeaway + the standard + the ask, | lamps: Held · room / Through · room · gap, lamps with short labels, the takeaway as her line; the full lines, the checks, the record, the standard and the ask in the file |
+
+## The short forms
+
+The debrief's lamps carry these; the full label stays in the file and in the platform's report.
+
+| Full label | On the lamp |
+|---|---|
+| Administration unreachable from the public side | Admin closed to the public side |
+| An alert that fired on the intrusion and not on the noise | An alert on the intrusion, not the noise |
+| An incident log with a time for each step | A timed incident log |
+| At least one cause is a control gap from tier 2 | A cause from a tier 2 gap |
+| Backups unreachable from the zones the attack ran in | Backups out of the attack's reach |
+| Blocks are logged, by the last rule | Blocks logged by the last rule |
+| Both forms have the facts a responder needs | Both forms carry the facts |
+| Each control picked for the risk it lowers, with its Function | Each control fits its risk |
+| Each crossing is listed and justified | Each crossing listed and justified |
+| Each has an impact in the three terms | An impact in the three terms |
+| Each link names its room and its gap | Each link names room and gap |
+| Each report has the facts a responder needs | Each report carries the facts |
+| Each service's rights limited to its job | Each service limited to its job |
+| Every action has an owner and a due date | Every action owned and dated |
+| Every asset in the facility is on the register | Every asset on the register |
+| Every cause has an action with a done-when | Every cause has a done-when |
+| Every control has evidence that would satisfy an auditor | Evidence for every control |
+| Every high risk has a treatment decision | Every high risk treated |
+| Every link in the record is in the chain, in order | The chain complete, in order |
+| Every privileged account has MFA | MFA on every privileged account |
+| Every suspicious message caught, with a reason that is not "it looked wrong" | Every suspicious message caught, with a reason |
+| Every ticket has an owner and a date | Every ticket owned and dated |
+| Evidence kept before anything is removed | Evidence kept first |
+| Evidence of each, dated and signed | Evidence, dated and signed |
+| No account for a job that no longer exists | No account for a gone job |
+| No account with more than its job needs | No account above its job |
+| No high risk without a control | No high risk uncontrolled |
+| No key on the same system as its data | No key beside its data |
+| No private data in the logs | No private data in logs |
+| No public storage of sensitive assets | Sensitive storage not public |
+| Nothing exploitable today rated below High | Exploitable today rated High |
+| Nothing on the form is a guess presented as a fact | No guess presented as fact |
+| Nothing reachable from outside on a high-value asset left open | No reachable high-value gap left |
+| Ordered by severity, exposure and asset value, not score alone | Ordered by severity, exposure, value |
+| Rated likelihood and impact for every risk | Every risk rated |
+| Rotate, invalidate, revoke, in that order | Rotate, invalidate, revoke, in order |
+| Severity declared within the time limit and justified by the facts | Severity declared in time, justified |
+| Sign-in, access and network logs kept for the sensitive assets | Sign-in, access, network logs kept |
+| The commander made no technical change | The commander made no change |
+| The decision, event or incident, is right and gives a reason | Event or incident: right, with a reason |
+| The evidence says what was checked and when | Evidence says what and when |
+| The internal address unreachable from services that do not need it | Internal address closed to the rest |
+| The priority actions trace back to the tier 1 register | Priorities trace to the register |
+| The public zone cannot reach the data zone | Public zone cannot reach data |
+| The record names who approved each account kept | Each kept account has an approver |
+| The runbook has no "consider" | No "consider" in the runbook |
+| The sensitive assets are encrypted at rest | Sensitive assets encrypted at rest |
+| The three actions each tie to a high risk and its control | Three actions tied to high risks |
+| The trace is complete from the first sign-in to the data touched | The trace complete, sign-in to data |
+| The trigger and the root causes are distinct | Trigger and root causes distinct |
+| The trigger is marked, and is not called the cause | The trigger marked, not the cause |
+| The whole-facility attack got through nowhere | The attack got through nowhere |
+| Their own access, not the administrator's | Own access, not the admin's |
+| Traffic across the public line is encrypted | Public-line traffic encrypted |
+| Whatever got through is in the record with the room and the gap | What got through is in the record |
+
+The thirty other labels were already five words or fewer and are shown as they are.
+
+Frames: `games/tech-escape/Builds/look-audit/text/` (the same walk as `after/`, plus
+`2c-file.png` with the file open over the briefing).
+
+## Web after the text pass
+
+22.5 MB transferred, 2.4 s to load (was 21.4 MB / 3.7 s after the look pass; the two load
+times are the same yardstick, headless Chrome with software rendering, and swing with the
+machine's load). Loads and runs on the platform.
