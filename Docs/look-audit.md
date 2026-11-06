@@ -864,3 +864,53 @@ details." The garage was a settings sheet with an agent standing next to it. Wha
 Frames: `games/ai-arena/Builds/look-audit/garage/` (1.1 with the ready list, 1.2 with the
 broken one, Settings, the capstone with every tag open, a brain switched, seven coins, the run
 and the debrief) and the walk in `text/`.
+
+---
+
+# Phase 5b: Robot Racing, the pit lane
+
+6 November 2026, the garage's cuts applied to the circuit.
+
+- **The robot runs by itself.** The three runs (Watch the pro, Fix the broken bot, Your run)
+  are gone as a control. A level opens with its setup already in the pit lane: the broken one
+  on a fix-it level (no points at all on 1.1, the sensor missing on 2.1, the loophole on 2.4),
+  the ready one where there is only that, the fixed defaults on the capstone. LUMA says once,
+  under the car, why it works or what is wrong with it. On the three levels whose mistake needs
+  two robots (never again / forever, the scraper / the careful one, run A / run B) the second
+  robot still trains after the player's, unchanged, so the two curves can be compared.
+- **The settings live on the car.** The seven sections are tags in two columns beside the car,
+  each with a line to the part of the car it is (senses at the nose, moves at the front wheel,
+  points on the roof light, knobs at the back, new moves at the rear wheel, tracks and the
+  measure on the ground); a setting the level has not opened reads OPENS AT 2.1 instead. The
+  sheet on the right holds only what this level opens: nothing on 1.1, the points table on
+  2.3, everything on the capstone, and the prediction when the level asks for one. The car
+  pops when a setting moves. The portrait camera came in closer and lower for the car.
+- **Speed is always the fastest.** The 1x/10x/100x/Max control left the run; it is in Settings
+  with LUMA's voice and the sound. The race still drops to 10x so it can be watched.
+- The run notes, the dial blurbs, the hint on fixed settings and the settings summary under
+  the car are gone with the cards they sat on.
+
+Frames: `games/robot-racing/Builds/look-audit/pit/` (1.1 with nothing to set, 2.3 with the
+points table, the capstone with everything, Settings, a run, the debrief) and the walk in
+`text/`.
+
+---
+
+# Phase 5c: Tech Escape, the room
+
+6 November 2026, the same cuts applied to the facility.
+
+- **The facility runs the attack by itself.** The three runs (Watch the pro, Fix the broken
+  room, Your run) are gone as a control. A level opens with the room as it was handed over,
+  the planned mistake in it (fix it, or run the attack and watch it get through); a room with
+  only a ready setup opens with that; a room the player already ran comes back as they left
+  it. LUMA says the mistake and why it fails once, under the room. One run per level; it
+  always counts, and it goes to the record.
+- The HUD names the mistake in four words ("Fix it: An asset nobody listed") and nothing more;
+  the attack's and the debrief's headers lost the run's name.
+- The room keeps what is the game here: the system's rows and their chips, the lamps on the
+  rows and on the wall. There is no speed to hide and one robot's worth of settings, so no
+  Settings sheet.
+
+Frames: `games/tech-escape/Builds/look-audit/room/` (1.3 as handed over, 1.1, the attack's
+end, the debrief) and the walk in `text/`.

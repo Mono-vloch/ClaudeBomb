@@ -6,16 +6,13 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // The one object in the scene. Builds the canvas, keeps the campaign (which rooms
-// are done, the stars each earned, every room's last state and the record), runs
-// the training steps of a room and moves between screens.
+// are done, the stars each earned, every room's last state and the record) and
+// moves between screens.
 public class App : MonoBehaviour
 {
-    public enum Step { SeeItWork, FixIt, YourTurn }
-
     public Room room;
     public RoomState state;
     public Session session = new Session();
-    public Step step = Step.YourTurn;
     public Attack lastAttack;
     public Luma luma;
     public Building world;
@@ -26,7 +23,6 @@ public class App : MonoBehaviour
 
     const string PrefLevel = "tech_escape_level", PrefStars = "tech_escape_stars_", PrefRoom = "tech_escape_room_", PrefRecord = "tech_escape_record";
     Image page;
-    RoomState own;
     public Action onLeave;
 
     public void Paper(Color c) { if (page != null) page.color = c; }
@@ -118,13 +114,16 @@ public class App : MonoBehaviour
     public void RunAttack() { new AttackScreen(Fresh(), this); }
     public void ShowResults() { new ResultsScreen(Fresh(), this); }
 
+    // The facility runs the attack by itself; the player fixes the room and watches. A
+    // level with a planned mistake opens with the room as it was handed over, the mistake
+    // in it (fix it, or run the attack and watch it get through); one with only a ready
+    // room opens with that. A room the player already ran comes back as they left it.
     public void StartLevel(int number)
     {
         room = Rooms.Get(number);
-        own = null;
         lastAttack = null;
-        step = room.ready.Count > 0 ? Step.SeeItWork : room.broken.Count > 0 ? Step.FixIt : Step.YourTurn;
-        LoadStep();
+        state = session.Of(room.id)?.Clone()
+             ?? (room.broken.Count > 0 ? room.Preset(room.broken, room.brokenOrder) : room.ready.Count > 0 ? room.Preset(room.ready, room.readyOrder) : room.Blank());
         ShowLesson();
     }
 
@@ -134,23 +133,10 @@ public class App : MonoBehaviour
         if (next > Rooms.Count) ShowTitle(); else StartLevel(next);
     }
 
-    public string StepName => step == Step.SeeItWork ? "Watch the pro" : step == Step.FixIt ? "Fix the broken room" : "Your run";
-    public bool Training => step != Step.YourTurn;
-
-    public void SetStep(Step s) { step = s; LoadStep(); }
-
-    void LoadStep()
-    {
-        if (step == Step.SeeItWork && room.ready.Count > 0) state = room.Preset(room.ready, room.readyOrder);
-        else if (step == Step.FixIt && room.broken.Count > 0) state = room.Preset(room.broken, room.brokenOrder);
-        else { step = Step.YourTurn; state = session.Of(room.id)?.Clone() ?? room.Blank(); }
-    }
-
     // The attack ran: remember the room as the student left it, and what got through.
     public void Record(Attack a)
     {
         lastAttack = a;
-        if (step != Step.YourTurn) return;
         session.rooms[room.id] = state.Clone();
         if (room.tier == 2 && !room.Capstone)
         {

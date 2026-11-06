@@ -50,7 +50,6 @@ public class DemoDriver : MonoBehaviour
         yield return new WaitForSeconds(0.6f);
         yield return Shot("2b-warm-up");
         app.StartLevel(3);
-        app.SetStep(App.Step.FixIt);
         app.ShowRoom();
         yield return new WaitForSeconds(0.8f);
         yield return Shot("3-room");
@@ -65,7 +64,6 @@ public class DemoDriver : MonoBehaviour
         yield return new WaitForSeconds(2.6f); // the medal has been revealed by then
         yield return Shot("5-debrief");
         app.StartLevel(7);
-        app.SetStep(App.Step.FixIt);
         app.ShowRoom();
         yield return new WaitForSeconds(0.8f);
         yield return Shot("6-room-ordered");

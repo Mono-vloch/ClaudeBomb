@@ -23,7 +23,7 @@ public class ResultsScreen
         this.app = app;
         var l = app.room;
         var a = app.lastAttack;
-        bool training = app.Training, counts = !training;
+        bool counts = true;
         root = Ui.Node("Results", parent);
         Ui.Stretch(root);
         app.Paper(Color.clear);
@@ -47,7 +47,7 @@ public class ResultsScreen
         Ui.Stretch(scrim.rectTransform);
         scrim.raycastTarget = false;
 
-        var title = Ui.Text(root, $"Debrief · Level {l.id} · {app.StepName}", 44, Theme.Ink, true);
+        var title = Ui.Text(root, $"Debrief · Level {l.id}", 44, Theme.Ink, true);
         Ui.Place(title.rectTransform, 80, 36, 900, 56);
         var sub = Ui.Text(root, $"{l.room}: {l.title}", 18, Theme.Text2);
         Ui.Place(sub.rectTransform, 80, 100, 880, 28);
@@ -117,17 +117,6 @@ public class ResultsScreen
             bx += w + 14;
             return b;
         }
-        if (training && app.step == App.Step.SeeItWork)
-        {
-            if (l.broken.Count > 0) Add("Next: Fix the broken room", () => { app.SetStep(App.Step.FixIt); app.ShowRoom(); }, Ui.ButtonStyle.Primary, 300);
-            Add("Next: Your run", () => { app.SetStep(App.Step.YourTurn); app.ShowRoom(); }, l.broken.Count > 0 ? Ui.ButtonStyle.Secondary : Ui.ButtonStyle.Primary, 200);
-        }
-        else if (training)
-        {
-            Add("Fix it again", app.ShowRoom, Ui.ButtonStyle.Primary, 180);
-            Add("Next: Your run", () => { app.SetStep(App.Step.YourTurn); app.ShowRoom(); }, Ui.ButtonStyle.Secondary, 200);
-        }
-        else
         {
             bool last = l.number >= Rooms.Count;
             Add(last ? "The exit: title screen" : $"Next: {Rooms.Get(l.number + 1).id} {Rooms.Get(l.number + 1).title.Replace("Capstone: ", "")}", last ? app.ShowTitle : (System.Action)app.NextLevel, Ui.ButtonStyle.Primary, last ? 260 : 520);
@@ -151,7 +140,7 @@ public class ResultsScreen
         Color colour = medal == 3 ? Gold : medal == 2 ? Silver : medal == 1 ? Bronze : Theme.Ink;
         var badge = Ui.Glass(root, "Medal", 1230, 215, 400, 150, true, colour);
         var b = badge.transform;
-        var tag = Ui.Eyebrow(b, app.Training ? "A TRAINING RUN" : "THE MEDAL", Theme.Teal);
+        var tag = Ui.Eyebrow(b, "THE MEDAL", Theme.Teal);
         Ui.Place(tag.rectTransform, 0, 14, 400, 18); tag.alignment = TextAlignmentOptions.Top;
         var name = Ui.Text(b, medal > 0 ? MedalNames[medal] : "NO MEDAL YET", medal > 0 ? 44 : 28, medal > 0 ? colour : Look.Chalk, true, TextAlignmentOptions.Center);
         name.characterSpacing = 6;
@@ -163,7 +152,7 @@ public class ResultsScreen
             Ui.Place(stars[s].rectTransform, 155 + s * 32, 98, 26, 26);
             stars[s].raycastTarget = false;
         }
-        var rank = Ui.Text(b, app.Training ? "the stars count on your own run" : $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Look.Chalk, false, TextAlignmentOptions.Center);
+        var rank = Ui.Text(b, $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Look.Chalk, false, TextAlignmentOptions.Center);
         Ui.Place(rank.rectTransform, 0, 122, 400, 20);
         app.StartCoroutine(Reveal(badge, stars, medal, colour));
     }

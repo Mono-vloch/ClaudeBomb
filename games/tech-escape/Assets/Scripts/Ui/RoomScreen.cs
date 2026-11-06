@@ -27,19 +27,13 @@ public class RoomScreen
         this.app = app;
         room = app.room;
         st = app.state;
-        locked = app.step == App.Step.SeeItWork;
+        locked = false;
         root = Ui.Node("Room", parent);
         Ui.Stretch(root);
         app.Paper(Color.clear);
 
-        var labels = new List<string>(); var steps = new List<App.Step>();
-        if (room.ready.Count > 0) { labels.Add("Watch the pro"); steps.Add(App.Step.SeeItWork); }
-        if (room.broken.Count > 0) { labels.Add("Fix the broken room"); steps.Add(App.Step.FixIt); }
-        labels.Add("Your run"); steps.Add(App.Step.YourTurn);
-        bool runs = labels.Count > 1;
-
         frame = Ui.Node("Frame", root);
-        Ui.Place(frame, 40, runs ? 196 : 128, 780, runs ? 690 : 758);
+        Ui.Place(frame, 40, 128, 780, 758);
         app.world.Build();
         index = Facility.RoomIndex(room.room);
         for (int i = 0; i < 12; i++) app.world.SetDoor(i, i == index ? Building.DoorState.Open : i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
@@ -48,12 +42,12 @@ public class RoomScreen
 
         // The HUD, in dark glass: the level, the room, the step.
         var hud = Ui.Glass(root, "Hud", 40, 16, 1140, 100);
-        var eyebrow = Ui.Eyebrow(hud.transform, $"LEVEL {room.id}  ·  {room.room.ToUpperInvariant()}  ·  {app.StepName.ToUpperInvariant()}", Theme.Teal);
+        var eyebrow = Ui.Eyebrow(hud.transform, $"LEVEL {room.id}  ·  {room.room.ToUpperInvariant()}", Theme.Teal);
         Ui.Place(eyebrow.rectTransform, 24, 14, 1000, 20);
         var title = Ui.Text(hud.transform, room.title, 28, Color.white, true);
         Ui.Place(title.rectTransform, 24, 36, 1090, 40);
         title.enableWordWrapping = false;
-        var stepNote = Ui.Text(hud.transform, app.step == App.Step.SeeItWork ? "The room as it should be" : app.step == App.Step.FixIt ? "Fix it: " + room.mistake : "Your run: it goes to the record", 13, Look.Chalk);
+        var stepNote = Ui.Text(hud.transform, string.IsNullOrEmpty(room.mistake) ? "The run goes to the record" : "Fix it: " + room.mistake, 13, Look.Chalk);
         Ui.Place(stepNote.rectTransform, 24, 72, 1090, 22);
         stepNote.enableWordWrapping = false; stepNote.overflowMode = TextOverflowModes.Ellipsis;
         var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.GhostOnDark, 15);
@@ -63,23 +57,15 @@ public class RoomScreen
         var run = Ui.Button(root, "RUN THE ATTACK", () => { if (Ready()) app.RunAttack(); }, Ui.ButtonStyle.Accent, 20);
         Ui.Place(run.GetComponent<RectTransform>(), 1620, 32, 260, 64);
 
-        if (runs)
-        {
-            var strip = Ui.Glass(root, "Runs", 40, 128, 780, 58, false);
-            var stepsLabel = Ui.Eyebrow(strip.transform, "THE RUNS", Theme.Teal);
-            Ui.Place(stepsLabel.rectTransform, 20, 20, 100, 20);
-            var seg = new Ui.Segmented(strip.transform, labels.ToArray(), steps.IndexOf(app.step), 640, 40, 14);
-            Ui.Place(seg.root, 120, 9, 640, 40);
-            seg.OnSelect = i => { app.SetStep(steps[i]); app.ShowRoom(); };
-        }
-
         // What the student fixes here, and LUMA's line, in glass under the room.
         var card = Ui.Glass(root, "Fixes", 40, 896, 780, 76);
         var tag = Ui.Eyebrow(card.transform, "YOU FIX", Theme.Teal);
         Ui.Place(tag.rectTransform, 20, 10, 700, 20);
         note = Ui.Text(card.transform, room.fixes, 14, Look.Chalk);
         Ui.Place(note.rectTransform, 20, 30, 744, 44);
-        app.luma.Line(root, 40, 980, 780, app.luma.Say("live-" + room.number), true, false, 14);
+        // The room as it was handed over: LUMA says what is wrong with it, once, over the
+        // room; on a room with nothing planned, her line for the level.
+        app.luma.Line(root, 40, 980, 780, string.IsNullOrEmpty(room.mistake) ? app.luma.Say("live-" + room.number) : "Fix it: " + room.mistake + ". " + room.why, true, false, 14);
 
         panel = Ui.Node("Panel", root);
         Ui.Place(panel, 840, 128, 1040, 936);

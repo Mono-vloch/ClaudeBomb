@@ -47,7 +47,7 @@ public class AttackScreen
         var eyebrow = Ui.Eyebrow(hud.transform, "THE FACILITY RUNS THE ATTACK", Theme.Danger);
         eyebrow.font = Theme.Bold;
         Ui.Place(eyebrow.rectTransform, 24, 12, 600, 18);
-        var phaseText = Ui.Text(hud.transform, $"Level {room.id}  ·  {room.room}  ·  {app.StepName}", 24, Color.white, true);
+        var phaseText = Ui.Text(hud.transform, $"Level {room.id}  ·  {room.room}", 24, Color.white, true);
         Ui.Place(phaseText.rectTransform, 24, 34, 720, 40);
         phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
         var doorsLabel = Ui.Eyebrow(hud.transform, "THE DOORS", Theme.Teal);
