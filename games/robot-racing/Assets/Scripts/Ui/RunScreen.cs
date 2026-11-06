@@ -25,7 +25,8 @@ public class RunScreen
     public Phase phase = Phase.Training;
     readonly Chart chart;
     readonly RectTransform labelsLayer, bannerLayer, bookContent;
-    readonly TextMeshProUGUI turnText, phaseText, pointsText, exploreText, moveText, bookCount, coach, missionText, rewardText, bestText, lapText;
+    readonly TextMeshProUGUI turnText, phaseText, pointsText, exploreText, moveText, bookCount, missionText, rewardText, bestText, lapText;
+    RectTransform coachLine;
     readonly TextMeshProUGUI[] sensorText = new TextMeshProUGUI[Sensors.Count];
     readonly (Image track, Image fill)[] sensorBar = new (Image, Image)[Sensors.Count];
     readonly Button pause, results, stop;
@@ -138,20 +139,20 @@ public class RunScreen
         // The move it just made, and what it earned.
         var moveCard = Ui.Card(root, "Move", Theme.Panel, Theme.Border1);
         Ui.Place(moveCard.rectTransform, 1450, 228, 410, 206);
-        var ml = Ui.Eyebrow(moveCard.transform, "WHAT IT DID, AND WHAT IT EARNED", Theme.TealDeep); Ui.Place(ml.rectTransform, 16, 10, 380, 16);
+        var ml = Ui.Eyebrow(moveCard.transform, "THE MOVE", Theme.TealDeep); Ui.Place(ml.rectTransform, 16, 10, 380, 16);
         moveText = Ui.Text(moveCard.transform, "", 15, Theme.Ink);
         Ui.Place(moveText.rectTransform, 16, 34, 378, 160);
 
         // The rule book it writes itself.
         var book = Ui.Card(root, "Book", Theme.Panel, Theme.Border1);
-        Ui.Place(book.rectTransform, 1020, 446, 840, 390);
-        var bl = Ui.Eyebrow(book.transform, "THE RULE BOOK IT WROTE ITSELF  ·  FOR EACH SITUATION, THE MOVE THAT PAID", Theme.TealDeep); Ui.Place(bl.rectTransform, 16, 10, 800, 16);
+        Ui.Place(book.rectTransform, 1020, 446, 840, 436);
+        var bl = Ui.Eyebrow(book.transform, "THE RULE BOOK  ·  THE SITUATION, THE MOVE THAT PAID", Theme.TealDeep); Ui.Place(bl.rectTransform, 16, 10, 800, 16);
         var scroll = Ui.Scroll(book.transform, "Scroll", out bookContent);
-        Ui.Place(scroll.GetComponent<RectTransform>(), 16, 32, 808, 346);
+        Ui.Place(scroll.GetComponent<RectTransform>(), 16, 32, 808, 392);
 
         string opening = app.CurrentSetup != null ? (app.step == App.Step.FixIt ? "Fix it: " + app.CurrentSetup.name + ". " : "Watch the pro. ") + app.CurrentSetup.why
                        : app.luma.Say(l != null ? "live-" + l.number : "welcome");
-        coach = Luma.Card(root, 1020, 848, 840, 150, opening, 15, null, app.luma);
+        SayLine(opening, true);
 
         results = Ui.Button(root, "See the debrief", app.FinishLevel, Ui.ButtonStyle.Primary, 18);
         Ui.Place(results.GetComponent<RectTransform>(), 1620, 1016, 240, 46);
@@ -175,12 +176,20 @@ public class RunScreen
         saidFirst = saidSettled = saidLoophole = false;
     }
 
+    // LUMA's line at the foot of the column: the lead of what she has to say, typed as she
+    // says it, gone once she is done. The whole of it is in the file.
+    void SayLine(string text, bool stay = false)
+    {
+        if (coachLine != null) Object.Destroy(coachLine.gameObject);
+        coachLine = app.luma.Line(root, 1020, 896, 840, Labels.Lead(text), false, stay, 15);
+    }
+
     void Mission()
     {
         string run = queue.Count > 1 ? $"{(string.IsNullOrEmpty(training.label) ? "Run " + (which + 1) : training.label)} ({which + 1} of {queue.Count})  ·  " : "";
         missionText.text = phase == Phase.Training ? $"{run}Training on {training.track.name.ToLowerInvariant()}: {training.s.attempts} attempts, seed {training.s.seed}"
-                         : phase == Phase.Racing ? $"{run}The race on {race.track.name.ToLowerInvariant()}: {race.laps.Count}/{lapsWanted} laps, no new moves, no learning"
-                         : phase == Phase.Real ? "The real run: one lap on a track the simulator never had. No learning." : "Done.";
+                         : phase == Phase.Racing ? $"{run}The race on {race.track.name.ToLowerInvariant()}: {race.laps.Count}/{lapsWanted} laps"
+                         : phase == Phase.Real ? "The real run: one lap, no learning" : "Done.";
     }
     int lapsWanted => app.lesson != null ? app.lesson.laps : 5;
 
@@ -229,9 +238,9 @@ public class RunScreen
                 if (watchable || speedIndex == 1) { if (a.finished) app.world.Finished(watchable); else app.world.Crash(watchable); }
                 app.world.AddGhost(path, a.finished);
                 path.Clear();
-                if (a.finished && !saidFirst) { saidFirst = true; Announce("FIRST FINISH", $"attempt {a.index}", Theme.Amber, 1.4f, true); coach.text = $"First finish at attempt {a.index}. One finish proves nothing: watch whether the curve stays up."; }
-                if (training.settled > 0 && !saidSettled) { saidSettled = true; Announce("THE CURVE SETTLED", $"attempt {training.settled}: most attempts finish now", Theme.Teal, 1.5f, true); coach.text = $"The curve settled at attempt {training.settled}: most attempts finish now. That is learning, not luck."; }
-                if (!saidLoophole && a.points > training.s.finish * 0.6f && !a.finished && training.s.speedBonus > 0) { saidLoophole = true; Announce("REWARD HACKED", "points, no lap: it found the cheapest way to the number", Theme.Danger, 2.4f, true); coach.text = "Look: the curve rises and the lap count stays at zero. It found the cheapest way to the number, and the number was not the job."; }
+                if (a.finished && !saidFirst) { saidFirst = true; Announce("FIRST FINISH", $"attempt {a.index}", Theme.Amber, 1.4f, true); SayLine($"First finish at attempt {a.index}. One finish proves nothing: watch whether the curve stays up."); }
+                if (training.settled > 0 && !saidSettled) { saidSettled = true; Announce("THE CURVE SETTLED", $"attempt {training.settled}: most attempts finish now", Theme.Teal, 1.5f, true); SayLine($"The curve settled at attempt {training.settled}: most attempts finish now. That is learning, not luck."); }
+                if (!saidLoophole && a.points > training.s.finish * 0.6f && !a.finished && training.s.speedBonus > 0) { saidLoophole = true; Announce("REWARD HACKED", "points, no lap: it found the cheapest way to the number", Theme.Danger, 2.4f, true); SayLine("Look: the curve rises and the lap count stays at zero. It found the cheapest way to the number, and the number was not the job."); }
                 if (training.done) { StartRace(); return false; }
             }
             return true;
@@ -258,7 +267,7 @@ public class RunScreen
         race = new Race(training, Track.Get(training.s.test), lapsWanted, training.s.seed + 1);
         if (race.track != training.track || true) { app.world.Build(race.track, false); app.world.ShowOverview(app.world.frame); }
         if (speedIndex > 1) SetSpeed(1);
-        coach.text = $"The race: {lapsWanted} laps on {race.track.name.ToLowerInvariant()} with the rule book as it is. No new moves, no learning.";
+        SayLine($"The race: {lapsWanted} laps on {race.track.name.ToLowerInvariant()} with the rule book as it is. No new moves, no learning.");
         Mission();
         follower.StartCoroutine(RaceIntro());
     }
@@ -313,7 +322,7 @@ public class RunScreen
         app.world.ShowOverview(app.world.frame);
         SetSpeed(0);
         Announce("THE REAL RUN", "one lap, no learning, on a track the simulator never had", Theme.Danger, 1.8f, true);
-        coach.text = "One lap on the real track, no learning. The oil on the straight is something the simulator never had.";
+        SayLine("One lap on the real track, no learning. The oil on the straight is something the simulator never had.");
         Mission();
     }
 
@@ -343,11 +352,11 @@ public class RunScreen
             bestText.text = $"{training.Best:0}";
             lapText.text = bestLap > 0 ? $"{bestLap} mv" : "–";
             turnText.text = $"Attempt {Mathf.Min(training.Attempts + 1, training.s.attempts)} of {training.s.attempts}";
-            phaseText.text = training.firstFinish < 0 ? "No finish yet. Random moves, and the points sorting them." : training.settled < 0 ? $"First finish at {training.firstFinish}. Waiting for the curve to settle." : $"Settled at {training.settled}.";
-            pointsText.text = $"This attempt: {training.attemptPoints:0} points  ·  best attempt: {training.Best:0}  ·  last move earned {training.lastReward:+0.#;-0.#}";
-            exploreText.text = $"Chance of a new move right now: {training.explore:0.00}  ·  the moves that paid come back more often; the rest it tries at this chance.";
-            bookCount.text = $"{training.book.pages.Count} situations in the book";
-            moveText.text = $"{Moves.Names[training.lastMove]}  ·  earned {training.lastReward:+0.#;-0.#}\n\nSpeed {training.car.speed}, {training.car.steps} moves this attempt.\n" + (training.car.crashed ? "Crashed." : training.car.finished ? "Finished." : "Driving.");
+            phaseText.text = training.firstFinish < 0 ? "No finish yet" : training.settled < 0 ? $"First finish at {training.firstFinish}" : $"Settled at {training.settled}";
+            pointsText.text = $"This attempt {training.attemptPoints:0}  ·  best {training.Best:0}  ·  last move {training.lastReward:+0.#;-0.#}";
+            exploreText.text = $"New move chance {training.explore:0.00}";
+            bookCount.text = $"{training.book.pages.Count} situations";
+            moveText.text = $"{Moves.Names[training.lastMove]}  ·  {training.lastReward:+0.#;-0.#}\n\nSpeed {training.car.speed}  ·  {training.car.steps} moves\n" + (training.car.crashed ? "Crashed." : training.car.finished ? "Finished." : "Driving.");
         }
         else if (race != null)
         {
@@ -357,10 +366,10 @@ public class RunScreen
             lapText.text = $"{race.car.steps} mv";
             turnText.text = phase == Phase.Real ? "The real run" : $"Lap {Mathf.Min(race.Lap, lapsWanted)} of {lapsWanted}";
             phaseText.text = $"Finished {race.Finishes}, crashed {race.Crashes}, wall touches {race.Touches:0.0} a lap, lap time {race.LapTime:0} moves";
-            pointsText.text = $"No new moves, no learning: the rule book as it is. Unknown situations met: {race.unknown}.";
+            pointsText.text = $"The rule book as it is  ·  unknown situations {race.unknown}";
             exploreText.text = "";
-            bookCount.text = $"{training.book.pages.Count} situations in the book";
-            moveText.text = $"Speed {race.car.speed}, {race.car.steps} moves this lap.\n" + (race.car.crashed ? "Crashed." : race.car.finished ? "Finished." : "Driving.");
+            bookCount.text = $"{training.book.pages.Count} situations";
+            moveText.text = $"Speed {race.car.speed}  ·  {race.car.steps} moves\n" + (race.car.crashed ? "Crashed." : race.car.finished ? "Finished." : "Driving.");
         }
         var r = phase == Phase.Training ? training.readings : race?.readings;
         for (int i = 0; i < Sensors.Count; i++)
@@ -400,7 +409,7 @@ public class RunScreen
         }
         if (pages.Count == 0)
         {
-            var empty = Ui.Text(bookContent, "Nothing yet. It starts knowing nothing.", 13, Theme.Muted);
+            var empty = Ui.Text(bookContent, "Nothing yet", 13, Theme.Muted);
             Ui.Place(empty.rectTransform, 10, 4, 600, 22);
             y = 30;
         }

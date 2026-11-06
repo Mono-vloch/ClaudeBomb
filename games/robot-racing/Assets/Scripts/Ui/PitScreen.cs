@@ -15,7 +15,8 @@ public class PitScreen
     readonly App app;
     readonly Settings s;
     readonly RectTransform frame, editor;
-    readonly TextMeshProUGUI caption, stepNote;
+    readonly TextMeshProUGUI caption;
+    RectTransform coachLine;
     TMP_InputField prediction;
 
     static readonly string[] TrackShort = { "One bend", "Two bends", "Both ways", "Chicane", "Plaza", "Hairpin", "Grand", "Left only", "Test bend", "Real" };
@@ -46,6 +47,8 @@ public class PitScreen
             var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.Quiet, 15);
             Ui.Place(back.GetComponent<RectTransform>(), 1080, 44, 100, 42);
         }
+        var file = Ui.Button(root, "The file", () => app.ShowFile(), Ui.ButtonStyle.Quiet, 15);
+        Ui.Place(file.GetComponent<RectTransform>(), 1184, 44, 90, 42);
         var train = Ui.Button(root, "TRAIN THE ROBOT", Train, Ui.ButtonStyle.Accent, 20);
         Ui.Place(train.GetComponent<RectTransform>(), 1600, 32, 260, 64);
 
@@ -61,8 +64,6 @@ public class PitScreen
             var seg = new Ui.Segmented(root, labels.ToArray(), steps.IndexOf(app.step), 560, 40, 14);
             Ui.Place(seg.root, 150, 100, 560, 40);
             seg.OnSelect = i => { app.SetStep(steps[i]); app.ShowPit(); };
-            stepNote = Ui.Text(root, "", 13, Theme.Text2);
-            Ui.Place(stepNote.rectTransform, 730, 100, 840, 44);
         }
 
         // The track
@@ -73,7 +74,7 @@ public class PitScreen
         Ui.Place(tag.rectTransform, 24, 12, 1200, 22);
         var note = Ui.Text(card.transform, t0.note, 20, Theme.Ink);
         Ui.Place(note.rectTransform, 24, 38, 1200, 36);
-        var budget = Ui.Text(card.transform, $"{s.attempts} attempts to train, then {(l != null ? l.laps : 5)} laps to race on the test track.", 14, Theme.Text2);
+        var budget = Ui.Text(card.transform, $"{s.attempts} attempts  ·  {(l != null ? l.laps : 5)} laps on the test track", 14, Theme.Text2);
         Ui.Place(budget.rectTransform, 24, 74, 1200, 24);
         LessonScreen.Map(card.transform, t0, 1300, 10, 480, 88);
 
@@ -87,7 +88,19 @@ public class PitScreen
         Ui.Place(editor, 780, 300, 1080, 760);
         BuildEditor();
         Caption();
+        Coach();
         Ui.Emblem(root);
+    }
+
+    // On a training run LUMA says why the ready setup learns, or what the broken one has
+    // in it, once, over the car; the words stay in the file.
+    void Coach()
+    {
+        if (coachLine != null) Object.Destroy(coachLine.gameObject);
+        coachLine = null;
+        var setup = app.CurrentSetup;
+        if (setup == null) return;
+        coachLine = app.luma.Line(root, 60, 300, 680, (app.step == App.Step.FixIt ? "Fix it: " + setup.name + ". " : "") + setup.why, true, false, 15);
     }
 
     void BuildWorld()
@@ -101,7 +114,7 @@ public class PitScreen
     {
         if (app.lesson != null && app.lesson.prediction && app.step == App.Step.YourTurn && (prediction == null || prediction.text.Trim().Length < 8))
         {
-            caption.text = "Write your prediction first: one line on what the robot will do.";
+            caption.text = "Write your prediction first.";
             caption.color = Theme.Danger;
             return;
         }
@@ -115,12 +128,9 @@ public class PitScreen
         caption.color = Theme.Text2;
         if (setup != null)
         {
-            caption.text = (app.step == App.Step.FixIt ? "Fix it: " + setup.name + ". " : "") + setup.why;
-            if (stepNote != null) stepNote.text = app.step == App.Step.SeeItWork ? "A ready setup that learns. Train it, and watch why it works."
-                                                : "The planned mistake, ready to run. Train it, watch it go wrong, then change the setting and train again.";
+            caption.text = app.step == App.Step.FixIt ? "Fix it: " + setup.name : "Watch the pro: a ready setup";
             return;
         }
-        if (stepNote != null) stepNote.text = "Your own settings. This is the run that counts.";
         caption.text = $"Senses: {string.Join(", ", Enumerable.Range(0, Sensors.Count).Where(i => s.sensors[i]).Select(i => Sensors.Names[i].ToLowerInvariant()))}  ·  " +
                        $"Moves: {s.MovesOn} of 5, top speed {s.topSpeed}  ·  Finish {s.finish:0}, crash {s.crash:0}, toward {s.toward:0.#}, away {s.away:0.#}, moment {s.moment:0.##}, speed bonus {s.speedBonus:0.#}  ·  " +
                        $"New moves {s.explore:0.0} falling {Settings.Fall(s.exploreFall)} to {s.exploreMin:0.00}  ·  rewrite {s.rewrite:0.00}  ·  {s.attempts} attempts, seed {s.seed}";
@@ -143,7 +153,7 @@ public class PitScreen
         if (tracks != null)
         {
             var tl = Ui.Eyebrow(tracks, "TRAINING ON", Theme.Muted); Ui.Place(tl.rectTransform, 0, 0, 200, 16);
-            var vl = Ui.Eyebrow(tracks, "TEST TRACK (NEVER TRAINED ON)", Theme.Muted); Ui.Place(vl.rectTransform, 0, 44, 300, 16);
+            var vl = Ui.Eyebrow(tracks, "TEST TRACK", Theme.Muted); Ui.Place(vl.rectTransform, 0, 44, 300, 16);
             for (int i = 0; i < Track.All.Length; i++)
             {
                 var id = Track.All[i].id;
@@ -168,7 +178,7 @@ public class PitScreen
                 int index = i;
                 Toggle(sensors, i * 100, 0, 96, Sensors.Names[i], s.sensors[i], () => { s.sensors[index] = !s.sensors[index]; app.world.SetSensors(s.sensors); Refresh(); });
             }
-        var moves = Section(t, 548, 134, 516, 96, "WHAT IT MAY DO  ·  AND ITS TOP SPEED", (free || l.moves) && !locked, "2.2",
+        var moves = Section(t, 548, 134, 516, 96, "WHAT IT MAY DO", (free || l.moves) && !locked, "2.2",
             string.Join(", ", Enumerable.Range(0, Moves.Count).Where(i => s.moves[i]).Select(i => Moves.Names[i])) + $". Top speed {s.topSpeed}.");
         if (moves != null)
         {
@@ -195,7 +205,7 @@ public class PitScreen
         }
 
         // New moves, and the knobs
-        var explore = Section(t, 16, 426, 520, 150, "NEW MOVES  ·  TRYING SOMETHING NEW", (free || l.explore) && !locked, "2.5",
+        var explore = Section(t, 16, 426, 520, 150, "NEW MOVES", (free || l.explore) && !locked, "2.5",
             $"Starts at {s.explore:0.0}, falls {Settings.Fall(s.exploreFall)}, floor {s.exploreMin:0.00}.");
         if (explore != null)
         {
@@ -203,39 +213,32 @@ public class PitScreen
             Row(explore, 0, 44, "How it falls", new[] { "never", "slowly", "fast", "at once" }, new[] { 1f, 0.995f, 0.98f, 0.9f }, s.exploreFall, v => { s.exploreFall = v; s.exploreOffAfterFinish = false; }, 300);
             Row(explore, 0, 88, "The floor", new[] { "0", "0.05", "0.5" }, new[] { 0f, 0.05f, 0.5f }, s.exploreMin, v => s.exploreMin = v, 300);
         }
-        var knobs = Section(t, 548, 426, 516, 150, "THE KNOBS  ·  SET BEFORE TRAINING", (free || l.knobs || l.attempts) && !locked, l != null && l.attempts && !l.knobs ? "3.3 (attempts open now)" : "3.3",
+        var knobs = Section(t, 548, 426, 516, 150, "THE KNOBS", (free || l.knobs || l.attempts) && !locked, "3.3",
             $"Rewrite speed {s.rewrite:0.00}, {s.attempts} attempts, seed {s.seed}.");
         if (knobs != null)
         {
             bool all = free || l.knobs;
             if (all) Row(knobs, 0, 0, "Rewrite speed", new[] { "0.02", "0.1", "0.3", "0.95" }, new[] { 0.02f, 0.1f, 0.3f, 0.95f }, s.rewrite, v => s.rewrite = v, 300);
-            else { var rl = Ui.Text(knobs, $"Rewrite speed: fixed at {s.rewrite:0.00} until 3.3", 13, Theme.Muted); Ui.Place(rl.rectTransform, 0, 8, 400, 20); }
+            else { var rl = Ui.Text(knobs, $"Rewrite speed {s.rewrite:0.00}  ·  opens at 3.3", 13, Theme.Muted); Ui.Place(rl.rectTransform, 0, 8, 400, 20); }
             Row(knobs, 0, 44, "Attempts", new[] { "50", "120", "250", "400", "1000" }, new[] { 50f, 120, 250, 400, 1000 }, s.attempts, v => s.attempts = (int)v, 300);
             if (all)
             {
-                var sl = Ui.Text(knobs, "The seed: the same luck twice", 13, Theme.Ink, true); Ui.Place(sl.rectTransform, 0, 92, 200, 20);
+                var sl = Ui.Text(knobs, "The seed", 13, Theme.Ink, true); Ui.Place(sl.rectTransform, 0, 92, 200, 20);
                 Pick(knobs, 200, 88, 240, new[] { $"Keep {s.seed}", "New seed" }, 0, i => { if (i == 1) { s.seed = new System.Random().Next(1, 1000); Refresh(); } });
             }
         }
 
         // The measure, and the prediction
-        var measure = Section(t, 16, 590, 520, 70, "THE MEASURE TO JUDGE IT BY", (free || l.measure) && !locked, "3.2", Measures.Names[s.measure] + ".");
+        var measure = Section(t, 16, 590, 520, 70, "THE MEASURE", (free || l.measure) && !locked, "3.2", Measures.Names[s.measure] + ".");
         if (measure != null) Pick(measure, 0, 0, 500, Measures.Names, s.measure, i => { s.measure = i; Refresh(); });
         if (l != null && l.prediction && app.step == App.Step.YourTurn)
         {
-            var pl = Ui.Eyebrow(t, "YOUR PREDICTION  ·  ONE LINE, BEFORE YOU TRAIN", Theme.TealDeep);
+            var pl = Ui.Eyebrow(t, "YOUR PREDICTION  ·  BEFORE YOU TRAIN", Theme.TealDeep);
             Ui.Place(pl.rectTransform, 564, 590, 500, 16);
             prediction = Ui.Input(t, l.predictionPrompt, false, 14);
             Ui.Place(prediction.GetComponent<RectTransform>(), 564, 610, 500, 44);
             prediction.text = app.session.prediction ?? "";
         }
-        else
-        {
-            var hint = Ui.Text(t, app.Training ? "A ready setup is read, not changed. Switch to Your run to set your own." : "Every setting not opened by this level is fixed, so only its idea is in play.", 13, Theme.Muted);
-            Ui.Place(hint.rectTransform, 564, 596, 500, 60);
-        }
-        var fuel = Ui.Text(t, "The attempt budget is the robot's time: it learns from the points, over the attempts, on the tracks, with these settings and nothing else.", 13, Theme.Text2);
-        Ui.Place(fuel.rectTransform, 28, 690, 1024, 40);
     }
 
     void Refresh()
@@ -257,7 +260,7 @@ public class PitScreen
             Ui.Place(content, 12, 30, w - 24, h - 36);
             return content;
         }
-        var tag = Ui.Eyebrow(card.transform, "LOCKED  ·  OPENS AT " + opensAt.ToUpperInvariant(), Theme.Muted);
+        var tag = Ui.Eyebrow(card.transform, "OPENS AT " + opensAt.ToUpperInvariant(), Theme.Muted);
         Ui.Place(tag.rectTransform, w - 330, 8, 318, 16);
         tag.alignment = TextAlignmentOptions.TopRight;
         var f = Ui.Text(card.transform, fixedText, 13, Theme.TealDeep, true);

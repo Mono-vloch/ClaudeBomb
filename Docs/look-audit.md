@@ -668,3 +668,76 @@ with the file open over the briefing).
 
 19.2 MB transferred, 3.7 s to load (was 19.2 MB / 3.8 s after the look pass): the words moved,
 they did not leave the build. Loads and runs on the platform.
+
+---
+
+# Phase 4b: Robot Racing, the text pass
+
+6 November 2026, the same rule as AI Arena's (Phase 4a), applied to the circuit. `Luma.Line`,
+`FileSheet` and `Labels` carried over; the file's standing section here is "How the pit lane
+works" (the sensors, the moves, the points table, new moves, the knobs, the tracks, the measure,
+the attempt budget, what a locked setting means).
+
+## What left each screen
+
+| Screen | Was | Is |
+|---|---|---|
+| Title | a 40-word blurb, LUMA's card, every level's name beside its tier, a footer | title, tagline, LUMA's one line, three tiers of numbered stops with stars; the voice and sound switches |
+| Briefing | kicker, LUMA, the 70-word idea, the track with its note and map, seven part cards with descriptions and "fixed … opens at …", a caption | in dark glass over the sharp circuit: the question, the headline, LUMA's intro spoken, the track's name, line and map, seven part chips (this level's lit), the ladder; the rest in the file |
+| Warm-up | "Right. That is from level 1.1." | "Right." / "Not quite." with the answer lit |
+| Pit lane | a run note, "150 attempts to train, then 5 laps to race on the test track.", long section titles, "LOCKED · OPENS AT 3.1", a hint on fixed settings, the 25-word attempt-budget sentence, the training run's reason in a caption | "150 attempts · 5 laps on the test track"; THE TRACKS, WHAT IT SENSES, WHAT IT MAY DO, THE POINTS TABLE, NEW MOVES, THE KNOBS, THE MEASURE; "OPENS AT 3.1"; the training run's reason spoken by LUMA once over the car; "Watch the pro: a ready setup" / "Fix it: no points at all" |
+| Run | LUMA's card with three-sentence commentary; "This attempt: 0 points · best attempt: -100 · last move earned -100.2"; "Chance of a new move right now: 0.87 · the moves that paid come back more often; the rest it tries at this chance."; "No finish yet. Random moves, and the points sorting them."; the rule book's long title | her lead sentence at the foot of the column, gone when she is done; "This attempt 0 · best −100 · last move −100.2"; "New move chance 0.87"; "No finish yet"; THE RULE BOOK · THE SITUATION, THE MOVE THAT PAID; "The race on one bend: 0/5 laps" |
+| Debrief | "A few questions first…" over the questions; Done/Missed with the full check labels; each run's settings in a second line; LUMA's takeaway + the three kinds of learning + the ask; unlock sentences | lamps with short labels; one line per run; the takeaway as her line; the unlock as a name; the full checks, each run's settings, the three kinds of learning and the ask in the file |
+
+## The short forms
+
+The debrief's lamps carry these; the full label stays in the file and in the platform's report.
+
+| Full label | On the lamp |
+|---|---|
+| Said what the robot knows at the start: nothing | Knows nothing at the start |
+| Trained a robot to a finish | Trained it to a finish |
+| Found why the first setup never improved | Found why it never improved |
+| Trained until the curve settled | Trained until it settled |
+| The robot finished most of several races, not one | Finished most races |
+| Read the rule book for one situation | Read the rule book |
+| Explained why the robot is not supervised learning | Why it is not supervised |
+| The robot got past both bends | Got past both bends |
+| Explained why the first robot could not learn it | Why the first robot could not |
+| The robot finished | Finished |
+| A constraint was set | Set a constraint |
+| The rule book uses slow down where it matters | Slows down where it matters |
+| Set finish, crash and on-the-way points | Set the three points |
+| Learned within the attempt budget | Learned within the budget |
+| The crash costs more than any single move can earn | A crash costs more than a move |
+| Predicted what the robot would do before running | Predicted first |
+| Explained why a curve can rise while the robot never finishes | Why the curve lies |
+| Set a high chance that falls | A high chance that falls |
+| The robot's line improved after its first finish | The line improved |
+| Finished within the attempt budget | Finished within the budget |
+| No loophole exploited | No loophole |
+| Compared the prediction with what happened | Compared the prediction |
+| The sensors on are the ones the track needed | The right sensors on |
+| The test track was never trained on | A test track never trained on |
+| The robot finished the test track | Finished the test track |
+| Explained what the one-track robot had learned | What the one-track robot learned |
+| Picked the measure that fits the stated cost / The measure chosen matched the stated cost | The measure fits the cost |
+| Explained in one line why finish rate lied | Why finish rate lied |
+| Changed one knob per run | One knob per run |
+| Named the knob that helped | Named the knob that helped |
+| Recognized the rewrite speed set too high | Spotted the rewrite too high |
+| The test track passed | Passed the test track |
+| The knobs were set one at a time | Knobs one at a time |
+| The real run finished, or the difference that broke it was named | The real run, or what broke it |
+
+Unchanged: Named the five parts, Sorted the six problems, Read the curve, The fixed robot
+finished, The curve settled, Kept the seed, Trained within the budget. The unlock names: "The
+attempts", "The sensors", "The moves and a constraint", "The points table", "New moves", "The
+tracks", "The measure", "The knobs and the seed", "Everything open: the capstone".
+
+Frames: `games/robot-racing/Builds/look-audit/text/` (the same walk as `after/`, plus
+`2c-file.png` with the file open over the briefing).
+
+## Web after the text pass
+
+loaded in 4.2 s, 20.5 MB transferred (was 19.5 MB / 4.0 s after the look pass). Loads and runs on the platform.

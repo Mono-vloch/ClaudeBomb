@@ -63,8 +63,6 @@ public class ResultsScreen
         var t = card.transform;
         var title = Ui.Text(t, $"Debrief · Level {l.id} · Before the checks", 40, Theme.Ink, true);
         Ui.Place(title.rectTransform, 32, 28, 1300, 52);
-        var sub = Ui.Text(t, "A few questions first: what you can name, explain or read off the run. The checks count them.", 16, Theme.Text2);
-        Ui.Place(sub.rectTransform, 32, 84, 1300, 26);
         var scroll = Ui.Scroll(t, "Scroll", out var content);
         Ui.Place(scroll.GetComponent<RectTransform>(), 32, 122, 1316, 790);
         float y = 0;
@@ -150,6 +148,7 @@ public class ResultsScreen
         World(window);
         var title = Ui.Text(root, l != null ? $"Debrief · Level {l.id} · {app.StepName}" : "The race is over", 44, Theme.Ink, true);
         Ui.Place(title.rectTransform, 80, 36, 1300, 56);
+        var extras = new List<(string head, string body)>(); // the full checks and the runs' settings, for the file
 
         // The curve of every run, left; the circuit and the medal, right.
         var chart = new Chart(root, 80, 100, 900, 300, "POINTS PER ATTEMPT  ·  EVERY RUN OF THIS LEVEL");
@@ -178,24 +177,27 @@ public class ResultsScreen
         {
             var card = Ui.Card(root, "Checks", Theme.Panel, Theme.Border1);
             Ui.Place(card.rectTransform, 80, y, 900, checksH);
-            var ch = Ui.Eyebrow(card.transform, "THE CHECKS  ·  WHAT YOU DID", Theme.TealDeep); Ui.Place(ch.rectTransform, 16, 10, 400, 16);
+            var ch = Ui.Eyebrow(card.transform, "THE CHECKS", Theme.TealDeep); Ui.Place(ch.rectTransform, 16, 10, 400, 16);
             float cy = 32;
             foreach (var (result, label) in checks)
             {
-                var word = Ui.Text(card.transform, result == Practised.Yes ? "Done" : result == Practised.Missed ? "Missed" : "n/a", 14, result == Practised.Yes ? Theme.TealDeep : result == Practised.Missed ? Theme.Danger : Theme.Muted, true);
-                Ui.Place(word.rectTransform, 16, cy + 1, 60, 22);
-                var lab = Ui.Text(card.transform, label, 15, Theme.Ink);
-                Ui.Place(lab.rectTransform, 84, cy, 800, 22);
+                // A lamp and a short label; the full label is in the file.
+                var lamp = Ui.Box(card.transform, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : Theme.Border, false);
+                Ui.Place(lamp.rectTransform, 18, cy + 5, 12, 12);
+                lamp.raycastTarget = false;
+                var lab = Ui.Text(card.transform, Labels.Of(label), 15, result == Practised.NotNeeded ? Theme.Muted : Theme.Ink);
+                Ui.Place(lab.rectTransform, 42, cy, 840, 22);
                 lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Ellipsis;
                 cy += 28;
             }
+            extras.Add(("THE CHECKS", string.Join("\n", checks.Select(c => (c.result == Practised.Yes ? "Done: " : c.result == Practised.Missed ? "Missed: " : "Not needed: ") + c.label))));
         }
 
         // The numbers side by side.
         float runsH = Mathf.Max(checksH, 32 + x.runs.Count * 42 + (x.real != null ? 24 : 0) + (l != null && l.measure && x.races.Count > 0 ? 28 : 0) + 12);
         var table = Ui.Card(root, "Runs", Theme.Panel, Theme.Border1);
         Ui.Place(table.rectTransform, 1000, y, 860, runsH);
-        var th = Ui.Eyebrow(table.transform, "THE RUNS  ·  ATTEMPTS TO THE FIRST FINISH, TO SETTLE, AND THE RACE", Theme.TealDeep);
+        var th = Ui.Eyebrow(table.transform, "THE RUNS  ·  FIRST FINISH, SETTLED, THE RACE", Theme.TealDeep);
         Ui.Place(th.rectTransform, 16, 10, 820, 16);
         float ry = 32;
         for (int i = 0; i < x.runs.Count; i++)
@@ -203,18 +205,16 @@ public class ResultsScreen
             var r = x.runs[i];
             var race = i < x.races.Count ? x.races[i] : null;
             string name = string.IsNullOrEmpty(r.label) ? $"Run {i + 1}" : r.label;
-            var line = Ui.Text(table.transform, $"<b>{name}</b>  ·  first finish {(r.firstFinish > 0 ? r.firstFinish.ToString() : "never")}  ·  settled {(r.settled > 0 ? r.settled.ToString() : "never")} of {r.s.attempts}  ·  " +
-                               (race != null ? $"race {race.Finishes}/{race.laps.Count} finished, {race.CrashesPerLap:0.0} crashes, {race.Touches:0.0} touches a lap, {race.LapTime:0} moves a lap" : ""), 13, Theme.Ink);
-            Ui.Place(line.rectTransform, 16, ry, 828, 20);
+            var line = Ui.Text(table.transform, $"<b>{name}</b>  ·  first finish {(r.firstFinish > 0 ? r.firstFinish.ToString() : "never")}  ·  settled {(r.settled > 0 ? r.settled.ToString() : "never")} of {r.s.attempts}" +
+                               (race != null ? $"  ·  race {race.Finishes}/{race.laps.Count}  ·  {race.CrashesPerLap:0.0} crashes, {race.Touches:0.0} touches, {race.LapTime:0} moves a lap" : ""), 13, Theme.Ink);
+            Ui.Place(line.rectTransform, 16, ry + 10, 828, 20);
             line.enableWordWrapping = false; line.overflowMode = TextOverflowModes.Ellipsis;
-            var knobs = Ui.Text(table.transform, (l != null && (l.knobs || l.explore || l.points) ? r.s.Knobs + "  ·  " : "") + $"{r.s.SensorsOn} sensors, {r.s.MovesOn} moves, top speed {r.s.topSpeed}, finish {r.s.finish:0} crash {r.s.crash:0} toward {r.s.toward:0.#} speed bonus {r.s.speedBonus:0.#}", 11, Theme.Muted);
-            Ui.Place(knobs.rectTransform, 16, ry + 20, 828, 16);
-            knobs.enableWordWrapping = false; knobs.overflowMode = TextOverflowModes.Ellipsis;
+            extras.Add((name.ToUpperInvariant(), r.s.Knobs + $"  ·  {r.s.SensorsOn} sensors, {r.s.MovesOn} moves, top speed {r.s.topSpeed}, finish {r.s.finish:0}, crash {r.s.crash:0}, toward {r.s.toward:0.#}, speed bonus {r.s.speedBonus:0.#}"));
             ry += 42;
         }
         if (x.real != null)
         {
-            var real = Ui.Text(table.transform, $"<b>The real run</b>  ·  {(x.real.Finishes > 0 ? $"finished in {x.real.LapTime:0} moves" : "crashed")}, {x.real.unknown} unknown situations met", 13, x.real.Finishes > 0 ? Theme.TealDeep : Theme.Danger);
+            var real = Ui.Text(table.transform, $"<b>The real run</b>  ·  {(x.real.Finishes > 0 ? $"finished in {x.real.LapTime:0} moves" : "crashed")}  ·  {x.real.unknown} unknown situations", 13, x.real.Finishes > 0 ? Theme.TealDeep : Theme.Danger);
             Ui.Place(real.rectTransform, 16, ry, 828, 20);
             ry += 24;
         }
@@ -229,9 +229,7 @@ public class ResultsScreen
         {
             app.luma.Say("recap");
             bool unlock = counts && l.number < Ladder.Count;
-            string second = "Ask back at work: " + l.ask;
-            string takeaway = l.takeaway + (l.number == 3 ? " Studying with an answer key: supervised. Finding groups with no key: unsupervised. Learning to ride a bike: reinforcement. The robot was never shown a correct lap." : "");
-            Luma.Card(root, 80, y, unlock ? 1320 : 1780, 136, takeaway, 17, second);
+            app.luma.Line(root, 80, y, unlock ? 1320 : 1780, l.takeaway, false, true, 17);
             if (unlock) Unlock(y, Ladder.Get(l.number + 1), medal);
             y += 150;
         }
@@ -266,6 +264,7 @@ public class ResultsScreen
             }
         }
         else Add("Set up again", app.ShowPit, Ui.ButtonStyle.Primary, 200);
+        Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.Secondary, 130);
         Add("Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 160);
         if (Platform.IsWeb) Add("Games menu", Platform.GoToMenu, Ui.ButtonStyle.Quiet, 160);
         Ui.Emblem(root);
@@ -332,16 +331,16 @@ public class ResultsScreen
         var t = card.transform;
         var tag = Ui.Eyebrow(t, $"UNLOCKED FOR LEVEL {next.id}", Theme.Teal); tag.font = Theme.Bold;
         Ui.Place(tag.rectTransform, 20, 14, 400, 20);
-        string what = next.number == Ladder.AttemptsLevel ? "How many attempts to train before the race."
-                    : next.number == Ladder.SensorsLevel ? "The sensors: which ones are on."
-                    : next.number == Ladder.MovesLevel ? "The moves it may make, and a constraint."
-                    : next.number == Ladder.PointsLevel ? "The points table."
-                    : next.number == Ladder.ExploreLevel ? "The chance it tries something new, and how it falls."
-                    : next.number == Ladder.TracksLevel ? "The training tracks and the test track."
-                    : next.number == Ladder.MeasureLevel ? "The measure you judge it by."
-                    : next.number == Ladder.KnobsLevel ? "The knobs, and the seed."
-                    : next.Capstone ? "Everything, and no help: the capstone." : next.title;
-        var body = Ui.Text(t, what, 17, Color.white, true);
+        string what = next.number == Ladder.AttemptsLevel ? "The attempts"
+                    : next.number == Ladder.SensorsLevel ? "The sensors"
+                    : next.number == Ladder.MovesLevel ? "The moves and a constraint"
+                    : next.number == Ladder.PointsLevel ? "The points table"
+                    : next.number == Ladder.ExploreLevel ? "New moves"
+                    : next.number == Ladder.TracksLevel ? "The tracks"
+                    : next.number == Ladder.MeasureLevel ? "The measure"
+                    : next.number == Ladder.KnobsLevel ? "The knobs and the seed"
+                    : next.Capstone ? "Everything open: the capstone" : next.title;
+        var body = Ui.Text(t, what, 20, Color.white, true);
         Ui.Place(body.rectTransform, 20, 38, 400, 56);
         var starsLine = Ui.Text(t, $"{stars} of 3 stars banked  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Theme.Teal);
         Ui.Place(starsLine.rectTransform, 20, 100, 400, 24);

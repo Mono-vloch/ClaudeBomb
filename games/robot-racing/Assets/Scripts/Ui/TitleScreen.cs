@@ -38,6 +38,9 @@ public class TitleScreen
         Button sound = null;
         sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
         Ui.Place(sound.GetComponent<RectTransform>(), 1440, 58, 140, 52);
+        Button voice = null;
+        voice = Ui.Button(root, Luma.Voice ? "Voice on" : "Voice off", () => { Luma.Voice = !Luma.Voice; if (!Luma.Voice) app.luma.Hush(); Ui.SetLabel(voice, Luma.Voice ? "Voice on" : "Voice off"); }, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(voice.GetComponent<RectTransform>(), 1290, 58, 134, 52);
 
         var eyebrow = Ui.Eyebrow(root, "ROBOT RACING  ·  GAME 03", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
@@ -45,20 +48,14 @@ public class TitleScreen
         Ui.Place(title.rectTransform, 114, 196, 1100, 140);
         var tag = Ui.Text(root, "You set the points. It teaches itself to race.", 40, Theme.Teal, true);
         Ui.Place(tag.rectTransform, 120, 350, 1000, 56);
-        var blurb = Ui.Text(root,
-            "Every student gets the same robot, and nobody drives it. You decide what it senses, what it may do and what earns points. " +
-            "Then watch it crash for a hundred attempts, slowly get good, and find out what it learns when you reward slightly the wrong thing.",
-            22, Theme.Faint);
-        Ui.Place(blurb.rectTransform, 120, 424, 820, 120);
-
         int done = app.LevelsDone, next = Mathf.Min(done + 1, Ladder.Count);
-        Luma.Card(root, 120, 560, 820, 92,
+        app.luma.Line(root, 120, 436, 820,
             done == 0 ? "I'm LUMA, your coach. Thirteen levels in three tiers. Press Start: the robot is on the grid."
                       : $"Welcome back. {done} of {Ladder.Count} levels done, {app.TotalStars} stars: {app.Rank}. Next: {Ladder.Get(next).title.ToLowerInvariant()}",
-            16, null, null, true);
+            true, true, 17);
 
         // The campaign: three tiers, each a track of stops with its stars.
-        float y = 684;
+        float y = 560;
         for (int tier = 1; tier <= 3; tier++)
         {
             var label = Ui.Eyebrow(root, $"TIER {tier}  ·  {Ladder.TierNames[tier - 1].ToUpperInvariant()}", Theme.Faint);
@@ -100,17 +97,12 @@ public class TitleScreen
                 int number = l.number;
                 button.onClick.AddListener(() => { Sfx.Tick(); app.StartLevel(number); });
             }
-            // The tier's levels, named, to the right of its track.
-            var names = Ui.Text(root, string.Join("  ·  ", System.Array.ConvertAll(levels, l => l.title.Replace("Capstone: ", ""))), 11, Theme.Faint);
-            Ui.Place(names.rectTransform, x0 + step * (levels.Length - 1) + 40, ty - 12, 900 - step * (levels.Length - 1), 36);
             y += 86;
         }
 
         var start = Ui.Button(root, done == 0 ? "Start" : $"Continue: level {Ladder.Get(next).id}", () => app.StartLevel(next), Ui.ButtonStyle.Accent, 22);
-        Ui.Place(start.GetComponent<RectTransform>(), 120, 950, 300, 60);
+        Ui.Place(start.GetComponent<RectTransform>(), 120, 850, 300, 60);
         var free = Ui.Button(root, "Free play", app.StartFree, Ui.ButtonStyle.GhostOnDark, 18);
-        Ui.Place(free.GetComponent<RectTransform>(), 440, 950, 170, 60);
-        var foot = Ui.Text(root, "A Maaloomatiia Academy game about teaching a machine to learn.", 14, Theme.Faint);
-        Ui.Place(foot.rectTransform, 120, 1030, 1000, 24);
+        Ui.Place(free.GetComponent<RectTransform>(), 440, 850, 170, 60);
     }
 }
