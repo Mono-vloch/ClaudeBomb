@@ -7,15 +7,13 @@ using UnityEngine.UI;
 
 // The one object in the scene. Builds the canvas, keeps the campaign (which
 // levels are done, the stars each earned), the level's session (its runs, races
-// and answers), runs the training steps of a level and moves between screens.
+// and answers) and moves between screens.
 public class App : MonoBehaviour
 {
-    public enum Step { SeeItWork, FixIt, YourTurn }
-
     public Lesson lesson;
     public Session session;
     public Settings settings = new Settings();   // free play's, or the level's own
-    public Step step = Step.YourTurn;
+    public int speedIndex = 3;                   // training runs at the fastest speed unless the settings say otherwise
     public Luma luma;
     public Circuit world;
     public SceneCamera view;
@@ -25,7 +23,6 @@ public class App : MonoBehaviour
     const string PrefLevel = "robot_racing_level";
     const string PrefStars = "robot_racing_stars_";
     Image page;
-    Settings own; // the student's own settings, kept while a ready setup is loaded
     public Action onLeave;
 
     public void Paper(Color c) { if (page != null) page.color = c; }
@@ -118,18 +115,21 @@ public class App : MonoBehaviour
     public void ShowPit() { new PitScreen(Fresh(), this); }
     public void ShowResults() { new ResultsScreen(Fresh(), this); }
 
-    // A level: its session, its settings, its first training run.
+    // A level: its session and its settings. The robot runs by itself; the player sets
+    // it up and watches. A level with a planned mistake opens with that setup already in
+    // the pit lane (fix it, or train it and watch it go wrong); one with only a ready
+    // setup opens with that; the capstone opens on the fixed defaults.
     public void StartLevel(int number)
     {
         lesson = Ladder.Get(number);
         session = new Session { lesson = lesson };
-        own = null;
-        settings = lesson.Start();
+        settings = StartingSetup?.a.Clone() ?? lesson.Start();
         session.settings = settings;
-        step = lesson.ready != null ? Step.SeeItWork : lesson.broken != null ? Step.FixIt : Step.YourTurn;
-        if (step != Step.YourTurn) LoadStep();
         ShowLesson();
     }
+
+    // The setup the level started with, for LUMA to say why it works or what is wrong with it.
+    public Setup StartingSetup => lesson == null ? null : lesson.broken ?? lesson.ready;
 
     public void NextLevel()
     {
@@ -141,51 +141,27 @@ public class App : MonoBehaviour
     {
         lesson = null;
         session = new Session();
-        own = null;
         settings = new Settings();
         session.settings = settings;
-        step = Step.YourTurn;
         ShowPit();
     }
 
-    public Setup CurrentSetup => step == Step.SeeItWork ? lesson?.ready : step == Step.FixIt ? lesson?.broken : null;
-    public string StepName => step == Step.SeeItWork ? "Watch the pro" : step == Step.FixIt ? "Fix the broken bot" : "Your run";
-    public bool Training => step != Step.YourTurn && CurrentSetup != null;
-
-    public void SetStep(Step s)
-    {
-        step = s;
-        if (s == Step.YourTurn) { if (own != null) { settings = own; own = null; } }
-        else LoadStep();
-        session.settings = settings;
-    }
-
-    void LoadStep()
-    {
-        var setup = CurrentSetup;
-        if (setup == null) { step = Step.YourTurn; return; }
-        if (own == null) own = settings;
-        settings = setup.a.Clone();
-        session.settings = settings;
-    }
-
     // Training starts: the run screen trains, races, and comes back to the debrief.
+    // The player's settings run; a level whose mistake needs two robots runs the second
+    // one after it, unchanged, so the two curves can be compared.
     public void StartTraining()
     {
-        var setup = CurrentSetup;
+        var setup = StartingSetup;
         var runs = new List<(Settings s, string label)>();
-        if (setup != null)
-        {
-            runs.Add((setup.a.Clone(), setup.aName));
-            if (setup.b != null) runs.Add((setup.b.Clone(), setup.bName));
-        }
-        else runs.Add((settings.Clone(), ""));
+        bool pair = setup != null && setup.b != null;
+        runs.Add((settings.Clone(), pair ? setup.aName : ""));
+        if (pair) runs.Add((setup.b.Clone(), setup.bName));
         new RunScreen(Fresh(), this, runs);
     }
 
     public void FinishLevel()
     {
-        if (lesson != null && step == Step.YourTurn) LevelsDone = Mathf.Max(LevelsDone, lesson.number);
+        if (lesson != null) LevelsDone = Mathf.Max(LevelsDone, lesson.number);
         ShowResults();
     }
 }

@@ -30,7 +30,7 @@ public class RunScreen
     readonly TextMeshProUGUI[] sensorText = new TextMeshProUGUI[Sensors.Count];
     readonly (Image track, Image fill)[] sensorBar = new (Image, Image)[Sensors.Count];
     readonly Button pause, results, stop;
-    readonly Ui.Segmented speed, viewToggle;
+    readonly Ui.Segmented viewToggle;
     readonly Follower follower;
     readonly Queue<(string text, string sub, Color colour, float seconds, bool big)> banners = new Queue<(string, string, Color, float, bool)>();
     readonly List<Vector2Int> path = new List<Vector2Int>();
@@ -44,6 +44,7 @@ public class RunScreen
     {
         Current = this;
         this.app = app;
+        speedIndex = app.speedIndex;
         queue = runs;
         var l = app.lesson;
         root = Ui.Node("Run", parent);
@@ -60,7 +61,7 @@ public class RunScreen
         // The mission HUD, dark glass over the world: the level and the step, the attempt,
         // the reward score, the best, the lap.
         var hud1 = Ui.Glass(root, "Hud", 40, 16, 500, 96);
-        var levelTag = Ui.Eyebrow(hud1.transform, l != null ? $"LEVEL {l.id}  ·  {app.StepName.ToUpperInvariant()}" : "FREE PLAY", Theme.Teal);
+        var levelTag = Ui.Eyebrow(hud1.transform, l != null ? $"LEVEL {l.id}" : "FREE PLAY", Theme.Teal);
         levelTag.font = Theme.Bold;
         Ui.Place(levelTag.rectTransform, 20, 10, 460, 18);
         turnText = Ui.Text(hud1.transform, "", 28, Color.white, true);
@@ -86,16 +87,13 @@ public class RunScreen
         viewToggle = new Ui.Segmented(root, new[] { "The track", "Follow" }, 0, 260, 40, 14);
         Ui.Place(viewToggle.root, 40, 1032, 260, 40);
         viewToggle.OnSelect = i => { if (i == 0) app.world.ShowOverviewAgain(); else app.world.ShowFollow(frame); };
-        var speedLabel = Ui.Text(root, "Speed", 14, Theme.Text2, false, TextAlignmentOptions.MidlineRight);
-        Ui.Place(speedLabel.rectTransform, 310, 1032, 50, 40);
-        speed = new Ui.Segmented(root, new[] { "1x", "10x", "100x", "Max" }, speedIndex, 292, 40, 13);
-        Ui.Place(speed.root, 368, 1032, 292, 40);
-        speed.OnSelect = i => { speedIndex = i; Sfx.EngineAudible = i <= 1; };
         Sfx.EngineAudible = speedIndex <= 1;
         pause = Ui.Button(root, "Pause", () => { paused = !paused; Ui.SetLabel(pause, paused ? "Resume" : "Pause"); if (paused) Sfx.Engine(0f); }, Ui.ButtonStyle.Secondary, 14);
-        Ui.Place(pause.GetComponent<RectTransform>(), 672, 1032, 90, 40);
+        Ui.Place(pause.GetComponent<RectTransform>(), 312, 1032, 90, 40);
         stop = Ui.Button(root, "Stop, race now", RaceNow, Ui.ButtonStyle.Quiet, 14);
-        Ui.Place(stop.GetComponent<RectTransform>(), 770, 1032, 150, 40);
+        Ui.Place(stop.GetComponent<RectTransform>(), 410, 1032, 150, 40);
+        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, null), Ui.ButtonStyle.Quiet, 14); // the speed, among others
+        Ui.Place(settings.GetComponent<RectTransform>(), 570, 1032, 100, 40);
 
         chart = new Chart(root, 40, 716, 940, 304, "POINTS PER ATTEMPT  ·  THE CURVE");
         labelsLayer = Ui.Node("Labels", root);
@@ -106,7 +104,7 @@ public class RunScreen
         // The mission, at the top of the column.
         var mission = Ui.Soft(root, "Mission");
         Ui.Place(mission.rectTransform, 1020, 28, 840, 58);
-        var missionTag = Ui.Eyebrow(mission.transform, l != null ? $"LEVEL {l.id}  ·  {app.StepName.ToUpperInvariant()}" : "FREE PLAY", Theme.TealDeep);
+        var missionTag = Ui.Eyebrow(mission.transform, l != null ? $"LEVEL {l.id}" : "FREE PLAY", Theme.TealDeep);
         Ui.Place(missionTag.rectTransform, 16, 8, 800, 18);
         missionText = Ui.Text(mission.transform, "", 15, Theme.Ink);
         Ui.Place(missionText.rectTransform, 16, 28, 808, 24);
@@ -150,8 +148,7 @@ public class RunScreen
         var scroll = Ui.Scroll(book.transform, "Scroll", out bookContent);
         Ui.Place(scroll.GetComponent<RectTransform>(), 16, 32, 808, 392);
 
-        string opening = app.CurrentSetup != null ? (app.step == App.Step.FixIt ? "Fix it: " + app.CurrentSetup.name + ". " : "Watch the pro. ") + app.CurrentSetup.why
-                       : app.luma.Say(l != null ? "live-" + l.number : "welcome");
+        string opening = app.luma.Say(l != null ? "live-" + l.number : "welcome");
         SayLine(opening, true);
 
         results = Ui.Button(root, "See the debrief", app.FinishLevel, Ui.ButtonStyle.Primary, 18);
@@ -193,7 +190,7 @@ public class RunScreen
     }
     int lapsWanted => app.lesson != null ? app.lesson.laps : 5;
 
-    public void SetSpeed(int i) { speedIndex = i; speed.Set(i, false); Sfx.EngineAudible = i <= 1; }
+    public void SetSpeed(int i) { speedIndex = i; Sfx.EngineAudible = i <= 1; }
     public void RaceNow() { if (phase == Phase.Training) training.done = true; }
 
     // ---- every frame ---------------------------------------------------------------------

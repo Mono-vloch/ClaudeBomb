@@ -19,6 +19,7 @@ public class SceneCamera : MonoBehaviour
     public Transform follow;      // Follow: the robot
     public float pitch = 55f, yaw = 20f, fov = 30f;
     public float orbitPitch = 26f, orbitDistance = 15f, orbitSpeed = 3.5f;
+    public float portraitAhead = 4.2f, portraitSide = 1.5f, portraitUp = 1.5f, portraitAnchor = 0.78f; // the portrait's distance and the height it looks at
     public event Action Framed;   // after every frame's placing: labels follow
 
     Camera cam;
@@ -100,9 +101,9 @@ public class SceneCamera : MonoBehaviour
             case Mode.Portrait:
             {
                 var turn = Quaternion.Euler(0, Mathf.Sin(Time.unscaledTime * 0.3f) * 5f, 0); // a slow look around it
-                var offset = turn * (follow.forward * 4.2f - follow.right * 1.5f + Vector3.up * 1.5f);
+                var offset = turn * (follow.forward * portraitAhead - follow.right * portraitSide + Vector3.up * portraitUp);
                 targetPos = follow.position + offset;
-                anchor = follow.position + Vector3.up * 0.78f;
+                anchor = follow.position + Vector3.up * portraitAnchor;
                 targetRot = Quaternion.LookRotation(anchor - targetPos);
                 targetFov = 30f;
                 break;

@@ -52,7 +52,6 @@ public class DemoDriver : MonoBehaviour
         yield return Shot("2b-warm-up");
 
         app.StartLevel(Ladder.PointsLevel);
-        app.SetStep(App.Step.YourTurn);
         app.ShowPit();
         yield return new WaitForSeconds(0.8f);
         yield return Shot("3-pit-lane");

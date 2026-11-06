@@ -142,11 +142,11 @@ public class ResultsScreen
     {
         Ui.Clear(root);
         var l = app.lesson;
-        bool training = app.Training, counts = l != null && !training, capstone = l != null && l.Capstone;
+        bool counts = l != null, capstone = l != null && l.Capstone;
         var window = Ui.Node("Window", root);
         Ui.Place(window, 1000, 100, 860, 300);
         World(window);
-        var title = Ui.Text(root, l != null ? $"Debrief · Level {l.id} · {app.StepName}" : "The race is over", 44, Theme.Ink, true);
+        var title = Ui.Text(root, l != null ? $"Debrief · Level {l.id}" : "The race is over", 44, Theme.Ink, true);
         Ui.Place(title.rectTransform, 80, 36, 1300, 56);
         var extras = new List<(string head, string body)>(); // the full checks and the runs' settings, for the file
 
@@ -244,18 +244,6 @@ public class ResultsScreen
         }
         if (l != null)
         {
-            if (training && app.step == App.Step.SeeItWork)
-            {
-                if (l.broken != null) Add("Next: Fix the broken bot", () => { app.SetStep(App.Step.FixIt); app.ShowPit(); }, Ui.ButtonStyle.Primary, 300);
-                Add("Next: Your run", () => { app.SetStep(App.Step.YourTurn); app.ShowPit(); }, l.broken != null ? Ui.ButtonStyle.Secondary : Ui.ButtonStyle.Primary, 200);
-                Add("Watch it again", app.ShowPit, Ui.ButtonStyle.Secondary, 180);
-            }
-            else if (training)
-            {
-                Add("Fix the setting, train again", () => { app.SetStep(App.Step.YourTurn); app.ShowPit(); }, Ui.ButtonStyle.Primary, 320);
-                Add("Watch the broken bot again", app.ShowPit, Ui.ButtonStyle.Secondary, 280);
-            }
-            else
             {
                 bool last = l.number >= Ladder.Count;
                 Add(last ? "Free play" : $"Next: {Ladder.Get(l.number + 1).id} {Ladder.Get(l.number + 1).title.Replace("Capstone: ", "")}", last ? app.StartFree : (System.Action)app.NextLevel, Ui.ButtonStyle.Primary, last ? 180 : 520);

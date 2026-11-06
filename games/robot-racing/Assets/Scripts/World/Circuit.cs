@@ -77,7 +77,38 @@ public class Circuit : MonoBehaviour
     public void ShowCountdown(RectTransform frame, float seconds) { this.frame = frame; rig.Countdown(carRoot, frame, seconds); }
     // The race is won: a slow turn around the car, in slow motion, then back to the overview.
     public void FinishMoment(float seconds, System.Action done) => rig.FinishMoment(carRoot, seconds, () => { ShowOverviewAgain(); done?.Invoke(); });
-    public void ShowPortrait(RectTransform frame) { this.frame = frame; Canvas.ForceUpdateCanvases(); cam.Portrait(carRoot, frame); cam.Snap(); }
+    // The car up close, from the front and a little to its side, the camera low: the pit lane.
+    public void ShowPortrait(RectTransform frame)
+    {
+        this.frame = frame; Canvas.ForceUpdateCanvases();
+        cam.portraitAhead = 3.3f; cam.portraitSide = 1.4f; cam.portraitUp = 1.25f; cam.portraitAnchor = 0.3f;
+        cam.Portrait(carRoot, frame); cam.Snap();
+    }
+
+    // A point on the car, given in the car's own space, on the screen in pixels: for the
+    // tags that hang off its parts. False when it is behind the camera.
+    public bool CarPartOnScreen(Vector3 local, out Vector3 screen)
+    {
+        screen = Vector3.zero;
+        if (carRoot == null) return false;
+        screen = cam.ToScreen(carRoot.TransformPoint(local));
+        return screen.z > 0;
+    }
+
+    // A setting moved: the car pops, so the change is seen on it.
+    public void Punch() { if (carBody != null) StartCoroutine(DoPunch(carBody)); }
+    IEnumerator DoPunch(Transform t)
+    {
+        float k = 0f;
+        while (k < 1f)
+        {
+            if (t == null) yield break;
+            k += Time.unscaledDeltaTime * 4f;
+            t.localScale = Vector3.one * (1f + 0.14f * Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI));
+            yield return null;
+        }
+        if (t != null) t.localScale = Vector3.one;
+    }
     public void ShowOrbit(RectTransform frame) { this.frame = frame; Canvas.ForceUpdateCanvases(); cam.Orbit(frame, Bounds.center); cam.Snap(); }
 
     // The light story, from Docs/art-bible.md. Day: a warm late-afternoon key from the
