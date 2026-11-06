@@ -98,6 +98,11 @@ public class RobotModel
     public Vector3 Head => root.position + Vector3.up * 1.12f * Scale;
     public Vector3 Feet => root.position;
     public Vector3 BasketPoint => basket.position + Vector3.up * 0.15f;
+    // Where the dials show on it: the brain and the effort on the antenna, the sight at the
+    // eyes, the memory on its back.
+    public Vector3 AntennaPoint => antennaBall.position;
+    public Vector3 EyePoint => body.TransformPoint(new Vector3(0.1f, 0.76f, 0.19f));
+    public Vector3 BackPoint => basket.position + Vector3.up * 0.12f;
 
     public static Quaternion Facing(int facing) => Quaternion.Euler(0, facing * 90f, 0); // 0 north (+Z), 1 east, 2 south, 3 west
 

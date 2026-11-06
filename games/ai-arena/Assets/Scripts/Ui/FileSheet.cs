@@ -17,7 +17,7 @@ public static class FileSheet
         "The shelf: tap a thing once to buy it, twice to never buy it, again to clear it. The rule for an empty view says what the agent does when nothing " +
         "on its list is in sight. Your own words carry the catch and anything else. What the agent will read is shown underneath, word for word: nothing " +
         "else reaches it.\n\n" +
-        "Brain: which Claude runs it. Bigger: better choices, pricier tokens. How far it sees: cells in every direction. More in view, more words every turn. " +
+        "The dials hang off the agent as tags: tap one to turn it. Brain: which Claude runs it. Bigger: better choices, pricier tokens. How far it sees: cells in every direction. More in view, more words every turn. " +
         "Memory: each turn starts from nothing, or the last 3 or 10 exchanges ride along in the prompt, or the agent writes itself a note it sees every turn. " +
         "Effort: how hard it thinks at each stall. More: better, slower, pricier. A dial that is locked opens at a later errand; until then every agent gets " +
         "the same, so only this errand's idea is in play.\n\n" +

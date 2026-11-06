@@ -5,23 +5,18 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// The one object in the scene. Builds the canvas, keeps the robots' settings
+// The one object in the scene. Builds the canvas, keeps the agents' settings
 // between rounds, keeps the campaign (which errands are done and the stars each
-// earned), runs the training steps of an errand and moves between the screens.
+// earned) and moves between the screens.
 public class App : MonoBehaviour
 {
-    // The three runs of an errand, in the curriculum's order: a ready setup that
-    // works (See it work), one with the planned mistake in it (Fix it), then the
-    // students' own lists (Your turn).
-    public enum Step { SeeItWork, FixIt, YourTurn }
-
     public List<AgentConfig> configs = new List<AgentConfig>();
     public Brief brief;
     public int briefIndex;
     public int turns = 20;
     public long budget = 30_000;
+    public float speed = 4f;     // the agents run at the fastest speed unless the settings say otherwise
     public Lesson lesson;        // the level being played, or null in free play
-    public Step step = Step.YourTurn;
     public DecideRun decide;     // errand 1.6, while its tasks run
     public Luma luma;
     public Market world;         // the market in three dimensions, behind the canvas
@@ -34,7 +29,6 @@ public class App : MonoBehaviour
     const string PrefStory = "story_seen";
     const string PrefStars = "ai_arena_stars_"; // + the level number
     Image page;
-    List<AgentConfig> own;       // the students' own lists, kept while a training setup is loaded
     public Action onLeave;       // a screen with coroutines of its own stops them here
 
     public bool StorySeen
@@ -177,18 +171,26 @@ public class App : MonoBehaviour
     }
 
     // The ladder: one level at a time, its brief, its locked dials, its briefing
-    // first. A level with a ready setup opens on the training run.
+    // first. The agents run by themselves; the player writes the list and watches. A
+    // level with a planned mistake opens with that list already written (fix it, or
+    // deploy it and watch it go wrong); one with only a ready list opens with that.
     public void StartLevel(int number)
     {
         lesson = Ladder.Get(number);
         decide = null;
-        RestoreOwn();
         brief = Brief.Make(briefIndex = lesson.briefPreset, rng);
-        foreach (var c in configs) lesson.Apply(c);
-        step = lesson.ready != null ? Step.SeeItWork : Step.YourTurn;
-        if (step != Step.YourTurn) LoadStep();
+        var start = lesson.broken ?? lesson.ready;
+        foreach (var c in configs)
+        {
+            if (start != null) { c.Write(start.Fill(brief)); c.model = start.model; c.vision = start.vision; c.memory = start.memory; c.effort = start.effort; }
+            else c.Write(""); // no help on this one: the list is the player's from the first word
+            lesson.Apply(c);
+        }
         ShowLesson();
     }
+
+    // The list the level started with, for LUMA to say why it works or what is wrong with it.
+    public Setup StartingSetup => lesson == null ? null : lesson.broken ?? lesson.ready;
 
     public void NextLevel()
     {
@@ -201,63 +203,12 @@ public class App : MonoBehaviour
     {
         lesson = null;
         decide = null;
-        RestoreOwn();
-        step = Step.YourTurn;
         brief = Brief.Make(briefIndex = rng.Next(Brief.Random), rng);
         ShowSetup();
     }
 
-    // ---- the training runs ----------------------------------------------------
-
-    public void SetStep(Step s)
-    {
-        step = s;
-        if (s == Step.YourTurn) RestoreOwn(); else LoadStep();
-    }
-
-    public Setup CurrentSetup => step == Step.SeeItWork ? lesson?.ready : step == Step.FixIt ? lesson?.broken : null;
-    public string StepName => step == Step.SeeItWork ? "Watch the pro" : step == Step.FixIt ? "Fix the broken bot" : "Your run";
-    public bool Training => step != Step.YourTurn && CurrentSetup != null;
-
-    // The ready setup, or the broken one, goes into every robot. The students'
-    // own lists wait, untouched, until Your run.
-    void LoadStep()
-    {
-        var setup = CurrentSetup;
-        if (setup == null) { step = Step.YourTurn; RestoreOwn(); return; }
-        if (own == null) own = configs.ConvertAll(c => c.Clone());
-        foreach (var c in configs)
-        {
-            c.Write(setup.Fill(brief));
-            c.model = setup.model; c.vision = setup.vision; c.memory = setup.memory; c.effort = setup.effort;
-            lesson.Apply(c);
-        }
-    }
-
-    void RestoreOwn()
-    {
-        if (own == null) return;
-        for (int i = 0; i < configs.Count && i < own.Count; i++)
-        {
-            var c = configs[i]; var o = own[i];
-            c.instructions = o.instructions; c.buy = new List<string>(o.buy); c.never = new List<string>(o.never);
-            c.fallback = o.fallback; c.words = o.words; c.freeText = o.freeText;
-            c.model = o.model; c.vision = o.vision; c.memory = o.memory; c.effort = o.effort;
-        }
-        own = null;
-    }
-
-    public void AddRobot(AgentConfig cfg)
-    {
-        configs.Add(cfg);
-        own?.Add(cfg.Clone());
-    }
-
-    public void RemoveRobot(int index)
-    {
-        configs.RemoveAt(index);
-        if (own != null && index < own.Count) own.RemoveAt(index);
-    }
+    public void AddRobot(AgentConfig cfg) => configs.Add(cfg);
+    public void RemoveRobot(int index) => configs.RemoveAt(index);
 
     // ---- the rounds ---------------------------------------------------------------
 
@@ -267,6 +218,7 @@ public class App : MonoBehaviour
         CurrentArena = arena;
         var parent = Fresh();
         sim = gameObject.AddComponent<Simulation>();
+        sim.speed = speed;
         new ArenaScreen(parent, this, arena, sim);
         sim.Begin(arena, rounds ?? turns);
     }
@@ -279,7 +231,7 @@ public class App : MonoBehaviour
             DecideNext();
             return;
         }
-        if (lesson != null && step == Step.YourTurn) LevelsDone = Mathf.Max(LevelsDone, lesson.number);
+        if (lesson != null) LevelsDone = Mathf.Max(LevelsDone, lesson.number);
         luma.Hush();
         onLeave?.Invoke();
         onLeave = null;
@@ -347,7 +299,7 @@ public class App : MonoBehaviour
 
     public void SaveConfigs()
     {
-        PlayerPrefs.SetString(PrefConfigs, JsonUtility.ToJson(new AgentConfigList { agents = own ?? configs }));
+        PlayerPrefs.SetString(PrefConfigs, JsonUtility.ToJson(new AgentConfigList { agents = configs }));
         PlayerPrefs.Save();
     }
 
@@ -356,15 +308,11 @@ public class App : MonoBehaviour
         try
         {
             var saved = JsonUtility.FromJson<AgentConfigList>(PlayerPrefs.GetString(PrefConfigs, ""));
-            if (saved != null && saved.agents != null && saved.agents.Count >= 2) configs = saved.agents;
+            if (saved != null && saved.agents != null && saved.agents.Count >= 1) configs = saved.agents;
         }
         catch (Exception) { }
-        if (configs.Count < 2)
-            configs = new List<AgentConfig>
-            {
-                new AgentConfig { name = "Agent 1", colour = 0 },
-                new AgentConfig { name = "Agent 2", colour = 1 },
-            };
+        // One agent: the player's. A class adds one per student in the settings.
+        if (configs.Count < 1) configs = new List<AgentConfig> { new AgentConfig { name = "Agent", colour = 0 } };
         // Lists saved before the garage built them from parts stay as written.
         foreach (var c in configs)
             if (!c.freeText && c.buy.Count == 0 && c.never.Count == 0 && string.IsNullOrWhiteSpace(c.words) && !string.IsNullOrWhiteSpace(c.instructions)) c.freeText = true;

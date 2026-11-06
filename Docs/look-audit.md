@@ -834,3 +834,33 @@ Frames: `games/tech-escape/Builds/look-audit/text/` (the same walk as `after/`, 
 22.5 MB transferred, 2.4 s to load (was 21.4 MB / 3.7 s after the look pass; the two load
 times are the same yardstick, headless Chrome with software rendering, and swing with the
 machine's load). Loads and runs on the platform.
+
+---
+
+# Phase 5a: AI Arena, the garage
+
+6 November 2026. Charbel, testing the web build: "I don't feel here I'm in a game, too much
+details." The garage was a settings sheet with an agent standing next to it. What changed:
+
+- **The agents run by themselves; the player writes and watches.** The three runs of an errand
+  (Watch the pro, Fix the broken bot, Your run) are gone as a control. A level opens with its
+  list already in the box: the broken one on a fix-it level ("Get fruit."), the ready one on
+  1.1, nothing on the capstone. LUMA says once, over the agent, why it works or what is wrong
+  with it. One run per level; it always counts.
+- **One agent.** The game was built for a class, one agent per student; for a player that is
+  noise. The roster now defaults to one, the player's (named, coloured), and a class adds more
+  in Settings. The agents' chips show only when there is more than one.
+- **The dials live on the agent.** The four upgrade cards are gone; four tags hang off the
+  agent's parts: BRAIN and EFFORT at the antenna, SIGHT at the eyes, MEMORY at its back. Tap
+  one to turn it: the agent pops, the antenna ball swaps size, the memory cards or the notebook
+  appear on it. A dial the errand has not opened wears OPENS AT 1.x instead.
+- **Pocket money is a wallet**: ten coins of 10k, tap to take that many; the gauge under it
+  says how far they go.
+- **Speed is always the fastest.** The 1x/2x/4x control left the run; it is in Settings with
+  the turns an errand lasts, LUMA's voice, the sound and the roster.
+- The editor keeps the one thing the player writes: the list, with "Build it from parts" for
+  those who want the shelf.
+
+Frames: `games/ai-arena/Builds/look-audit/garage/` (1.1 with the ready list, 1.2 with the
+broken one, Settings, the capstone with every tag open, a brain switched, seven coins, the run
+and the debrief) and the walk in `text/`.

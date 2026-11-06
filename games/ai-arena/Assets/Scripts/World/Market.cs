@@ -112,6 +112,31 @@ public class Market : MonoBehaviour
         UpdateVision();
     }
 
+    // A point on a robot's part, on the screen in pixels: 0 the antenna, 1 the eyes, 2 its
+    // back. False when it is behind the camera.
+    public bool PartOnScreen(AgentState a, int part, out Vector3 screen)
+    {
+        screen = Vector3.zero;
+        if (!bots.TryGetValue(a, out var r) || !r.root.gameObject.activeSelf) return false;
+        screen = cam.ToScreen(part == 0 ? r.AntennaPoint : part == 1 ? r.EyePoint : r.BackPoint);
+        return screen.z > 0;
+    }
+
+    // A dial moved: the robot pops, so the change is seen on it.
+    public void Punch(AgentState a) { if (bots.TryGetValue(a, out var r)) StartCoroutine(DoPunch(r.body)); }
+    IEnumerator DoPunch(Transform t)
+    {
+        float k = 0f;
+        while (k < 1f)
+        {
+            if (t == null) yield break;
+            k += Time.unscaledDeltaTime * 4f;
+            t.localScale = Vector3.one * (1f + 0.14f * Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI));
+            yield return null;
+        }
+        if (t != null) t.localScale = Vector3.one;
+    }
+
     // The cover: four robots at dusk, wandering, the camera turning slowly.
     public void ShowCover(RectTransform frame)
     {

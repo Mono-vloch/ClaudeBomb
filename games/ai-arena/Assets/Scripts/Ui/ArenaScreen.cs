@@ -65,7 +65,7 @@ public class ArenaScreen
         // The mission HUD, dark glass over the market: the errand and the step, the turn,
         // the loop's three words lighting one after the other, and the score.
         var hud1 = Ui.Glass(root, "Hud", 40, 16, 520, 96);
-        string where = app.decide != null ? $"TASK {app.decide.RunNumber} OF {Decide.ShoppingTasks}" : app.lesson != null ? $"ERRAND {app.lesson.id}  ·  {app.StepName.ToUpperInvariant()}" : "FREE PLAY";
+        string where = app.decide != null ? $"TASK {app.decide.RunNumber} OF {Decide.ShoppingTasks}" : app.lesson != null ? $"ERRAND {app.lesson.id}" : "FREE PLAY";
         var levelTag = Ui.Eyebrow(hud1.transform, where, Theme.Teal);
         levelTag.font = Theme.Bold;
         Ui.Place(levelTag.rectTransform, 20, 10, 480, 18);
@@ -106,15 +106,12 @@ public class ArenaScreen
         var viewToggle = new Ui.Segmented(root, new[] { "The market", "Agent's eye" }, 0, 300, 40, 14);
         Ui.Place(viewToggle.root, 40, 1032, 300, 40);
         viewToggle.OnSelect = i => world.SetView(i == 0 ? Market.View.Market : Market.View.RobotsEye);
-        var speedLabel = Ui.Text(root, "Speed", 14, Theme.Text2, false, TextAlignmentOptions.MidlineRight);
-        Ui.Place(speedLabel.rectTransform, 350, 1032, 50, 40);
-        var speed = new Ui.Segmented(root, new[] { "1x", "2x", "4x" }, 1, 168, 40, 14);
-        Ui.Place(speed.root, 408, 1032, 168, 40);
-        speed.OnSelect = i => sim.speed = i == 0 ? 1 : i == 1 ? 2 : 4;
         pause = Ui.Button(root, "Pause", () => { sim.paused = !sim.paused; Ui.SetLabel(pause, sim.paused ? "Resume" : "Pause"); }, Ui.ButtonStyle.Secondary, 14);
-        Ui.Place(pause.GetComponent<RectTransform>(), 588, 1032, 90, 40);
+        Ui.Place(pause.GetComponent<RectTransform>(), 352, 1032, 90, 40);
         var stop = Ui.Button(root, "Call them home", () => { if (!sim.finished) sim.Abort(); }, Ui.ButtonStyle.Quiet, 14);
-        Ui.Place(stop.GetComponent<RectTransform>(), 686, 1032, 160, 40);
+        Ui.Place(stop.GetComponent<RectTransform>(), 450, 1032, 160, 40);
+        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, null), Ui.ButtonStyle.Quiet, 14); // the speed, among others
+        Ui.Place(settings.GetComponent<RectTransform>(), 620, 1032, 100, 40);
 
         // The agents' names, under their feet; the bubble over the chosen one.
         labelsLayer = Ui.Node("Labels", root);
@@ -149,13 +146,10 @@ public class ArenaScreen
         BuildCards();
         if (withCoach)
         {
-            firstErrand = app.decide == null && app.lesson != null && app.lesson.number == 1 && app.step == App.Step.YourTurn;
-            var setup = app.CurrentSetup;
+            firstErrand = app.decide == null && app.lesson != null && app.lesson.number == 1;
             string opening = app.decide != null
                 ? $"Task {app.decide.RunNumber} of {Decide.ShoppingTasks}: \"{arena.brief.rule}\" The gray agent is a fixed rule: no AI, no tokens. The teal one is an agent with a list. Watch the basket and the cost."
                 : firstErrand ? "Watch your agent. After its first turn I will read out the loop it just ran."
-                : setup != null && app.step == App.Step.SeeItWork ? "Watch the pro. " + setup.why
-                : setup != null && app.step == App.Step.FixIt ? "Fix it: " + setup.name + ". " + setup.why
                 : app.luma.Say(app.lesson != null ? "live-" + app.lesson.number : "free");
             SayLine(opening, true);
             sim.OnTurnResolved += Watch;

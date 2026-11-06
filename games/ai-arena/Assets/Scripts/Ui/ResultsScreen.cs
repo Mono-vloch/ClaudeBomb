@@ -25,7 +25,7 @@ public class ResultsScreen
     {
         this.app = app; this.arena = arena;
         var lesson = app.lesson;
-        bool training = app.Training, capstone = lesson != null && lesson.number == Ladder.Count, counts = lesson != null && !training;
+        bool capstone = lesson != null && lesson.number == Ladder.Count, counts = lesson != null;
         root = Ui.Node("Results", parent);
         Ui.Stretch(root);
         app.Paper(Color.clear);
@@ -40,7 +40,7 @@ public class ResultsScreen
         Ui.Stretch(scrim.rectTransform);
         scrim.raycastTarget = false;
 
-        var title = Ui.Text(root, lesson != null ? $"Debrief · Errand {lesson.id} · {app.StepName}" : "The agents are home", 44, Theme.Ink, true);
+        var title = Ui.Text(root, lesson != null ? $"Debrief · Errand {lesson.id}" : "The agents are home", 44, Theme.Ink, true);
         Ui.Place(title.rectTransform, 80, 36, 1200, 56);
         var sub = Ui.Text(root, $"{arena.brief.from}: {arena.brief.rule}", 16, Theme.Text2);
         Ui.Place(sub.rectTransform, 80, 100, 900, 30);
@@ -172,24 +172,10 @@ public class ResultsScreen
                 bx += w + 16;
                 return b;
             }
-            if (training && app.step == App.Step.SeeItWork)
-            {
-                if (lesson.broken != null) Add("Next: Fix the broken bot", () => { app.SetStep(App.Step.FixIt); app.ShowSetup(); }, Ui.ButtonStyle.Primary, 320);
-                Add("Next: Your run", () => { app.SetStep(App.Step.YourTurn); app.ShowSetup(); }, lesson.broken != null ? Ui.ButtonStyle.Secondary : Ui.ButtonStyle.Primary, 220);
-                Add("Watch it again", app.ShowSetup, Ui.ButtonStyle.Secondary, 200);
-            }
-            else if (training)
-            {
-                Add("Fix the list, deploy again", app.ShowSetup, Ui.ButtonStyle.Primary, 320);
-                Add("Next: Your run", () => { app.SetStep(App.Step.YourTurn); app.ShowSetup(); }, Ui.ButtonStyle.Secondary, 220);
-            }
-            else
-            {
-                bool last = lesson.number >= Ladder.Count;
-                Add(last ? "Free play" : $"Next errand: {Ladder.Get(lesson.number + 1).title}", last ? app.StartFree : (System.Action)app.NextLevel, Ui.ButtonStyle.Primary, last ? 200 : 460);
-                Add("Same errand again", app.ShowSetup, Ui.ButtonStyle.Secondary, 240);
-                if (capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.Secondary, 200);
-            }
+            bool last = lesson.number >= Ladder.Count;
+            Add(last ? "Free play" : $"Next errand: {Ladder.Get(lesson.number + 1).title}", last ? app.StartFree : (System.Action)app.NextLevel, Ui.ButtonStyle.Primary, last ? 200 : 460);
+            Add("Same errand again", app.ShowSetup, Ui.ButtonStyle.Secondary, 240);
+            if (capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.Secondary, 200);
             Add("The lists", ShowLists, Ui.ButtonStyle.Secondary, 150);
             Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.Secondary, 130);
             Add("Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 170);
