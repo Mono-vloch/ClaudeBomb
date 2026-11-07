@@ -13,6 +13,7 @@ using UnityEngine.UI;
 public static class FileSheet
 {
     static RectTransform open;
+    public static bool IsOpen => open != null;
 
     public const string PitLane =
         "What it senses: the sensors, front, left, right, speed, bend ahead. A sensor that is off is a situation the robot cannot tell apart from another. " +
@@ -39,6 +40,12 @@ public static class FileSheet
             if (l.training.Length > 1) tracks += $"\n\nTraining on {string.Join(", ", l.training.Select(id => Track.Get(id).name.ToLowerInvariant()))}.";
             if (l.test != l.training[0]) tracks += $"\n\nThe test track, never trained on: {Track.Get(l.test).name.ToLowerInvariant()}. {Track.Get(l.test).note}";
             sections.Add(("THE TRACK", tracks));
+            // The rewards as placed on the track: the table the player built.
+            if (l.points || l.flag)
+            {
+                var s = app.settings;
+                sections.Add(("THE REWARDS, AS PLACED", $"The finish {s.finish:0}  ·  a crash {s.crash:0}  ·  each step toward the finish {s.toward:0.#}  ·  each step away {s.away:0.#}  ·  each moment {s.moment:0.#}  ·  speed bonus {s.speedBonus:0.#}"));
+            }
             if (l.ready != null) sections.Add(("WATCH THE PRO", l.ready.why));
             if (l.broken != null) sections.Add(("FIX THE BROKEN BOT  ·  " + l.broken.name.ToUpperInvariant(), l.broken.why));
         }

@@ -54,6 +54,7 @@ public class Lesson
     public string[] training = { "bend" };
     public string test = "bend";
     public bool sensors, moves, points, explore, knobs, tracks, measure, attempts; // what the student may set
+    public bool flag;              // 1.1: the finish flag alone, before the points table opens at 2.3
     public bool prediction;        // one line before training: what will it do?
     public string predictionPrompt = "Before you run: what will this robot do?";
     public bool realRun;           // 3.4: one lap on the real track, no learning
@@ -124,7 +125,7 @@ public static class Ladder
             luma = "Hi, I'm LUMA. Nobody drives this robot. Press run and watch it crash, then crash later, then finish.",
             learn = "Nobody drives. Every moment the robot senses, chooses a move, makes it, and gets points. It starts knowing nothing and moves at random; " +
                     "the moves that earned points it makes more often. That is all.\n\nThe five parts: the robot, the track, what it senses, what it does, the points. Watch them on the run.",
-            training = new[] { "bend" }, test = "bend",
+            training = new[] { "bend" }, test = "bend", flag = true,
             ready = new Setup { name = "Watch the pro", a = On(new[] { "bend" }, "bend", s => s.attempts = 120),
                 why = "A ready robot on a short track. The finish pays, a crash costs, every cell closer to the finish pays a little. Watch attempt 1, then attempt 100." },
             broken = new Setup { name = "No points at all", a = On(new[] { "bend" }, "bend", s => { s.finish = 0; s.crash = 0; s.toward = 0; s.away = 0; s.moment = 0; s.attempts = 120; }),

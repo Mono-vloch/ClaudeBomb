@@ -42,10 +42,10 @@ public class CameraRig : MonoBehaviour
         chaseBody.m_BindingMode = CinemachineTransposer.BindingMode.LockToTargetWithWorldUp;
         // Low and close behind the car (the realism pass): it fills a third of the picture.
         bool kit = Circuit.HasKit;
-        chaseBody.m_FollowOffset = kit ? new Vector3(0.2f, 0.38f, -0.8f) : new Vector3(0f, 2.0f, -3.4f);
+        chaseBody.m_FollowOffset = kit ? new Vector3(0.2f, 0.46f, -1.0f) : new Vector3(0f, 2.0f, -3.4f); // the whole car in the lower third, the track ahead in view (the game-feel pass)
         chaseBody.m_XDamping = 0.5f; chaseBody.m_YDamping = 0.6f; chaseBody.m_ZDamping = 0.8f; chaseBody.m_YawDamping = 0.9f;
         if (kit) { chaseBody.m_XDamping = 0.12f; chaseBody.m_YDamping = 0.2f; chaseBody.m_ZDamping = 0.12f; chaseBody.m_YawDamping = 0.35f; } // close behind: it keeps up
-        chaseAim.m_TrackedObjectOffset = kit ? new Vector3(0f, 0.1f, 0.42f) : new Vector3(0f, 0.4f, 0.9f);
+        chaseAim.m_TrackedObjectOffset = kit ? new Vector3(0f, 0.08f, 0.7f) : new Vector3(0f, 0.4f, 0.9f);
         chaseAim.m_LookaheadTime = 0.15f; chaseAim.m_LookaheadSmoothing = 8f;
         var listener = chase.gameObject.AddComponent<CinemachineImpulseListener>();
         listener.m_Gain = 1f; listener.m_UseCameraSpace = true;

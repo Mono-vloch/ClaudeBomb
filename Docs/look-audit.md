@@ -1322,3 +1322,180 @@ dashboards of boxes, chip strips, empty states as the hero, two button styles), 
 realism prompt keeps as it was and only moves into drawers. The world's remaining items are
 second. Closing the gap needs an interface pass across the three games, which is a decision
 for the owner, not this pass.
+
+---
+
+# Phase 7: game-feel pass
+
+7 November 2026, from `Docs/game-feel-pass-prompt.md`, after the look was approved. Design
+first (`Docs/game-feel/`, approved with the owner's answers), then the Robot Racing pilot:
+levels 1.1 and 2.3 rebuilt end to end on the new branch `game-feel-pass`. The other levels and
+the other two games wait for the pilot's approval.
+
+## What changed in Robot Racing (the pilot)
+
+1. **Verbs, not forms.** The rewards are markers placed on the track (`World/Markers.cs`): the
+   chequered flag on the finish, three cones against the wall (a crash), teal chevrons along the
+   way (each step toward the finish), a red one pointing back (each step away), a clock post
+   (each moment), an orange sign (the speed bonus). Each shows its number on a plate; drag one
+   from the shelf on the pit lane onto its place, tap it to turn the number, drag it back for
+   zero. On 1.1 the flag alone, which turns the points on as a whole (the rest return to the
+   ready robot's values); from 2.3 the shelf. No physics: picked by projection, dragged along
+   the pointer's ray on the ground.
+2. **The world shows the state.** Every attempt leaves its ghost line; each move's points float
+   up from the car; the attempt budget is a fuel gauge with a needle; the lap is on a board by
+   the grid and at the top; the start lights under the gantry run the countdown; a crash is
+   sparks and a shake; the race ends with the camera on the car at the line.
+3. **The montage.** The training is computed first (`Core/Replay.cs`) and played back: every
+   attempt at race speed, a thirty-second montage that slows for the first attempt, the first
+   finish, the settle and the last, or straight to the end; "Skip ahead" is the run's main
+   action, the pace is in the menu.
+4. **The briefing is a transmission**: the car on the grid in the camera feed, three lines
+   from race control typed in, one button.
+5. **One line, one menu.** An objective of at most eight words at the top left; Esc or one icon
+   opens the menu (`Ui/GameMenu.cs`: the briefing, the file, this level again, the title, the
+   games menu, sound, voice, pace). Briefing, The file, Settings, Title screen, Follow/The
+   track, Pause, Stop race now, Hide left the screens.
+6. **LUMA says one short thing when something happens**: "Nobody is steering." on attempt 1,
+   "One finish proves nothing: watch whether the curve stays up." at the first finish, "That is
+   learning, not luck." at the settle, "The race, with the rule book as it is." at the start
+   lights, "Every move earns zero." after a run with no finish, "Turn the finish points on and run
+   again." back in the pit lane, the first sentence of the takeaway on the debrief. Shown whole,
+   never typed mid-sentence, 15 words or fewer, recorded like her other lines. Her full lines
+   and the curriculum are in the file.
+7. **The questions are taps on the world** (`Ui/QuizScreen.cs`): the car, the track, the sensors'
+   rays, the wheels, the points floating over the track (lit teal while the question is up), or
+   three signs beside the grid. Stored as the chips stored them.
+8. **The debrief is the car at the line**, the lap board, the medal with its stars, LUMA's one
+   line, Next and Again; the curve, the checks, the runs' numbers, the stars in all and the rank
+   behind Details.
+
+## The four bugs
+
+| Bug | Fix |
+|---|---|
+| 1.1 could not be won (its points were locked at zero and the one control was missing) | The flag; on the finish it turns the points on as a whole. The walk's 1.1: first finish at attempt 18, race 5 of 5, GOLD. |
+| Training invisible at the default speed (over in one frame) | The montage, about 30 s whatever the budget; Max stays in the menu. |
+| Tech Escape 2.4's allow-all rule below the drawer's fold | The drawer head lost the "You fix" paragraph and the step note (both are in the file and in LUMA's line); two decisions on a row sit side by side. All five rules fit. |
+| Tech Escape's attack banner gone before LUMA finished her line | The banner waits until she has finished typing and speaking (`Luma.Busy`). |
+
+Also fixed on the way: the warm-up question is off in the three games; the "Reason" label no
+longer clips.
+
+## Words and controls, before and after
+
+Counted the same way before (the inventory, `Docs/game-feel/inventory/robot-racing.md`) and
+after (the walk's `counts.jsonl`): every visible word with a letter or digit, every button the
+player can press; Claude Bomb's yardstick counted the same way is 78 words on its briefing
+and 46 to 68 on its play screen (4 control groups plus the chat).
+
+| Screen | Before: words / controls | After: words / controls | Limit |
+|---|---|---|---|
+| Title | 84 / 17 | 61 / 15 (the level map is the one ladder) | – |
+| Briefing 1.1 | 98 / 15 | 46 / 3 (Skip, the menu, the button) | 50 |
+| Pit lane 1.1 | 125 / 5 | 6 to 8 / 2 (the menu, Train) | 30, 3 + main |
+| Training 1.1 | 203 / 6 | 9 to 15 / 4 (Camera, Details, the menu, Skip ahead) | 30, 3 + main |
+| Race 1.1 | 188 / 6 | 15 to 19 / 3 | 30, 3 + main |
+| Race over 1.1 | 216 / 7 | 10 / 4 (Debrief is the main action) | 30, 3 + main |
+| Questions 1.1 | 146 / 32 | 10 and 22 / 1 (the menu; the answers are taps) | 30 |
+| Debrief 1.1 | 127 / 5 | 15 / 4 (Details, Again, the menu, Next) | 30 |
+| Debrief 1.1, Details open | – | 120 / 6 | – |
+| Briefing 2.3 | 113 / 15 | 47 / 3 | 50 |
+| Pit lane 2.3 | 170 / 28 | 23 to 26 / 2 | 30, 3 + main |
+| Training 2.3 | 190 to 235 / 6 | 14 to 25 / 4 | 30, 3 + main |
+| Training 2.3, Details open | – | 234 / 5 (the seed and the chance live here) | – |
+| Race 2.3 | 224 to 227 / 6 | 16 to 20 / 3 | 30, 3 + main |
+| Debrief 2.3 | 147 / 5 | 16 / 4 | 30 |
+| The menu | – | 41 / 15 | – |
+
+Every LUMA line on every screen of the walk is whole and 15 words or fewer. No "OPENS AT",
+no coordinates, no seed and no probability on any play or briefing screen (the seed and the
+new-move chance are behind Details, where the walk flags them on purpose). The car fills 36 %
+of the frame in training and 26 % in the race (the chase pulled back so the track ahead
+shows); in the pit lane the view is fitted to the markers, not the car.
+
+## The reviewers, round 1
+
+Two fresh agents, given only the screenshots (`games/robot-racing/Builds/look-audit/game-feel/final/`).
+
+**The player test** (level 1.1's eleven screens in order, "what is it about, what do you do on
+each screen, where did it feel like a form"): it said what the game is about in one paragraph
+("You do not drive... give it points, press Train, watch it crash, crash later, find the line,
+then it races five laps and you get a medal") and what to do on nine of eleven screens. It
+could not tell on two: the 1.1 pit lane ("nothing shows where or how to set the points; the
+flag never looked touchable") and the first question ("LUMA's line is a statement, nothing to
+tap"). Screens that felt like a form or instructions: the briefing (an instruction page, "the
+right kind, with a Skip"), the signs question ("a quiz, nicer than radio buttons, still a
+comprehension test"), and half the title (the tier grid "feels like a syllabus"). Its plain
+summary: "what I actually did was tap a flag I did not know was tappable, press Train, watch
+three screens, press Debrief, tap a sign, press Next"; the red-then-teal ribbons "teach the idea
+without a word"; "if the flag glowed or wobbled, or the hint said Tap the flag, the one act of
+play would land."
+
+**The Claude Bomb test** (the side-by-sides): RIGHT on the pit lane, the training, the race
+and the debrief ("a chase camera on a car on a track with a gauge and an objective line is a
+racing game"; "the most game-like frame of the set"; "a finish-line shot between tyre walls
+with a 5/5 board and a GOLD callout"), LEFT on the title ("a course outline") and the questions
+("a multiple-choice question staged on billboards"), EVEN on the briefing ("the right's 3D scene
+is more convincing; the left's text gives the player a role and a clock"). What still reads as an
+app, most visible first: the title's tier map; LUMA's strips read as a tutor's captions ("Nobody
+is steering.", "No new moves, no learning.", the takeaway); the button rows (Camera/Details,
+Again/Next/Details) and the menu icon; the floating numbers with no HUD to belong to. Its three
+changes: rebuild the title around the car with the level select in the world; LUMA as a radio
+call with stakes, six words or fewer, and a fixed HUD with a timer or position; in-world
+triggers instead of buttons, and the question asked by the race itself with a consequence.
+
+Acted on before round 2: the flag now pulses with a teal lamp from the start and the objective
+reads "Put the flag on the finish line." until it is placed; the five things a parts question
+can mean glow teal while it is up; the race ends on the car at the line, not the overview; the
+race cue became "The race, with the rule book as it is."; the shelf moved up the pit lane, clear
+of the gantry, and the kit's own cones hide while the crash marker is there.
+
+## The reviewers, round 2
+
+The same two tests, fresh agents, on the frames after those fixes.
+
+**The player test**: it said what the game is about ("A robot race car that nobody drives. I
+don't steer it; I put down a reward, the car crashes into walls until it figures out the route,
+then it runs a five-lap race, I answer questions, I get a medal") and what to do on ten of
+eleven screens. The 1.1 pit lane now lands: "I'd drag the checkered flag up to the finish, then
+press Train. This is the first thing that feels like touching the game, and it's
+understandable." The race over and the debrief "feel like a game's results screen". The one
+screen it still could not read is the first question ("Tap the answer" with "The one making the
+decisions.", "a sentence fragment, not a question", the glowing car and the "+2" not read as
+choices). Still a form or instructions by its account: the briefing ("a reading page, short,
+skippable"), the signs ("the nicest-looking quiz I've seen, but a comprehension check"), and the
+title's left half ("a course dashboard"). Not forms, not play either: the training and the race
+("my only real act in the world is dragging one flag; the game's premise is nobody drives, and
+it's honest about that, but the player's hands are idle for most of the level"). "Rule book" in
+the race cue is "a phrase nobody introduced".
+
+**The Claude Bomb test**: RIGHT on the pit lane, the training, the race, the questions (on looks:
+"no chat panel, only the track from above; but it is a multiple-choice question") and the
+debrief ("a medal reveal over the car in a tyre-walled pen"); EVEN on the briefing; LEFT on the
+title ("the TIER 1/2/3 node grid turns the opening screen into a course map"). "The right side
+feels more like a game than the reference in five of seven screens." What still reads as an app
+on every right-side screen: the teal main button in the bottom-right corner (Train, Skip ahead,
+Next, To the pit lane, Continue), LUMA's sentence box, the small buttons (Camera, Details, Again,
+Skip), the menu icon; and the floating "-100" / "+2" and "GOLD" as text rather than objects. Its
+three changes: a title with no node grid and the level select in the world; one key or a
+diegetic trigger instead of the main button and the pills; the points and the medal as objects
+(gates that light, a scoreboard, a podium).
+
+## Where the pilot stands
+
+The pilot meets the prompt's machine checks on every screen and passes the player test on all
+but one screen; the Claude Bomb test prefers it on five of seven. What both reviewers still hold
+against it is largely what the prompt keeps (the ladder on the title, three controls plus one
+main action, LUMA's one line, questions on the world) or what the game is ("nobody drives": the
+player places and watches). The owner's call, not the pass's: the level map on the title (the
+brief keeps it there); the first question's prompt, which is the curriculum's wording; buttons
+versus key prompts; and whether to turn the floating points and the medal into objects (a lit
+gate, a podium) in the next round.
+
+## Web
+
+Robot Racing: 31.2 MB transferred (was 28.5; the recorded cues and the new code), 5.0 s to
+load, runs on the platform. Tech Escape with its two fixes: 44.5 MB, 6.8 s. Both measured
+with the realism pass's `loadtime.mjs` in headless Chrome with software rendering. The frames of
+the pilot, the counts and the side-by-sides are in `games/robot-racing/Builds/look-audit/game-feel/final/`.

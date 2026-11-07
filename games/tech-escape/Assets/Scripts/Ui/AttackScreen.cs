@@ -105,7 +105,9 @@ public class AttackScreen
         app.world.OpeningShot(frame, 2.4f);
         app.world.Alarm(2.2f);
         app.atmosphere.Pulse(Theme.Danger, 0.4f, 0.9f);
-        yield return Moment("THE ATTACK BEGINS", "", Theme.Danger, 1.3f, true, Sfx.Mood.Siren);
+        // The banner stays up until LUMA has finished her line (typed and spoken), so it is
+        // never gone while she is still mid-sentence; then its own 1.3 s.
+        yield return Moment("THE ATTACK BEGINS", "", Theme.Danger, 1.3f, true, Sfx.Mood.Siren, () => app.luma.Busy);
         yield return app.world.WalkTo(app.world.Entrance + Vector3.right * 1.5f, 0.8f);
         Transform last = app.world.AttackerTransform;
         foreach (var line in attack.lines)
@@ -171,7 +173,7 @@ public class AttackScreen
     // A moment over the corridor, low in the frame so the attacker stays in view, in dark glass
     // with a keyline in its colour: big ones come in with an overshoot and a flash of the colour
     // over the world.
-    IEnumerator Moment(string text, string sub, Color colour, float seconds, bool big, Sfx.Mood mood)
+    IEnumerator Moment(string text, string sub, Color colour, float seconds, bool big, Sfx.Mood mood, System.Func<bool> holdWhile = null)
     {
         Image flash = null;
         if (big)
@@ -209,6 +211,8 @@ public class AttackScreen
             if (flash != null) flash.color = new Color(colour.r, colour.g, colour.b, 0.45f * Mathf.Max(0f, 1f - k * 2.5f));
         });
         if (flash != null) Object.Destroy(flash.gameObject);
+        float held = 0f;
+        while (holdWhile != null && holdWhile() && held < 30f) { held += Time.unscaledDeltaTime; yield return null; }
         yield return new WaitForSecondsRealtime(seconds);
         yield return Ui.Animate(0.22f, k => { group.alpha = 1 - k; card.rectTransform.localScale = Vector3.one * (1f - 0.08f * k); });
         Object.Destroy(card.gameObject);

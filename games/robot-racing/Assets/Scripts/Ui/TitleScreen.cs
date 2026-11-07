@@ -1,12 +1,12 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Maaloomatiia.Games;
 
 // The cover: the robot car on the grid at dusk under the start gantry, the camera turning
 // slowly round it, framed as the trackside camera's feed; beside it the wordmark, the
-// pitch, LUMA, the campaign (three tiers of levels with the stars each earned) and the
-// way in.
+// pitch, LUMA's one line, the campaign (three tiers of levels with the stars each earned:
+// the only ladder in the game) and the way in. Sound, voice and the games menu are in the
+// menu behind the icon.
 public class TitleScreen
 {
     public readonly RectTransform root;
@@ -37,17 +37,7 @@ public class TitleScreen
         }
 
         Ui.Wordmark(root, 120, 64, 250);
-        if (Platform.IsWeb)
-        {
-            var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 18);
-            Ui.Place(menu.GetComponent<RectTransform>(), 400, 58, 200, 52);
-        }
-        Button sound = null;
-        sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(sound.GetComponent<RectTransform>(), 766, 58, 140, 52);
-        Button voice = null;
-        voice = Ui.Button(root, Luma.Voice ? "Voice on" : "Voice off", () => { Luma.Voice = !Luma.Voice; if (!Luma.Voice) app.luma.Hush(); Ui.SetLabel(voice, Luma.Voice ? "Voice on" : "Voice off"); }, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(voice.GetComponent<RectTransform>(), 616, 58, 134, 52);
+        GameMenu.Icon(root);
 
         var eyebrow = Ui.Eyebrow(root, "ROBOT RACING  ·  GAME 03", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
@@ -56,16 +46,14 @@ public class TitleScreen
         var tag = Ui.Text(root, "You set the points. It teaches itself to race.", 40, Theme.Teal, true);
         Ui.Place(tag.rectTransform, 120, 350, 1000, 56);
         int done = app.LevelsDone, next = Mathf.Min(done + 1, Ladder.Count);
-        app.luma.Line(root, 120, 436, 820,
-            done == 0 ? "I'm LUMA, your coach. Thirteen levels in three tiers. Press Start: the robot is on the grid."
-                      : $"Welcome back. {done} of {Ladder.Count} levels done, {app.TotalStars} stars: {app.Rank}. Next: {Ladder.Get(next).title.ToLowerInvariant()}",
-            true, true, 17);
+        if (done == 0) app.luma.Cue(root, "title", 120, 436, 820, stay: true);
+        else app.luma.Line(root, 120, 436, 820, $"Welcome back. Next: {Ladder.Get(next).title.Replace("Capstone: ", "").ToLowerInvariant()}", true, true, 17, type: false);
 
         // The campaign: three tiers, each a track of stops with its stars.
         float y = 560;
         for (int tier = 1; tier <= 3; tier++)
         {
-            var label = Ui.Eyebrow(root, $"TIER {tier}  ·  {Ladder.TierNames[tier - 1].ToUpperInvariant()}", Theme.Faint);
+            var label = Ui.Eyebrow(root, $"TIER {tier}", Theme.Faint);
             Ui.Place(label.rectTransform, 120, y, 700, 18);
             var levels = System.Array.FindAll(Ladder.All, l => l.tier == tier);
             float x0 = 150, step = 112, ty = y + 42;
@@ -77,7 +65,6 @@ public class TitleScreen
                 var l = levels[i];
                 bool isNext = l.number == next, isDone = l.number <= done;
                 float x = x0 + i * step;
-                // Rounded squares, never circles: the level's stop is a button.
                 if (isNext)
                 {
                     var halo = Ui.Box(root, "Halo", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f));
@@ -109,7 +96,5 @@ public class TitleScreen
 
         var start = Ui.Button(root, done == 0 ? "Start" : $"Continue: level {Ladder.Get(next).id}", () => app.StartLevel(next), Ui.ButtonStyle.Accent, 22);
         Ui.Place(start.GetComponent<RectTransform>(), 120, 850, 300, 60);
-        var free = Ui.Button(root, "Free play", app.StartFree, Ui.ButtonStyle.GhostOnDark, 18);
-        Ui.Place(free.GetComponent<RectTransform>(), 440, 850, 170, 60);
     }
 }

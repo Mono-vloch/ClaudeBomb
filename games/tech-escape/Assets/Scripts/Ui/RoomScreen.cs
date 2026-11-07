@@ -66,23 +66,19 @@ public class RoomScreen
         Ui.Place(fold.GetComponent<RectTransform>(), DrawerW - 112, 18, 88, 40);
         var title = Ui.Text(drawer, room.title, 28, Color.white, true);
         Ui.Place(title.rectTransform, 28, 62, DrawerW - 56, 76);
-        var stepNote = Ui.Text(drawer, string.IsNullOrEmpty(room.mistake) ? "The run goes to the record" : "Fix it: " + room.mistake, 16, Look.Chalk);
-        Ui.Place(stepNote.rectTransform, 28, 140, DrawerW - 56, 24);
-        stepNote.enableWordWrapping = false; stepNote.overflowMode = TextOverflowModes.Ellipsis;
+        // The step note and the "You fix" paragraph left the drawer's head on 7 November 2026:
+        // LUMA says the mistake over the room and the file holds the paragraph, and the room's
+        // rows need the height (Firewall Control's allow-all rule, the planned mistake, sat
+        // below the drawer's fold).
         var back = Ui.Button(drawer, "Briefing", app.ShowLesson, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(back.GetComponent<RectTransform>(), 28, 180, 132, 52);
+        Ui.Place(back.GetComponent<RectTransform>(), 28, 150, 132, 52);
         var file = Ui.Button(drawer, "The file", () => app.ShowFile(), Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(file.GetComponent<RectTransform>(), 170, 180, 132, 52);
+        Ui.Place(file.GetComponent<RectTransform>(), 170, 150, 132, 52);
         var run = Ui.Button(drawer, "RUN THE ATTACK", () => { if (Ready()) app.RunAttack(); }, Ui.ButtonStyle.Accent, 18);
-        Ui.Place(run.GetComponent<RectTransform>(), 312, 180, DrawerW - 340, 52);
-        // What the student fixes here.
-        var tag = Ui.Eyebrow(drawer, "YOU FIX", Theme.Teal);
-        tag.fontSize = 16;
-        Ui.Place(tag.rectTransform, 28, 250, DrawerW - 56, 22);
-        note = Ui.Text(drawer, room.fixes, 16, Look.Chalk);
-        float noteH = Mathf.Max(24f, note.GetPreferredValues(room.fixes ?? "", DrawerW - 56, 0).y);
-        Ui.Place(note.rectTransform, 28, 276, DrawerW - 56, noteH);
-        float top = 276 + noteH + 16;
+        Ui.Place(run.GetComponent<RectTransform>(), 312, 150, DrawerW - 340, 52);
+        note = Ui.Text(drawer, "", 16, Look.Chalk); // only speaks up when the run cannot start yet
+        Ui.Place(note.rectTransform, 28, 206, DrawerW - 56, 24);
+        float top = 232;
         var rule = Ui.Box(drawer, "Rule", Line, false);
         Ui.Place(rule.rectTransform, 28, top, DrawerW - 56, 1);
         var head = Ui.Eyebrow(drawer, room.ordered ? "THE SYSTEM  ·  ORDER AND DECIDE" : "THE SYSTEM  ·  DECIDE EACH ROW", Theme.Teal);
@@ -135,12 +131,17 @@ public class RoomScreen
             decided.Add(perRow.All(f => { int p = st.Pick(item.key, f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; }));
             float x0 = room.ordered ? 58 : 18;
             var probe = Ui.Text(content, item.detail, 16, Theme.Faint);
-            float detailH = probe.GetPreferredValues(item.detail ?? "", W - x0 - 18, 0).y;
+            float detailH = string.IsNullOrEmpty(item.detail) ? 0f : probe.GetPreferredValues(item.detail, W - x0 - 18, 0).y;
             probe.fontSize = 18; probe.font = Theme.Bold;
             float nameH = Mathf.Max(26f, probe.GetPreferredValues(item.name ?? "", W - x0 - 18, 0).y);
             Object.Destroy(probe.gameObject);
-            var chipH = perRow.Select(f => ChipHeight(f, item.key, W - x0 - 14)).ToList();
-            float h = 12 + nameH + 4 + detailH + 10 + chipH.Sum(c => c + 8) + 6;
+            // Two decisions on a row sit side by side (half the width each), so five rules fit
+            // the drawer; more than two stack as before.
+            bool twoUp = perRow.Count == 2;
+            float chipW = twoUp ? (W - x0 - 14 - 8) / 2f : W - x0 - 14;
+            var chipH = perRow.Select(f => ChipHeight(f, item.key, chipW)).ToList();
+            float chipBlock = twoUp ? chipH.Max() + 8 : chipH.Sum(c => c + 8);
+            float h = 12 + nameH + 4 + detailH + (detailH > 0 ? 10 : 4) + chipBlock + 6;
             var row = Ui.Box(content, item.key, RowFill);
             Ui.Place(row.rectTransform, 0, y, W, h);
             var rt = row.transform;
@@ -162,9 +163,10 @@ public class RoomScreen
             Ui.Place(name.rectTransform, x0, 12, W - x0 - 18, nameH);
             var detail = Ui.Text(rt, item.detail, 16, Theme.Faint);
             Ui.Place(detail.rectTransform, x0, 16 + nameH, W - x0 - 18, detailH);
-            float fy = 16 + nameH + detailH + 10;
-            for (int k = 0; k < perRow.Count; k++) { Chip(rt, x0, fy, W - x0 - 14, perRow[k], item.key, chipH[k]); fy += chipH[k] + 8; }
-            y += h + 14;
+            float fy = 16 + nameH + detailH + (detailH > 0 ? 10 : 4);
+            if (twoUp) { float hh = chipH.Max(); for (int k = 0; k < 2; k++) Chip(rt, x0 + k * (chipW + 8), fy, chipW, perRow[k], item.key, hh); }
+            else for (int k = 0; k < perRow.Count; k++) { Chip(rt, x0, fy, W - x0 - 14, perRow[k], item.key, chipH[k]); fy += chipH[k] + 8; }
+            y += h + 12;
         }
         app.world.ShowConfig(index, decided);
         TabLamps(decided);
@@ -225,17 +227,24 @@ public class RoomScreen
     }
 
     // A decision as a chip on the dark: its label, then the choice; click it, it cycles through its options.
-    const float LabelW = 150;
+    // The label takes what it needs (up to 150), so a half-width chip keeps room for its choice.
+    float LabelWidth(Field f, float w)
+    {
+        var probe = Ui.Text(content, f.label, 16, Theme.Faint, true);
+        float lw = probe.GetPreferredValues(f.label, 0, 0).x + 24;
+        Object.Destroy(probe.gameObject);
+        return Mathf.Clamp(lw, 60f, Mathf.Min(150f, w * 0.45f));
+    }
 
-    // A chip is one line high, two when its option does not fit on one.
+    // A chip is as high as its choice needs: one line, two, or three.
     float ChipHeight(Field f, string itemKey, float w)
     {
         int current = st.Pick(itemKey, f.key);
         string text = current >= 0 && current < f.options.Length ? f.options[current] : "?";
         var probe = Ui.Text(content, text, 16, Color.white, true);
-        float tw = probe.GetPreferredValues(text, 0, 0).x;
+        float th = probe.GetPreferredValues(text, w - LabelWidth(f, w) - 28, 0).y;
         Object.Destroy(probe.gameObject);
-        return tw > w - LabelW - 30 ? 62f : 40f;
+        return th <= 24f ? 40f : th <= 46f ? 62f : 84f;
     }
 
     void Chip(Transform t, float x, float y, float w, Field f, string itemKey, float height = 40f)
@@ -243,7 +252,7 @@ public class RoomScreen
         int current = st.Pick(itemKey, f.key);
         string text = current >= 0 && current < f.options.Length ? f.options[current] : "?";
         bool unset = current < 0 || f.options[current] == "?";
-        const float labelW = LabelW;
+        float labelW = LabelWidth(f, w);
         var label = Ui.Text(t, f.label, 16, Theme.Faint, true);
         Ui.Place(label.rectTransform, x, y + 9, labelW - 8, 24);
         label.enableWordWrapping = false; label.overflowMode = TextOverflowModes.Ellipsis;

@@ -1,16 +1,18 @@
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The briefing before a level: the car on its grid on the right, sharp, seen low from
-// behind down the first straight; on the left, in dark glass, the level's question, its headline, LUMA's
-// opening line spoken and typed, the track with its map, and the robot's seven
-// parts with this level's lit. Everything the course says beyond that is in the
-// file.
+// The briefing is a transmission, as Claude Bomb's: the car on its grid in the trackside
+// camera's feed on the left, and on the right, from race control, three or four short lines
+// typed in and one button. No chips, no cards, no ladder. Everything the course says beyond
+// that is in the file, one icon away.
 public class LessonScreen
 {
     public readonly RectTransform root;
-    static readonly string[] Parts = { "The robot", "What it senses", "What it may do", "The points", "New moves", "The knobs", "Tracks and measure" };
+    const float PanelX = 1240f, PanelW = 640f;
+    bool hurry;
 
     public LessonScreen(Transform parent, App app)
     {
@@ -19,91 +21,101 @@ public class LessonScreen
         Ui.Stretch(root);
         app.Paper(Color.clear);
 
-        // The world: this level's track, by day, on the right, sharp.
-        var window = Ui.Node("Window", root);
-        Ui.Place(window, 900, 150, 980, 880);
+        // The world: this level's track, the car on the grid, in the camera feed on the left.
+        var frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 40, 60, 1100, 960);
         var track = Track.Get(l.training[0]);
         app.world.Build(track, false);
-        if (Circuit.HasKit) app.world.ShowGrid(window); else app.world.ShowOverview(window);
+        if (Circuit.HasKit) { app.world.ShowGrid(frame); CameraFeed.Build(frame, "CAM 3  /  THE GRID", "MAALOOMATIIA RACEWAY  /  EVENING PRACTICE"); }
+        else app.world.ShowOverview(frame);
         app.atmosphere.MenuBlur(false);
 
-        // The briefing, left, in dark glass over the park.
-        var panel = Ui.Glass(root, "Brief", 40, 40, 840, 840, false);
-        var b = panel.transform;
-        var eyebrow = Ui.Eyebrow(b, $"LEVEL {l.id} OF 3.4  ·  THE BRIEFING", Theme.Teal);
-        eyebrow.font = Theme.Bold;
-        Ui.Place(eyebrow.rectTransform, 40, 36, 760, 22);
-        var title = Ui.Text(b, l.title, 46, Color.white, true);
-        Ui.Place(title.rectTransform, 36, 64, 780, 110);
-        var kicker = Ui.Text(b, l.kicker, 24, Theme.Teal, true);
-        Ui.Place(kicker.rectTransform, 40, 180, 760, 70);
+        // The transmission, right, on the ink.
+        var shade = Ui.Box(root, "Shade", Theme.Ink, false);
+        Ui.Place(shade.rectTransform, PanelX - 80, -40, 1000, 1200);
+        shade.raycastTarget = false;
+        var fade = Ui.Node("Fade", root).gameObject.AddComponent<Image>();
+        fade.sprite = Ui.FadeStrip; fade.color = Theme.Ink; fade.raycastTarget = false;
+        fade.rectTransform.localScale = new Vector3(-1, 1, 1);
+        Ui.Place(fade.rectTransform, PanelX - 80, -40, 200, 1200);
 
-        app.luma.Line(b, 40, 262, 760, app.luma.Say("intro-" + l.number), true, true, 18);
+        var (header, sub, lines) = Transmission(l, track);
+        var dot = Ui.Dot(root, Theme.Teal, 12);
+        Ui.Place(dot.rectTransform, PanelX, 318, 12, 12);
+        var head = Ui.Text(root, header, 30, Color.white, true);
+        Ui.Place(head.rectTransform, PanelX + 24, 300, PanelW - 140, 44);
+        var subText = Ui.Eyebrow(root, sub, Theme.Faint);
+        Ui.Place(subText.rectTransform, PanelX + 24, 348, PanelW - 140, 20);
+        var skip = Ui.Button(root, "Skip", () => hurry = true, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(skip.GetComponent<RectTransform>(), PanelX + PanelW - 100, 300, 100, 40);
+        GameMenu.Icon(root);
 
-        // The track, as the pit lane will show it: its name, one line, the map.
-        var msg = Ui.Box(b, "Track", new Color(1f, 1f, 1f, 0.08f));
-        Ui.Place(msg.rectTransform, 40, 380, 760, 132);
-        msg.raycastTarget = false;
-        var from = Ui.Eyebrow(msg.transform, $"THE TRACK  ·  {track.name.ToUpperInvariant()}" + (l.training.Length > 1 ? $"  ·  AND {l.training.Length - 1} MORE" : "") + (l.test != l.training[0] ? $"  ·  TEST: {Track.Get(l.test).name.ToUpperInvariant()}" : ""), Theme.Teal);
-        Ui.Place(from.rectTransform, 24, 16, 500, 22);
-        var note = Ui.Text(msg.transform, track.note, 20, Color.white);
-        Ui.Place(note.rectTransform, 24, 42, 480, 80);
-        Map(msg.transform, track, 530, 14, 210, 104);
-
-        // The seven parts: this level's lit, the ones already open in white, the rest dim.
-        var partsTag = Ui.Eyebrow(b, "YOUR ROBOT, PART BY PART  ·  THIS LEVEL OPENS", Theme.Teal);
-        Ui.Place(partsTag.rectTransform, 40, 538, 760, 20);
-        bool[] open = { true, l.sensors, l.moves, l.points, l.explore, l.knobs || l.attempts, l.tracks || l.measure };
-        bool[] lit =
+        var texts = new List<TextMeshProUGUI>();
+        float y = 400;
+        foreach (var line in lines)
         {
-            l.number == 1, l.number == Ladder.SensorsLevel, l.number == Ladder.MovesLevel, l.number == Ladder.PointsLevel || l.number == 7,
-            l.number == Ladder.ExploreLevel, l.number == Ladder.KnobsLevel || l.number == Ladder.AttemptsLevel, l.number == Ladder.TracksLevel || l.number == Ladder.MeasureLevel,
-        };
-        for (int i = 0; i < Parts.Length; i++)
-        {
-            float x = 40 + (i % 3) * 256, y = 566 + (i / 3) * 54;
-            var chip = Ui.Box(b, Parts[i], lit[i] ? Theme.Teal : open[i] ? new Color(1f, 1f, 1f, 0.14f) : new Color(1f, 1f, 1f, 0.05f));
-            Ui.Place(chip.rectTransform, x, y, 240, 44);
-            chip.raycastTarget = false;
-            var name = Ui.Text(chip.transform, Parts[i], 16, lit[i] ? Theme.Ink : open[i] ? Color.white : Theme.Faint, true, TextAlignmentOptions.Center);
-            Ui.Stretch(name.rectTransform);
+            bool last = line == lines[lines.Count - 1];
+            var t = Ui.Text(root, "", 24, last ? Theme.Teal : Color.white, last);
+            float h = t.GetPreferredValues(line, PanelW, 0).y + 8;
+            Ui.Place(t.rectTransform, PanelX, y, PanelW, h);
+            texts.Add(t);
+            y += h + 14;
         }
-
-        var go = Ui.Button(b, "Go to the pit lane", app.ShowPit, Ui.ButtonStyle.Accent, 22);
-        Ui.Place(go.GetComponent<RectTransform>(), 40, 740, 320, 64);
-        var file = Ui.Button(b, "The file", () => app.ShowFile(), Ui.ButtonStyle.GhostOnDark, 18);
-        Ui.Place(file.GetComponent<RectTransform>(), 380, 740, 130, 64);
-        var home = Ui.Button(b, "Title screen", app.ShowTitle, Ui.ButtonStyle.GhostOnDark, 18);
-        Ui.Place(home.GetComponent<RectTransform>(), 530, 740, 170, 64);
-
-        // The ladder, over the track: the levels. Any other step jumps there.
-        var strip = Ui.Glass(root, "Ladder", 920, 40, 960, 82, false);
-        var ladder = Ui.Eyebrow(strip.transform, "THE LADDER", Theme.Teal);
-        Ui.Place(ladder.rectTransform, 20, 10, 600, 20);
-        int n = 0;
-        foreach (var step in Ladder.All)
-        {
-            bool current = step.number == l.number, done = step.number <= app.LevelsDone;
-            var card = Ui.Card(strip.transform, "Step", current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.08f), current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.3f));
-            Ui.Place(card.rectTransform, 20 + n * 70, 34, 62, 38);
-            var num = Ui.Text(card.transform, step.id, 16, current ? Theme.Ink : Color.white, true, TextAlignmentOptions.Center);
-            Ui.Stretch(num.rectTransform);
-            if (!current)
-            {
-                card.raycastTarget = true;
-                var button = card.gameObject.AddComponent<Button>();
-                button.targetGraphic = card;
-                int number = step.number;
-                button.onClick.AddListener(() => { Sfx.Tick(); app.StartLevel(number); });
-            }
-            n++;
-        }
-        Ui.Emblem(root);
-        // The warm-up question (Recall) is off: the briefing opens straight onto the level.
-        // To bring it back: if (l.recall != null) Recall(app, l.recall);
+        var go = Ui.Button(root, "To the pit lane", app.ShowPit, Ui.ButtonStyle.Accent, 22);
+        Ui.Place(go.GetComponent<RectTransform>(), PanelX, y + 24, 300, 64);
+        var runner = root.gameObject.AddComponent<Runner>();
+        runner.StartCoroutine(TypeAll(texts, lines));
     }
 
-    // The track as a small map: road light, walls dark, start and finish marked.
+    IEnumerator TypeAll(List<TextMeshProUGUI> texts, List<string> lines)
+    {
+        yield return new WaitForSecondsRealtime(0.4f);
+        for (int i = 0; i < texts.Count; i++)
+        {
+            if (texts[i] == null) yield break;
+            yield return Ui.Type(texts[i], lines[i], 48f, () => hurry);
+            if (!hurry) yield return new WaitForSecondsRealtime(0.35f);
+        }
+    }
+
+    // What race control says before each level: three or four short lines of story. The
+    // middle lines are the level's own words (its kicker and LUMA's intro), cut to sentences.
+    public static (string header, string sub, List<string> lines) Transmission(Lesson l, Track track)
+    {
+        var lines = new List<string>();
+        string sub = "evening practice";
+        switch (l.number)
+        {
+            case 1:
+                lines.Add("The robot on the grid has never driven.");
+                lines.Add("Nobody steers it. It senses, moves, gets points, and goes again.");
+                lines.Add("Watch it crash, then crash later, then finish.");
+                break;
+            case 6:
+                sub = "the hairpin";
+                lines.Add("A long way round, with a tight turn back.");
+                lines.Add("Points only at the end leave the robot in the dark.");
+                lines.Add("Small points on the way light the path.");
+                break;
+            default:
+                sub = track.name.ToLowerInvariant();
+                lines.Add(track.note);
+                foreach (var s in Sentences(l.kicker)) if (lines.Count < 3) lines.Add(s);
+                var cue = Luma.FirstSentence(l.luma);
+                if (cue != null && lines.Count < 4 && !lines.Contains(cue)) lines.Add(cue);
+                break;
+        }
+        return ("Race control", sub, lines);
+    }
+
+    static IEnumerable<string> Sentences(string text)
+    {
+        if (string.IsNullOrEmpty(text)) yield break;
+        foreach (var p in System.Text.RegularExpressions.Regex.Split(text.Trim(), @"(?<=[.!?])\s+"))
+            if (p.Trim().Length > 0) yield return p.Trim();
+    }
+
+    // The track as a small map: road light, walls dark, start and finish marked (the file uses it).
     public static void Map(Transform parent, Track t, float x, float y, float w, float h)
     {
         float cell = Mathf.Min(w / t.W, h / t.H);
@@ -120,49 +132,5 @@ public class LessonScreen
             }
     }
 
-    // The warm-up: one question from an earlier level, over the briefing. No score.
-    void Recall(App app, Recall r)
-    {
-        var overlay = Ui.Node("Recall", root);
-        Ui.Stretch(overlay);
-        var dim = Ui.Box(overlay, "Dim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.72f), false);
-        Ui.Stretch(dim.rectTransform);
-        dim.raycastTarget = true;
-        var card = Ui.Box(overlay, "Card", Ui.DarkFill);
-        Ui.Place(card.rectTransform, 560, 300, 800, 440);
-        var t = card.transform;
-        var tag = Ui.Eyebrow(t, $"WARM-UP  ·  FROM LEVEL {r.from}  ·  NO SCORE", Theme.Teal);
-        tag.font = Theme.Bold;
-        Ui.Place(tag.rectTransform, 32, 28, 600, 22);
-        var q = Ui.Text(t, r.question, 26, Color.white, true);
-        Ui.Place(q.rectTransform, 32, 60, 736, 80);
-        var verdict = Ui.Text(t, "", 20, Color.white, true);
-        Ui.Place(verdict.rectTransform, 32, 330, 560, 56);
-        var go = Ui.Button(t, "Continue", () => Object.Destroy(overlay.gameObject), Ui.ButtonStyle.Accent, 17);
-        Ui.Place(go.GetComponent<RectTransform>(), 800 - 32 - 160, 380, 160, 46);
-        go.gameObject.SetActive(false);
-        var buttons = new Button[r.options.Length];
-        for (int i = 0; i < r.options.Length; i++)
-        {
-            int index = i;
-            buttons[i] = Ui.Button(t, r.options[i], () =>
-            {
-                bool right = index == r.answer;
-                verdict.text = right ? "Right." : "Not quite.";
-                verdict.color = right ? Theme.Teal : Theme.Danger;
-                if (right) Sfx.Chime(); else Sfx.Ruin();
-                for (int j = 0; j < buttons.Length; j++)
-                {
-                    buttons[j].interactable = false;
-                    Ui.Chip(buttons[j], j == r.answer);
-                    if (j == index && j != r.answer) { buttons[j].GetComponent<Image>().color = Theme.Danger; buttons[j].GetComponentInChildren<TextMeshProUGUI>().color = Theme.Danger; }
-                }
-                go.gameObject.SetActive(true);
-            }, Ui.ButtonStyle.GhostOnDark, 18);
-            Ui.Place(buttons[i].GetComponent<RectTransform>(), 32, 150 + i * 56, 736, 48);
-            var label = buttons[i].GetComponentInChildren<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-            Ui.Stretch(label.rectTransform, 20, 0, 20, 0);
-        }
-    }
+    class Runner : MonoBehaviour { }
 }

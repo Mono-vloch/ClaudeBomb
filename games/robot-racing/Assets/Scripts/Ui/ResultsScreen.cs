@@ -6,22 +6,26 @@ using UnityEngine;
 using UnityEngine.UI;
 using Maaloomatiia.Games;
 
-// The debrief: first the level's questions (what the student can explain, name
-// or predict), then the curve of every run, the numbers side by side (attempts
-// to the first finish and to settle, the race's measures), the checks ticked or
-// missed, a medal, LUMA's takeaway and the question to take back to work, the
-// next level's unlock, and on a capstone the two if-then plans. The circuit turns
-// slowly in a window the whole time; the medal is revealed over it.
+// The debrief is a moment, then a door (the game-feel pass): the car where the race left
+// it, the lap board reading the laps, the medal revealed over it with its stars, LUMA's one
+// line, Next and a quiet Again. The curve of every run, the checks, the runs' numbers, the
+// stars in all and the rank sit behind Details, closed by default. The report to the
+// platform and the stars banked are as they were.
 public class ResultsScreen
 {
     public static ResultsScreen Current;
     public readonly RectTransform root;
     readonly App app;
     readonly Session x;
-    RectTransform plans;
+    RectTransform sheet, plans;
+    int medal;
+    List<(Practised result, string label)> checks;
+    readonly List<(string head, string body)> extras = new List<(string head, string body)>();
 
     static readonly Color Gold = Theme.Hex("#E0B23A"), Silver = Theme.Hex("#AAB4BE"), Bronze = Theme.Hex("#C48A5A");
     static readonly string[] MedalNames = { "", "BRONZE", "SILVER", "GOLD" };
+
+    public static bool Answered(Session x) => x.lesson == null || x.lesson.quiz.All(q => q.IsText ? x.texts.ContainsKey(q.key) : x.picks.ContainsKey(q.key));
 
     public ResultsScreen(Transform parent, App app)
     {
@@ -31,26 +35,228 @@ public class ResultsScreen
         root = Ui.Node("Results", parent);
         Ui.Stretch(root);
         app.Paper(Color.clear);
-        if (app.lesson != null && app.lesson.quiz.Length > 0 && !Answered()) Quiz();
+        if (app.lesson != null && app.lesson.quiz.Length > 0 && !Answered(x)) Quiz();
         else Build();
     }
 
-    bool Answered() => app.lesson.quiz.All(q => q.IsText ? x.texts.ContainsKey(q.key) : x.picks.ContainsKey(q.key));
-
     Track Track => x.LastRace?.track ?? x.Last?.track ?? (app.lesson != null ? Track.Get(app.lesson.training[0]) : Track.Get(x.settings.training[0]));
 
-    // The world behind the screen: the track the race ran on, turning slowly, soft.
-    void World(RectTransform window)
+    // ---- the moment ----
+
+    void Build()
     {
+        Ui.Clear(root);
+        var l = app.lesson;
+        bool counts = l != null;
+        var frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 0, 0, Ui.W, Ui.H);
         app.world.Build(Track, false);
-        if (Circuit.HasKit) app.world.ShowCarOrbit(window); else app.world.ShowOrbit(window);
-        app.atmosphere.MenuBlur(true);
-        var scrim = Ui.Box(root, "Scrim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.3f), false);
-        Ui.Stretch(scrim.rectTransform);
-        scrim.raycastTarget = false;
+        var race = x.LastRace;
+        if (race != null)
+        {
+            var c = race.car;
+            app.world.Pose(c.from, c.pos, c.heading, 0, 1f, race.readings, x.settings.sensors);
+            app.world.LapBoard($"LAP {race.Finishes}/{race.laps.Count}");
+        }
+        if (Circuit.HasKit) app.world.ShowCarOrbit(frame, 1.75f, 17f); else app.world.ShowOrbit(frame);
+        app.atmosphere.MenuBlur(false);
+
+        // The checks, and the medal they earn.
+        medal = 0;
+        checks = null;
+        if (l != null)
+        {
+            checks = l.Check(x);
+            int ticked = checks.Count(c => c.result == Practised.Yes), needed = checks.Count(c => c.result != Practised.NotNeeded);
+            medal = needed > 0 && ticked == needed ? 3 : ticked * 2 >= needed && needed > 0 ? 2 : x.RaceOk(x.LastRace) ? 1 : 0;
+            if (counts)
+            {
+                app.SetStars(l.number, medal);
+                string result = ticked == needed ? "complete" : ticked * 2 >= needed ? "partial" : "incomplete";
+                app.StartCoroutine(Platform.ReportProgress($"{l.id}:{result}", medal, string.Join("; ", checks.Where(c => c.result != Practised.NotNeeded).Select(c => $"{c.label}: {(c.result == Practised.Yes ? "done" : "missed")}"))));
+            }
+            extras.Add(("THE CHECKS", string.Join("\n", checks.Select(c => (c.result == Practised.Yes ? "Done: " : c.result == Practised.Missed ? "Missed: " : "Not needed: ") + c.label))));
+            for (int i = 0; i < x.runs.Count; i++)
+            {
+                var r = x.runs[i];
+                string name = string.IsNullOrEmpty(r.label) ? $"Run {i + 1}" : r.label;
+                extras.Add((name.ToUpperInvariant(), r.s.Knobs + $"  ·  {r.s.SensorsOn} sensors, {r.s.MovesOn} moves, top speed {r.s.topSpeed}, finish {r.s.finish:0}, crash {r.s.crash:0}, toward {r.s.toward:0.#}, speed bonus {r.s.speedBonus:0.#}"));
+            }
+        }
+        Medal(medal, l != null);
+        GameMenu.Icon(root);
+
+        if (l != null)
+        {
+            string take = "take-" + l.number;
+            if (Luma.Lines.ContainsKey(take)) app.StartCoroutine(SayLater(take, 2.2f));
+        }
+
+        // The door: Next, a quiet Again, and Details.
+        bool last = l != null && l.number >= Ladder.Count;
+        var next = Ui.Button(root, l == null ? "Set up again" : last ? "Free play" : "Next", l == null ? app.ShowPit : last ? app.StartFree : (System.Action)app.NextLevel, Ui.ButtonStyle.Accent, 22);
+        Ui.Place(next.GetComponent<RectTransform>(), Ui.W - 40 - 240, 996, 240, 64);
+        if (l != null)
+        {
+            var again = Ui.Button(root, "Again", app.ShowPit, Ui.ButtonStyle.GhostOnDark, 18);
+            Ui.Place(again.GetComponent<RectTransform>(), Ui.W - 40 - 240 - 14 - 140, 1004, 140, 56);
+        }
+        var details = Ui.Button(root, "Details", ToggleSheet, Ui.ButtonStyle.GhostOnDark, 18);
+        Ui.Place(details.GetComponent<RectTransform>(), 40, 1004, 140, 56);
     }
 
-    // ---- the questions ------------------------------------------------------------------
+    IEnumerator SayLater(string id, float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        if (root != null) app.luma.Cue(root, id, 40, 920, 820, stay: true);
+    }
+
+    // The medal, revealed over the car: the badge comes in with an overshoot, the stars light
+    // one by one, confetti and a fanfare for silver and gold.
+    void Medal(int medal, bool hasLevel)
+    {
+        Color colour = medal == 3 ? Gold : medal == 2 ? Silver : medal == 1 ? Bronze : Theme.Faint;
+        var badge = Ui.Glass(root, "Medal", (Ui.W - 440) / 2, 90, 440, 170, true, colour);
+        var b = badge.transform;
+        var name = Ui.Text(b, medal > 0 ? MedalNames[medal] : "", 52, colour, true, TextAlignmentOptions.Center);
+        name.characterSpacing = 8;
+        Ui.Place(name.rectTransform, 0, 28, 440, 64);
+        var stars = new Image[3];
+        for (int s = 0; s < 3; s++)
+        {
+            stars[s] = Ui.Box(b, "Star", s < medal ? colour : new Color(1, 1, 1, 0.16f));
+            Ui.Place(stars[s].rectTransform, 220 - 48 + s * 34 - 14, 108, 28, 28);
+            stars[s].raycastTarget = false;
+        }
+        app.StartCoroutine(Reveal(badge, stars, medal, colour));
+    }
+
+    IEnumerator Reveal(Image badge, Image[] stars, int medal, Color colour)
+    {
+        var group = Ui.Group(badge);
+        group.alpha = 0f;
+        badge.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        badge.rectTransform.anchoredPosition = new Vector2(Ui.W / 2, -(90 + 85));
+        foreach (var s in stars) s.transform.localScale = Vector3.zero;
+        yield return new WaitForSecondsRealtime(0.55f);
+        if (badge == null) yield break;
+        if (medal > 0) Sfx.Sting(Sfx.Mood.Fanfare); else Sfx.Tick();
+        yield return Ui.Animate(0.45f, k =>
+        {
+            if (badge == null) return;
+            group.alpha = Mathf.Min(1f, k * 3f);
+            badge.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.5f, 1f, Ui.EaseOutBack(k));
+        });
+        for (int s = 0; s < medal; s++)
+        {
+            int i = s;
+            Sfx.Chime();
+            yield return Ui.Animate(0.22f, k => { if (stars[i] != null) stars[i].transform.localScale = Vector3.one * Mathf.LerpUnclamped(0f, 1f, Ui.EaseOutBack(k)); });
+            if (medal >= 2) app.world.Celebrate();
+            yield return new WaitForSecondsRealtime(0.1f);
+        }
+        for (int s = medal; s < 3; s++) if (stars[s] != null) stars[s].transform.localScale = Vector3.one;
+    }
+
+    // ---- Details: the curve, the checks, the runs, the stars, behind one button ----
+
+    void ToggleSheet()
+    {
+        if (sheet != null) { Object.Destroy(sheet.gameObject); sheet = null; return; }
+        var l = app.lesson;
+        const float W = 760f, DW = W - 56;
+        sheet = Ui.Node("Details", root);
+        Ui.Place(sheet, Ui.W - W, 0, W, Ui.H);
+        var bg = Ui.Box(sheet, "Glass", Ui.DarkFill, false);
+        Ui.Stretch(bg.rectTransform);
+        var keyline = Ui.Box(sheet, "Keyline", Theme.Teal, false);
+        Ui.Place(keyline.rectTransform, 0, 0, 3, Ui.H);
+        var tag = Ui.Eyebrow(sheet, l != null ? $"DETAILS  ·  LEVEL {l.id}" : "DETAILS", Theme.Teal); tag.font = Theme.Bold;
+        Ui.Place(tag.rectTransform, 28, 26, 500, 22);
+        var close = Ui.Button(sheet, "Close", ToggleSheet, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(close.GetComponent<RectTransform>(), W - 112, 18, 88, 40);
+        var scroll = Ui.Scroll(sheet, "Scroll", out var content);
+        Ui.Place(scroll.GetComponent<RectTransform>(), 20, 70, W - 40, Ui.H - 90);
+        float y = 0;
+        var chart = new Chart(content, 0, y, W - 40, 260, "POINTS PER ATTEMPT  ·  EVERY RUN OF THIS LEVEL", dark: true);
+        chart.Draw(x.runs);
+        y += 272;
+        if (l != null && checks != null)
+        {
+            var card = Ui.DarkCard(content, "Checks");
+            float h = 40 + checks.Count * 30 + 10;
+            Ui.Place(card.rectTransform, 0, y, W - 40, h);
+            var ch = Ui.Eyebrow(card.transform, "THE CHECKS", Theme.Teal); Ui.Place(ch.rectTransform, 16, 10, 400, 22);
+            float cy = 40;
+            foreach (var (result, label) in checks)
+            {
+                var lamp = Ui.Box(card.transform, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : Theme.Border, false);
+                Ui.Place(lamp.rectTransform, 18, cy + 6, 12, 12);
+                lamp.raycastTarget = false;
+                var lab = Ui.Text(card.transform, Labels.Of(label), 16, result == Practised.NotNeeded ? Theme.Faint : Color.white);
+                Ui.Place(lab.rectTransform, 42, cy, W - 100, 24);
+                lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Ellipsis;
+                cy += 30;
+            }
+            y += h + 12;
+            var stars = Ui.Text(content, $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}", 16, Theme.Teal, true);
+            Ui.Place(stars.rectTransform, 8, y, DW, 24); y += 34;
+        }
+        float runsH = 40 + x.runs.Count * 56 + (x.real != null ? 28 : 0) + (l != null && l.measure && x.races.Count > 0 ? 30 : 0) + 12;
+        var table = Ui.DarkCard(content, "Runs");
+        Ui.Place(table.rectTransform, 0, y, W - 40, runsH);
+        var th = Ui.Eyebrow(table.transform, "THE RUNS  ·  FIRST FINISH, SETTLED, THE RACE", Theme.Teal);
+        Ui.Place(th.rectTransform, 16, 10, 600, 22);
+        float ry = 40;
+        for (int i = 0; i < x.runs.Count; i++)
+        {
+            var r = x.runs[i];
+            var race = i < x.races.Count ? x.races[i] : null;
+            string name = string.IsNullOrEmpty(r.label) ? $"Run {i + 1}" : r.label;
+            var line = Ui.Text(table.transform, $"<b>{name}</b>  ·  first finish {(r.firstFinish > 0 ? r.firstFinish.ToString() : "none")}  ·  settled {(r.settled > 0 ? "at " + r.settled : "no")}  ·  {r.s.attempts} attempts" +
+                               (race != null ? $"\nrace {race.Finishes}/{race.laps.Count}  ·  {race.CrashesPerLap:0.0} crashes, {race.Touches:0.0} touches, {race.LapTime:0} moves a lap" : ""), 16, Color.white);
+            Ui.Place(line.rectTransform, 16, ry, W - 80, 50);
+            line.enableWordWrapping = false; line.overflowMode = TextOverflowModes.Ellipsis;
+            ry += 56;
+        }
+        if (x.real != null)
+        {
+            var real = Ui.Text(table.transform, $"<b>The real run</b>  ·  {(x.real.Finishes > 0 ? $"finished in {x.real.LapTime:0} moves" : "crashed")}  ·  {x.real.unknown} unknown situations", 16, x.real.Finishes > 0 ? Theme.Teal : Theme.Danger);
+            Ui.Place(real.rectTransform, 16, ry, W - 80, 24);
+            ry += 28;
+        }
+        if (l != null && l.measure && x.races.Count > 0)
+        {
+            var ml = Ui.Text(table.transform, "Judged by " + Measures.Names[x.settings.measure].ToLowerInvariant() + ": " + string.Join(", ", x.runs.Select((r, i) => $"{(string.IsNullOrEmpty(r.label) ? "run " + (i + 1) : r.label)} {x.races[i].Measure(x.settings.measure):0.0}")), 16, Theme.Teal, true);
+            Ui.Place(ml.rectTransform, 16, ry, W - 80, 24);
+        }
+        y += runsH + 12;
+        if (l != null)
+        {
+            var take = Ui.Text(content, l.takeaway, 17, Color.white);
+            float th2 = take.GetPreferredValues(l.takeaway, DW, 0).y + 4;
+            Ui.Place(take.rectTransform, 8, y, DW, th2); y += th2 + 10;
+            var ask = Ui.Text(content, l.ask, 16, Theme.Faint);
+            float ah = ask.GetPreferredValues(l.ask, DW, 0).y + 4;
+            Ui.Place(ask.rectTransform, 8, y, DW, ah); y += ah + 16;
+            if (l.number < Ladder.Count)
+            {
+                var nextL = Ladder.Get(l.number + 1);
+                var unlock = Ui.Text(content, $"Next: {nextL.id} {nextL.title.Replace("Capstone: ", "")}", 16, Theme.Teal, true);
+                Ui.Place(unlock.rectTransform, 8, y, DW, 24); y += 34;
+            }
+            if (l.Capstone)
+            {
+                var pl = Ui.Button(content, "If-then plans", ShowPlans, Ui.ButtonStyle.GhostOnDark, 16);
+                Ui.Place(pl.GetComponent<RectTransform>(), 8, y, 200, 46); y += 56;
+            }
+            var file = Ui.Button(content, "The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.GhostOnDark, 16);
+            Ui.Place(file.GetComponent<RectTransform>(), 8, y, 140, 46); y += 56;
+        }
+        content.sizeDelta = new Vector2(0, y + 20);
+    }
+
+    // ---- the questions the world cannot carry: the old list (the rule book, a line of text) ----
 
     void Quiz()
     {
@@ -58,11 +264,12 @@ public class ResultsScreen
         var l = app.lesson;
         var window = Ui.Node("Window", root);
         Ui.Place(window, 40, 60, 420, 960);
-        World(window);
+        app.world.Build(Track, false);
+        if (Circuit.HasKit) app.world.ShowCarOrbit(window); else app.world.ShowOrbit(window);
         var card = Ui.Box(root, "Quiz", Ui.DarkFill);
         Ui.Place(card.rectTransform, 480, 40, 1380, 1000);
         var t = card.transform;
-        var title = Ui.Text(t, $"Debrief · Level {l.id} · Before the checks", 40, Color.white, true);
+        var title = Ui.Text(t, "Before the checks", 40, Color.white, true);
         Ui.Place(title.rectTransform, 32, 28, 1300, 52);
         var scroll = Ui.Scroll(t, "Scroll", out var content);
         Ui.Place(scroll.GetComponent<RectTransform>(), 32, 122, 1316, 790);
@@ -135,203 +342,6 @@ public class ResultsScreen
     }
 
     public void SkipQuiz() { if (app.lesson != null) foreach (var q in app.lesson.quiz) { if (q.IsText) x.texts[q.key] = ""; else x.picks[q.key] = -1; } Build(); }
-
-    // ---- the debrief --------------------------------------------------------------------
-
-    void Build()
-    {
-        Ui.Clear(root);
-        var l = app.lesson;
-        bool counts = l != null, capstone = l != null && l.Capstone;
-        var window = Ui.Node("Window", root);
-        Ui.Place(window, 1000, 140, 440, 260);
-        World(window);
-        var title = Ui.Text(root, l != null ? $"Debrief · Level {l.id}" : "The race is over", 44, Color.white, true);
-        Ui.Place(title.rectTransform, 80, 36, 1300, 56);
-        var extras = new List<(string head, string body)>(); // the full checks and the runs' settings, for the file
-
-        // The curve of every run, left; the circuit and the medal, right.
-        var chart = new Chart(root, 80, 100, 900, 300, "POINTS PER ATTEMPT  ·  EVERY RUN OF THIS LEVEL", dark: true);
-        chart.Draw(x.runs);
-
-        // The checks, and the medal they earn.
-        int medal = 0;
-        List<(Practised result, string label)> checks = null;
-        if (l != null)
-        {
-            checks = l.Check(x);
-            int ticked = checks.Count(c => c.result == Practised.Yes), needed = checks.Count(c => c.result != Practised.NotNeeded);
-            medal = needed > 0 && ticked == needed ? 3 : ticked * 2 >= needed && needed > 0 ? 2 : x.RaceOk(x.LastRace) ? 1 : 0;
-            if (counts)
-            {
-                app.SetStars(l.number, medal);
-                string result = ticked == needed ? "complete" : ticked * 2 >= needed ? "partial" : "incomplete";
-                app.StartCoroutine(Platform.ReportProgress($"{l.id}:{result}", medal, string.Join("; ", checks.Where(c => c.result != Practised.NotNeeded).Select(c => $"{c.label}: {(c.result == Practised.Yes ? "done" : "missed")}"))));
-            }
-        }
-        Medal(medal, l != null);
-
-        float y = 420;
-        float checksH = l != null ? 40 + checks.Count * 30 + 10 : 0;
-        if (l != null)
-        {
-            var card = Ui.DarkCard(root, "Checks");
-            Ui.Place(card.rectTransform, 80, y, 900, checksH);
-            var ch = Ui.Eyebrow(card.transform, "THE CHECKS", Theme.Teal); Ui.Place(ch.rectTransform, 16, 10, 400, 22);
-            float cy = 40;
-            foreach (var (result, label) in checks)
-            {
-                // A lamp and a short label; the full label is in the file.
-                var lamp = Ui.Box(card.transform, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : Theme.Border, false);
-                Ui.Place(lamp.rectTransform, 18, cy + 6, 12, 12);
-                lamp.raycastTarget = false;
-                var lab = Ui.Text(card.transform, Labels.Of(label), 16, result == Practised.NotNeeded ? Theme.Faint : Color.white);
-                Ui.Place(lab.rectTransform, 42, cy, 840, 24);
-                lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Ellipsis;
-                cy += 30;
-            }
-            extras.Add(("THE CHECKS", string.Join("\n", checks.Select(c => (c.result == Practised.Yes ? "Done: " : c.result == Practised.Missed ? "Missed: " : "Not needed: ") + c.label))));
-        }
-
-        // The numbers side by side.
-        float runsH = Mathf.Max(checksH, 40 + x.runs.Count * 56 + (x.real != null ? 28 : 0) + (l != null && l.measure && x.races.Count > 0 ? 30 : 0) + 12);
-        var table = Ui.DarkCard(root, "Runs");
-        Ui.Place(table.rectTransform, 1000, y, 860, runsH);
-        var th = Ui.Eyebrow(table.transform, "THE RUNS  ·  FIRST FINISH, SETTLED, THE RACE", Theme.Teal);
-        Ui.Place(th.rectTransform, 16, 10, 820, 22);
-        float ry = 40;
-        for (int i = 0; i < x.runs.Count; i++)
-        {
-            var r = x.runs[i];
-            var race = i < x.races.Count ? x.races[i] : null;
-            string name = string.IsNullOrEmpty(r.label) ? $"Run {i + 1}" : r.label;
-            var line = Ui.Text(table.transform, $"<b>{name}</b>  ·  first finish {(r.firstFinish > 0 ? r.firstFinish.ToString() : "never")}  ·  settled {(r.settled > 0 ? r.settled.ToString() : "never")} of {r.s.attempts}" +
-                               (race != null ? $"\nrace {race.Finishes}/{race.laps.Count}  ·  {race.CrashesPerLap:0.0} crashes, {race.Touches:0.0} touches, {race.LapTime:0} moves a lap" : ""), 16, Color.white);
-            Ui.Place(line.rectTransform, 16, ry, 828, 50);
-            line.enableWordWrapping = false; line.overflowMode = TextOverflowModes.Ellipsis;
-            extras.Add((name.ToUpperInvariant(), r.s.Knobs + $"  ·  {r.s.SensorsOn} sensors, {r.s.MovesOn} moves, top speed {r.s.topSpeed}, finish {r.s.finish:0}, crash {r.s.crash:0}, toward {r.s.toward:0.#}, speed bonus {r.s.speedBonus:0.#}"));
-            ry += 56;
-        }
-        if (x.real != null)
-        {
-            var real = Ui.Text(table.transform, $"<b>The real run</b>  ·  {(x.real.Finishes > 0 ? $"finished in {x.real.LapTime:0} moves" : "crashed")}  ·  {x.real.unknown} unknown situations", 16, x.real.Finishes > 0 ? Theme.Teal : Theme.Danger);
-            Ui.Place(real.rectTransform, 16, ry, 828, 24);
-            ry += 28;
-        }
-        if (l != null && l.measure && x.races.Count > 0)
-        {
-            var ml = Ui.Text(table.transform, "Judged by " + Measures.Names[x.settings.measure].ToLowerInvariant() + ": " + string.Join(", ", x.runs.Select((r, i) => $"{(string.IsNullOrEmpty(r.label) ? "run " + (i + 1) : r.label)} {x.races[i].Measure(x.settings.measure):0.0}")), 16, Theme.Teal, true);
-            Ui.Place(ml.rectTransform, 16, ry, 828, 24);
-        }
-        y += runsH + 12;
-
-        if (l != null)
-        {
-            app.luma.Say("recap");
-            bool unlock = counts && l.number < Ladder.Count;
-            app.luma.Line(root, 80, y, unlock ? 1320 : 1780, l.takeaway, true, true, 18);
-            if (unlock) Unlock(y, Ladder.Get(l.number + 1), medal);
-            y += 150;
-        }
-
-        float bx = 80;
-        Button Add(string label, System.Action act, Ui.ButtonStyle style, float w)
-        {
-            var b = Ui.Button(root, label, act, style, 17);
-            Ui.Place(b.GetComponent<RectTransform>(), bx, 990, w, 56);
-            bx += w + 14;
-            return b;
-        }
-        if (l != null)
-        {
-            {
-                bool last = l.number >= Ladder.Count;
-                Add(last ? "Free play" : $"Next: {Ladder.Get(l.number + 1).id} {Ladder.Get(l.number + 1).title.Replace("Capstone: ", "")}", last ? app.StartFree : (System.Action)app.NextLevel, Ui.ButtonStyle.Primary, last ? 180 : 520);
-                Add("Train again", app.ShowPit, Ui.ButtonStyle.GhostOnDark, 160);
-                if (capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.GhostOnDark, 180);
-            }
-        }
-        else Add("Set up again", app.ShowPit, Ui.ButtonStyle.Primary, 200);
-        Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.GhostOnDark, 130);
-        Add("Title screen", app.ShowTitle, Ui.ButtonStyle.GhostOnDark, 160);
-        if (Platform.IsWeb) Add("Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 160);
-    }
-
-    // The medal, revealed over the turning circuit: the badge comes in with an overshoot,
-    // the stars light one by one, confetti and a fanfare for silver and gold.
-    void Medal(int medal, bool hasLevel)
-    {
-        var cap = Ui.Glass(root, "Window caption", 1000, 100, 860, 40);
-        var caption = Ui.Eyebrow(cap.transform, $"{Track.name.ToUpperInvariant()}  ·  THE TEST TRACK  ·  {(x.LastRace != null ? $"{x.LastRace.Finishes} OF {x.LastRace.laps.Count} LAPS FINISHED" : "NO RACE YET")}", Theme.Teal);
-        Ui.Place(caption.rectTransform, 20, 10, 820, 22);
-        Color colour = medal == 3 ? Gold : medal == 2 ? Silver : medal == 1 ? Bronze : Theme.Ink;
-        var badge = Ui.Glass(root, "Medal", 1460, 200, 400, 160, true, colour);
-        var b = badge.transform;
-        var tag = Ui.Eyebrow(b, hasLevel ? "THE MEDAL" : "FREE PLAY", Theme.Teal);
-        Ui.Place(tag.rectTransform, 0, 14, 400, 18); tag.alignment = TextAlignmentOptions.Top;
-        var name = Ui.Text(b, medal > 0 ? MedalNames[medal] : "NO MEDAL YET", medal > 0 ? 44 : 28, medal > 0 ? colour : Look.AsphaltLine, true, TextAlignmentOptions.Center);
-        name.characterSpacing = 6;
-        Ui.Place(name.rectTransform, 0, 34, 400, 60);
-        var stars = new Image[3];
-        for (int s = 0; s < 3; s++)
-        {
-            stars[s] = Ui.Box(b, "Star", s < medal ? colour : new Color(1, 1, 1, 0.16f));
-            Ui.Place(stars[s].rectTransform, 155 + s * 32, 98, 26, 26);
-            stars[s].raycastTarget = false;
-        }
-        var rank = Ui.Text(b, hasLevel ? $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}" : "the stars count on a level's own run", 16, Look.AsphaltLine, false, TextAlignmentOptions.Center);
-        Ui.Place(rank.rectTransform, 0, 128, 400, 24);
-        app.StartCoroutine(Reveal(badge, stars, medal, colour));
-    }
-
-    IEnumerator Reveal(Image badge, Image[] stars, int medal, Color colour)
-    {
-        var group = Ui.Group(badge);
-        group.alpha = 0f;
-        badge.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        badge.rectTransform.anchoredPosition = new Vector2(1460 + 200, -(200 + 80));
-        foreach (var s in stars) s.transform.localScale = Vector3.zero;
-        yield return new WaitForSecondsRealtime(0.55f);
-        if (badge == null) yield break;
-        if (medal > 0) Sfx.Sting(Sfx.Mood.Fanfare); else Sfx.Tick();
-        yield return Ui.Animate(0.45f, k =>
-        {
-            if (badge == null) return;
-            group.alpha = Mathf.Min(1f, k * 3f);
-            badge.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.5f, 1f, Ui.EaseOutBack(k));
-        });
-        for (int s = 0; s < medal; s++)
-        {
-            int i = s;
-            Sfx.Chime();
-            yield return Ui.Animate(0.22f, k => { if (stars[i] != null) stars[i].transform.localScale = Vector3.one * Mathf.LerpUnclamped(0f, 1f, Ui.EaseOutBack(k)); });
-            if (medal >= 2) app.world.Celebrate();
-            yield return new WaitForSecondsRealtime(0.1f);
-        }
-        for (int s = medal; s < 3; s++) if (stars[s] != null) stars[s].transform.localScale = Vector3.one;
-    }
-
-    void Unlock(float y, Lesson next, int stars)
-    {
-        var card = Ui.Card(root, "Unlock", Theme.TealDeep, Theme.TealDeep);
-        Ui.Place(card.rectTransform, 1420, y, 440, 136);
-        var t = card.transform;
-        var tag = Ui.Eyebrow(t, $"UNLOCKED FOR LEVEL {next.id}", Theme.Teal); tag.font = Theme.Bold;
-        Ui.Place(tag.rectTransform, 20, 14, 400, 20);
-        string what = next.number == Ladder.AttemptsLevel ? "The attempts"
-                    : next.number == Ladder.SensorsLevel ? "The sensors"
-                    : next.number == Ladder.MovesLevel ? "The moves and a constraint"
-                    : next.number == Ladder.PointsLevel ? "The points table"
-                    : next.number == Ladder.ExploreLevel ? "New moves"
-                    : next.number == Ladder.TracksLevel ? "The tracks"
-                    : next.number == Ladder.MeasureLevel ? "The measure"
-                    : next.number == Ladder.KnobsLevel ? "The knobs and the seed"
-                    : next.Capstone ? "Everything open: the capstone" : next.title;
-        var body = Ui.Text(t, what, 20, Color.white, true);
-        Ui.Place(body.rectTransform, 20, 38, 400, 56);
-        var starsLine = Ui.Text(t, $"{stars} of 3 stars banked  ·  {app.TotalStars} in all  ·  {app.Rank}", 16, Theme.Teal);
-        Ui.Place(starsLine.rectTransform, 20, 100, 400, 24);
-    }
 
     // The capstone's two if-then plans, about the student's own work.
     void ShowPlans()

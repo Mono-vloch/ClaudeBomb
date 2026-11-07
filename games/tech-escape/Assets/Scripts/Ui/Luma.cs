@@ -108,9 +108,16 @@ public class Luma : MonoBehaviour
         return card.rectTransform;
     }
 
+    // True while a line is still being typed or spoken: a moment that must not cover her
+    // mid-sentence (the attack's first banner) waits on it.
+    public bool Busy => typing || Speaking;
+    bool typing;
+
     System.Collections.IEnumerator RunLine(Image card, CanvasGroup group, TMP_Text body, string text, bool stay)
     {
+        typing = true;
         yield return Ui.Type(body, text, 45f);
+        typing = false;
         float waited = 0f;
         while (card != null && Speaking && waited < 30f) { waited += Time.unscaledDeltaTime; yield return null; }
         if (stay || card == null) yield break;

@@ -59,6 +59,8 @@ public partial class Circuit : MonoBehaviour
     {
         StopAllCoroutines();
         demo = null;
+        ClearMarkers();
+        lapBoard = null; lapText = null;
         for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
     }
 
@@ -78,7 +80,8 @@ public partial class Circuit : MonoBehaviour
     // The race starts: the camera flies in from high and wide, down behind the car.
     public void ShowCountdown(RectTransform frame, float seconds) { this.frame = frame; rig.Countdown(carRoot, frame, seconds); }
     // The race is won: a slow turn around the car, in slow motion, then back to the overview.
-    public void FinishMoment(float seconds, System.Action done) => rig.FinishMoment(carRoot, seconds, () => { ShowOverviewAgain(); done?.Invoke(); });
+    // overviewAfter false: the camera stays on the car (a slow swing), where the race ended.
+    public void FinishMoment(float seconds, System.Action done, bool overviewAfter = true) => rig.FinishMoment(carRoot, seconds, () => { if (overviewAfter) ShowOverviewAgain(); else ShowCarOrbit(frame, 1.75f, 17f); done?.Invoke(); });
     // The car up close, from the front and a little to its side, the camera low: the pit lane.
     public void ShowPortrait(RectTransform frame)
     {

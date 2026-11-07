@@ -7,14 +7,14 @@ using UnityEngine.UI;
 
 // The one object in the scene. Builds the canvas, keeps the campaign (which
 // levels are done, the stars each earned), the level's session (its runs, races
-// and answers) and moves between screens.
+// and answers) and moves between screens. The game menu (Esc, the icon) lives on it.
 public class App : MonoBehaviour
 {
     public Lesson lesson;
     public Session session;
     public Settings settings = new Settings();   // free play's, or the level's own
-    public int speedIndex = 3;                   // training runs at the fastest speed unless the settings say otherwise
     public Luma luma;
+    public GameMenu menu;
     public Circuit world;
     public SceneCamera view;
     public Atmosphere atmosphere;
@@ -22,6 +22,7 @@ public class App : MonoBehaviour
 
     const string PrefLevel = "robot_racing_level";
     const string PrefStars = "robot_racing_stars_";
+    const string PrefPace = "robot_racing_pace";
     Image page;
     public Action onLeave;
 
@@ -31,6 +32,8 @@ public class App : MonoBehaviour
     public void SetStars(int level, int stars) { if (stars <= StarsOf(level)) return; PlayerPrefs.SetInt(PrefStars + level, stars); PlayerPrefs.Save(); }
     public int TotalStars => Enumerable.Range(1, Ladder.Count).Sum(StarsOf);
     public string Rank => TotalStars >= 32 ? "Chief engineer" : TotalStars >= 20 ? "Race engineer" : TotalStars >= 8 ? "Mechanic" : "Trainee";
+    // The training pace: 0 every attempt at race speed, 1 the montage (the default), 2 straight to the end.
+    public int pace { get => PlayerPrefs.GetInt(PrefPace, 1); set { PlayerPrefs.SetInt(PrefPace, Mathf.Clamp(value, 0, 2)); PlayerPrefs.Save(); } }
 
     RectTransform canvas, stage, screen;
     public RectTransform Stage => stage;
@@ -59,6 +62,7 @@ public class App : MonoBehaviour
         world.rig = rig;
         world.gameObject.SetActive(false);
         luma = gameObject.AddComponent<Luma>();
+        menu = gameObject.AddComponent<GameMenu>();
         Sfx.Init(gameObject);
         Sfx.luma = luma;
         if (DemoDriver.Wanted) gameObject.AddComponent<DemoDriver>();
@@ -95,6 +99,7 @@ public class App : MonoBehaviour
     RectTransform Fresh()
     {
         FileSheet.Close();
+        menu?.Close();
         luma.Hush();
         onLeave?.Invoke();
         onLeave = null;
@@ -113,6 +118,7 @@ public class App : MonoBehaviour
     public void ShowFile(params (string head, string body)[] extra) => FileSheet.Toggle(this, screen, extra);
     public void ShowLesson() { new LessonScreen(Fresh(), this); }
     public void ShowPit() { new PitScreen(Fresh(), this); }
+    public void ShowQuiz() { new QuizScreen(Fresh(), this); }
     public void ShowResults() { new ResultsScreen(Fresh(), this); }
 
     // A level: its session and its settings. The robot runs by itself; the player sets
@@ -159,9 +165,11 @@ public class App : MonoBehaviour
         new RunScreen(Fresh(), this, runs);
     }
 
+    // The race is over: the level's questions on the world where they fit, then the debrief.
     public void FinishLevel()
     {
         if (lesson != null) LevelsDone = Mathf.Max(LevelsDone, lesson.number);
-        ShowResults();
+        if (lesson != null && QuizScreen.Fits(lesson) && !ResultsScreen.Answered(session)) ShowQuiz();
+        else ShowResults();
     }
 }

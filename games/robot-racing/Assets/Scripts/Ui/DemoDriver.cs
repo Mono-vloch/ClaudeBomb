@@ -1,11 +1,17 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using TMPro;
 using UnityEngine;
 
-// Walks through every screen on its own and saves a screenshot of each, so the
-// layout can be checked from the command line:
+// Walks through every screen of the pilot's levels (1.1 and 2.3) on its own and saves a
+// screenshot of each, with the game-feel pass's counts: the words and the controls on
+// each screen, what must not be there (OPENS AT, a ladder, coordinates, seeds,
+// probabilities), and whether every LUMA line is whole and short.
 //   "Robot Racing.app/Contents/MacOS/Robot Racing" -screenshots /some/folder
+// Writes counts.jsonl beside the pictures.
 public class DemoDriver : MonoBehaviour
 {
     public static string Folder
@@ -36,77 +42,114 @@ public class DemoDriver : MonoBehaviour
         var app = GetComponent<App>();
         if (CoverPath != null) { yield return Cover(app); yield break; }
         Directory.CreateDirectory(Folder);
+        File.WriteAllText(Path.Combine(Folder, "counts.jsonl"), "");
         Luma.Silent = true;
         AudioListener.volume = 0f; // the walk is silent: it runs on a desk, not in a class
+        PlayerPrefs.DeleteKey("robot_racing_seen_rewards");
+        app.pace = 1;
         yield return new WaitForSeconds(1.2f);
-        yield return Shot("1-title");
-        Checks("1-title");
+        yield return Shot("01-title");
 
+        // ---- level 1.1 ----
         app.StartLevel(1);
-        yield return new WaitForSeconds(2.5f); // LUMA's line has been typed by then
-        yield return Shot("2-briefing");
-        Checks("2-briefing");
-        app.ShowFile();
-        yield return new WaitForSeconds(0.5f);
-        yield return Shot("2c-file");
-        app.ShowFile();
+        yield return new WaitForSeconds(7f); // the transmission typed
+        yield return Shot("02-briefing-1.1");
 
-        app.StartLevel(Ladder.PointsLevel);
         app.ShowPit();
-        yield return new WaitForSeconds(4.5f); // LUMA's line typed out
-        yield return Shot("3-pit-lane");
-        Coverage("3-pit-lane: the car", app.world.Car);
-        Checks("3-pit-lane");
-        app.StartLevel(1);
-        app.ShowPit();
-        yield return new WaitForSeconds(9f); // LUMA's line said and gone: the pit lane as the player works in it
-        yield return Shot("3b-pit-lane-1.1");
-        Coverage("3b-pit-lane-1.1: the car", app.world.Car);
+        yield return new WaitForSeconds(3.6f); // the car, then the track and the shelf
+        yield return Shot("03-pit-lane-1.1");
+        Coverage("03-pit-lane-1.1: the car", app.world.Car);
+        app.world.PlaceMarker("finish", 100f);
+        yield return new WaitForSeconds(0.8f);
+        yield return Shot("03b-pit-lane-1.1-flag");
 
-        app.StartLevel(1);
         app.StartTraining();
-        yield return new WaitForSeconds(1.5f);
-        RunScreen.Current?.SetSpeed(0);
-        yield return new WaitForSeconds(2.2f);
-        yield return Shot("4-training-slow");
-        Coverage("4-training-slow: the car", app.world.Car);
-        Checks("4-training-slow");
-        RunScreen.Current?.SetSpeed(3);
+        yield return new WaitForSeconds(3.5f);
+        yield return Shot("04-training-1.1");
+        Coverage("04-training-1.1: the car", app.world.Car);
+        yield return new WaitForSeconds(9f);
+        yield return Shot("04b-training-1.1-later");
         float waited = 0;
-        while (RunScreen.Current != null && RunScreen.Current.phase != RunScreen.Phase.Done && waited < 60f) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(0.5f);
-        app.FinishLevel();
-        yield return new WaitForSeconds(0.5f);
-        yield return Shot("6-debrief-questions");
-        ResultsScreen.Current?.SkipQuiz();
-        yield return new WaitForSeconds(2.4f); // the medal has been revealed by then
-        yield return Shot("7-debrief");
-        Checks("7-debrief");
-
-        // The race on the grand circuit (2.6's robot learns it; its laps are long): at 1x, between the moments.
-        app.StartLevel(9);
-        app.StartTraining();
-        yield return new WaitForSeconds(0.5f);
-        RunScreen.Current?.SetSpeed(3);
+        while (RunScreen.Current != null && !RunScreen.Current.RaceRunning && waited < 90f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(1.2f);
+        yield return Shot("05-race-1.1");
+        Coverage("05-race-1.1: the car", app.world.Car);
         waited = 0;
-        while (RunScreen.Current != null && !RunScreen.Current.RaceRunning && waited < 60f) { waited += Time.deltaTime; yield return null; }
-        RunScreen.Current?.SetSpeed(0);
-        yield return new WaitForSeconds(1.0f);
-        float clear = 0f; waited = 0f;
-        var rig = app.world.Car != null ? app.world.Car.GetComponentInChildren<CarRig>() : null;
-        while (RunScreen.Current != null && RunScreen.Current.phase == RunScreen.Phase.Racing && clear < 0.4f && waited < 40f)
+        while (RunScreen.Current != null && RunScreen.Current.phase != RunScreen.Phase.Done && waited < 60f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(2.2f);
+        yield return Shot("05b-race-over-1.1");
+        app.FinishLevel();
+        yield return new WaitForSeconds(1.6f);
+        yield return Shot("06-questions-1.1");
+        for (int i = 0; i < 7 && QuizScreen.Current != null; i++)
         {
-            // Between the moments, on a straight (the chase settled behind the car).
-            waited += Time.unscaledDeltaTime;
-            clear = RunScreen.Current.BannerUp || (rig != null && Mathf.Abs(rig.Steer) > 3f) ? 0f : clear + Time.unscaledDeltaTime;
-            if (Mathf.Repeat(waited, 1f) < Time.unscaledDeltaTime) Debug.Log($"[Walk] race wait {waited:0.0}: banner {RunScreen.Current.BannerUp}, steer {(rig != null ? rig.Steer : -1):0.0}, clear {clear:0.00}");
-            yield return null;
+            if (i == 5) { yield return new WaitForSeconds(0.4f); yield return Shot("06b-questions-1.1-signs"); }
+            QuizScreen.Current?.AutoAnswer();
+            yield return new WaitForSeconds(1.2f);
         }
-        yield return Shot("5-race");
-        Coverage("5-race: the car", app.world.Car);
-        Checks("5-race");
+        waited = 0;
+        while (ResultsScreen.Current == null && waited < 10f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(3.2f); // the medal has been revealed, LUMA's line is up
+        yield return Shot("07-debrief-1.1");
+        ClickButton("Details");
+        yield return new WaitForSeconds(0.6f);
+        yield return Shot("07b-debrief-1.1-details");
+
+        // ---- level 2.3 ----
+        app.StartLevel(Ladder.PointsLevel);
+        yield return new WaitForSeconds(6f);
+        yield return Shot("08-briefing-2.3");
+        app.ShowPit();
+        yield return new WaitForSeconds(5.5f); // the shelf arrives
+        yield return Shot("09-pit-lane-2.3");
+        Coverage("09-pit-lane-2.3: the car", app.world.Car);
+        app.world.PlaceMarker("crash", -100f);
+        yield return new WaitForSeconds(0.4f);
+        app.world.PlaceMarker("toward", 2f);
+        yield return new WaitForSeconds(0.4f);
+        app.world.PlaceMarker("away", -2f);
+        yield return new WaitForSeconds(0.8f);
+        yield return Shot("09b-pit-lane-2.3-placed");
+        app.StartTraining();
+        yield return new WaitForSeconds(3.5f);
+        yield return Shot("10-training-2.3");
+        waited = 0;
+        while (RunScreen.Current != null && !RunScreen.Current.BannerUp && waited < 40f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(0.5f);
+        yield return Shot("10b-training-2.3-moment");
+        ClickButton("Details");
+        yield return new WaitForSeconds(0.8f);
+        yield return Shot("10c-training-2.3-details");
+        ClickButton("Close");
+        waited = 0;
+        while (RunScreen.Current != null && !RunScreen.Current.RaceRunning && waited < 90f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(1.5f);
+        yield return Shot("11-race-2.3");
+        Coverage("11-race-2.3: the car", app.world.Car);
+        waited = 0;
+        while (RunScreen.Current != null && RunScreen.Current.phase != RunScreen.Phase.Done && waited < 60f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(2.2f);
+        app.FinishLevel();
+        yield return new WaitForSeconds(3.2f);
+        yield return Shot("12-debrief-2.3");
+
+        app.menu.Open();
+        yield return new WaitForSeconds(0.5f);
+        yield return Shot("13-menu");
         yield return new WaitForSeconds(0.5f);
         Application.Quit();
+    }
+
+    // Presses a button on the screen by its label.
+    static void ClickButton(string label)
+    {
+        foreach (var b in FindObjectsByType<UnityEngine.UI.Button>(FindObjectsSortMode.None))
+        {
+            if (!b.isActiveAndEnabled) continue;
+            var t = b.GetComponentInChildren<TextMeshProUGUI>();
+            if (t != null && t.text == label) { b.onClick.Invoke(); return; }
+        }
+        Debug.Log($"[Walk] no button \"{label}\"");
     }
 
     // The cover, as Claude Bomb's: the robot car on the grid at dusk, the trackside camera's
@@ -125,8 +168,6 @@ public class DemoDriver : MonoBehaviour
         if (Circuit.HasKit)
         {
             app.world.ShowCarOrbit(frame, 1.32f, 8f);
-            // Held still at -coveryaw degrees from straight ahead of the car (default -30), so
-            // the picture is the same every time.
             float yaw = -30f;
             var args = System.Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)
@@ -142,8 +183,7 @@ public class DemoDriver : MonoBehaviour
         Application.Quit();
     }
 
-    // How much of the frame the car's bounding box covers, as the realism pass measures it:
-    // the body and its wheels, not the sensor beams or the trails.
+    // How much of the frame the car's bounding box covers (the realism pass's measure).
     static void Coverage(string what, Transform car)
     {
         var cam = Camera.main;
@@ -163,43 +203,62 @@ public class DemoDriver : MonoBehaviour
         Debug.Log($"[Coverage] {what}: {w:P0} x {h:P0} of the frame = {w * h:P0}");
     }
 
-    // The realism pass's checks on the screen just shot: no Flat shader and no MeshKit mesh on
-    // the world (the effects excepted: the sensor beams, trails, ghost lines, particles), no
-    // light panel over the world, and no text the player reads under 16 px at 1080p.
-    static void Checks(string what)
+    // The game-feel pass's counts on the screen just shot. A word is a whitespace-separated
+    // token with a letter or a digit in it; the player's own typed text is left out. A control
+    // is a button or a field the player can press. Labels standing in the world (TextMeshPro)
+    // count when the camera sees them.
+    static void Count(string what)
     {
-        int flat = 0, kit = 0, world = 0;
-        var meshKit = new System.Collections.Generic.HashSet<Mesh> { MeshKit.Box, MeshKit.Cylinder, MeshKit.Sphere, MeshKit.Cone, MeshKit.Capsule, MeshKit.Dome, MeshKit.Pear, MeshKit.Pyramid, MeshKit.Tube };
-        foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
-        {
-            if (!r.enabled || !r.gameObject.activeInHierarchy) continue;
-            if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer || r.name == "beam") continue; // effects
-            world++;
-            if (r.sharedMaterials.Any(m => m != null && m.shader != null && m.shader.name.Contains("Flat"))) { flat++; if (flat <= 3) Debug.Log($"[Check] {what}: Flat on {r.name}"); }
-            var f = r.GetComponent<MeshFilter>();
-            if (f != null && meshKit.Contains(f.sharedMesh)) { kit++; if (kit <= 3) Debug.Log($"[Check] {what}: MeshKit mesh on {r.name}"); }
-        }
-        int light = 0, small = 0; float smallest = 99f;
-        foreach (var img in Object.FindObjectsByType<UnityEngine.UI.Image>(FindObjectsSortMode.None))
-        {
-            if (!img.isActiveAndEnabled || img.canvas == null || img.GetComponentInParent<CanvasGroup>()?.alpha < 0.05f) continue;
-            var c = img.color; var rt = img.rectTransform.rect;
-            float lum = 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b;
-            if (c.a > 0.5f && lum > 0.75f && rt.width * rt.height > 60000f) { light++; Debug.Log($"[Check] {what}: light panel {img.name} {rt.width:0}x{rt.height:0}"); }
-        }
-        foreach (var t in Object.FindObjectsByType<TMPro.TextMeshProUGUI>(FindObjectsSortMode.None))
+        int words = 0, controls = 0;
+        var flags = new List<string>();
+        var lines = new List<string>();
+        var lumaLines = new List<string>();
+        bool Visible(CanvasGroup[] groups) => groups.All(g => g.alpha > 0.05f);
+        foreach (var t in FindObjectsByType<TMP_Text>(FindObjectsSortMode.None))
         {
             if (!t.isActiveAndEnabled || string.IsNullOrWhiteSpace(t.text) || t.color.a < 0.05f) continue;
-            float size = t.enableAutoSizing ? t.fontSizeMin : t.fontSize;
-            smallest = Mathf.Min(smallest, size);
-            if (size < 16f) { small++; if (small <= 5) Debug.Log($"[Check] {what}: {size} px text \"{t.text.Substring(0, Mathf.Min(30, t.text.Length))}\""); }
+            if (!Visible(t.GetComponentsInParent<CanvasGroup>(true))) continue;
+            if (t is TextMeshPro world3d && !(world3d.renderer != null && world3d.renderer.isVisible)) continue;
+            if (t.GetComponentInParent<TMP_InputField>() != null) continue; // the player's own text, or its placeholder
+            string shown = t.maxVisibleCharacters < t.textInfo.characterCount ? t.text.Substring(0, Mathf.Min(t.text.Length, t.maxVisibleCharacters)) : t.text;
+            string plain = Regex.Replace(shown, "<[^>]+>", "");
+            int n = plain.Split((char[])null, System.StringSplitOptions.RemoveEmptyEntries).Count(w => w.Any(char.IsLetterOrDigit));
+            if (n == 0) continue;
+            words += n;
+            lines.Add(plain.Replace("\n", " / "));
+            if (Regex.IsMatch(plain, @"OPENS AT", RegexOptions.IgnoreCase)) flags.Add("OPENS AT");
+            if (Regex.IsMatch(plain, @"\bseed\b", RegexOptions.IgnoreCase)) flags.Add("seed");
+            if (Regex.IsMatch(plain, @"\(\s*\d+\s*,\s*\d+\s*\)")) flags.Add("coordinates");
+            if (Regex.IsMatch(plain, @"\b0\.\d\d\b")) flags.Add("probability");
+            if (t.transform.parent != null && t.transform.parent.name == "Luma line")
+            {
+                bool whole = t.maxVisibleCharacters >= t.textInfo.characterCount;
+                lumaLines.Add($"{(whole ? "whole" : "CUT")} {n}w: {plain}");
+                if (!whole) flags.Add("LUMA cut");
+                if (n > Luma.CueWords) flags.Add("LUMA long");
+            }
         }
-        Debug.Log($"[Check] {what}: {world} world renderers, {flat} Flat, {kit} MeshKit; {light} light panels; {small} texts under 16 px (smallest {smallest})");
+        foreach (var s in FindObjectsByType<UnityEngine.UI.Selectable>(FindObjectsSortMode.None))
+        {
+            if (!s.isActiveAndEnabled || !s.interactable) continue;
+            if (!Visible(s.GetComponentsInParent<CanvasGroup>(true))) continue;
+            if (s.GetComponent<UnityEngine.UI.Image>() != null && s.GetComponent<UnityEngine.UI.Image>().color.a < 0.02f && s.name.StartsWith("Level ")) { controls++; continue; }
+            controls++;
+        }
+        int ladder = lines.Count(l => Regex.IsMatch(l, @"^\d\.\d+$"));
+        if (ladder >= 6) flags.Add("ladder");
+        var record = new { screen = what, words, controls, flags = flags.Distinct().ToList(), luma = lumaLines, lines };
+        string json = Newtonsoft.Json.JsonConvert.SerializeObject(record);
+        File.AppendAllText(Path.Combine(Folder, "counts.jsonl"), json + "\n");
+        Debug.Log($"[Count] {what}: {words} words, {controls} controls; flags: {(flags.Count == 0 ? "none" : string.Join(", ", flags.Distinct()))}");
     }
 
     IEnumerator Shot(string name)
     {
         yield return new WaitForEndOfFrame();
+        Count(name);
+        var world = GetComponent<App>().world;
+        foreach (var m in world.Markers) { var sp = world.ScreenOf(m.root.position + Vector3.up * 0.3f); Debug.Log($"[Markers] {name}: {m.kind} at screen {sp.x:0},{sp.y:0} z {sp.z:0.0} value {m.Value}"); }
         ScreenCapture.CaptureScreenshot(Path.Combine(Folder, name + ".png"));
         yield return new WaitForSeconds(0.8f);
     }
