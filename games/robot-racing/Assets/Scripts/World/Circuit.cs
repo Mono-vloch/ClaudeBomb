@@ -60,7 +60,7 @@ public partial class Circuit : MonoBehaviour
         StopAllCoroutines();
         demo = null;
         ClearMarkers();
-        lapBoard = null; lapText = null;
+        lapBoard = null; lapText = null; curveBoard = null; curveBars.Clear(); RingSigns(null); podium = null;
         for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
     }
 
@@ -345,6 +345,9 @@ public partial class Circuit : MonoBehaviour
         Atmosphere.Current?.Pulse(Theme.Danger, 0.35f, 0.45f);
         Atmosphere.Current?.HitStop(0.07f);
     }
+    // A finish in training: the chime and the pulse, no confetti (it read as noise in the montage).
+    public void FinishFlash() { Atmosphere.Current?.Pulse(Theme.Teal, 0.2f, 0.35f); Sfx.Chime(); }
+
     public void Finished(bool big = true)
     {
         effects.Confetti(carRoot.position + Vector3.up * 0.4f, big ? 42 : 16);

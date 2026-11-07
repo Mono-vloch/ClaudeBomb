@@ -1499,3 +1499,184 @@ Robot Racing: 31.2 MB transferred (was 28.5; the recorded cues and the new code)
 load, runs on the platform. Tech Escape with its two fixes: 44.5 MB, 6.8 s. Both measured
 with the realism pass's `loadtime.mjs` in headless Chrome with software rendering. The frames of
 the pilot, the counts and the side-by-sides are in `games/robot-racing/Builds/look-audit/game-feel/final/`.
+
+---
+
+# Phase 7b: the rest of Robot Racing
+
+7 November 2026, after the pilot's approval. The owner asked for four fixes while the other
+eleven levels were built, and settled the open questions: race control's points show dim on
+1.1 once the flag lands; computed-then-replayed training stays as long as the results and the
+platform report are identical; one big Continue and a small Levels on the title, the level map
+as a race calendar; buttons stay for the main actions; a guess on the fuel gauge before each
+training, LUMA reacting to how close it was. Everything below is on branch `game-feel-pass`,
+uncommitted.
+
+## The four fixes
+
+| Asked | Done |
+|---|---|
+| Questions: the question itself as the objective line, the tappable things glow, LUMA only after the answer | The objective reads "Who makes the decisions?", "What does the robot know at the start?", "What would the robot do here?" (`QuizScreen.Short`). The answers stand on one signpost beside the grid, stacked plates with a teal halo that pulses while the question is up; a parts question lights the car, the track, a ray, a wheel and the "+2". A prompt longer than the line stands on a board. LUMA says "Right." or "Not quite." after the tap, nothing before. |
+| 2.3's placed numbers never overlap each other or the props; the camera lower and closer while placing | The plates face the camera and lift clear of each other every frame (`Markers.Unstack`: the lowest on the screen settles first, each higher one lifts until clear, the size taken from the text's height in the world). The placing view is 22° down instead of 30°, fitted to the car, the shelf and the markers' places with half the margin, with headroom for the plates; 38° when the track cards are out, so the gantry does not hide them. |
+| Training's floating dots must read as points from the car, or go | They rise off the car's roof in the world on a thin thread of their colour (`Circuit.PointsFloat`), scale up as they leave and fade; the confetti at a training finish went (a pulse and a chime stay; the race keeps its confetti). |
+| Debrief: a medal model rising on a podium, the stars part of it | A podium beside the car where the race ended (`Circuit.Podium`): three steps numbered 1, 2, 3; the medal rises out of its step (gold on 1, silver on 2, bronze on 3) on a ribbon, its three stars in an arc over the disc, lit as earned, popping one by one; the camera stands behind the car on the podium's side. No model was bought: it is built from the kit's materials. |
+
+## Every setting as a thing in the world
+
+`World/Markers.cs` now holds every setting a level opens (`PitScreen.Kinds` says which):
+
+- **The rewards** on the shelf by the pit wall, as in the pilot. On 1.1 the flag alone; once it
+  is on the finish, race control's crash, toward, away and moment stand on the track at the
+  ready robot's values, darkened, with grey plates, and cannot be touched (they write nothing;
+  the flag turns the points on as a whole, as before). From 2.3 they are the player's.
+- **The dials** on the shelf, tapped to turn: the fuel can (the attempts: 120, 250, 400, 1000,
+  50) with a red cap on 1.2 that stops the training at the first finish (the level's planned
+  mistake; a tap takes it off); the die (the chance of a new move: 90 %, 10 %, 50 %) with the
+  "never again" cap on 2.5; the fall post (falls, never, slowly, fast, at once) and the floor
+  (5 %, 0 %, 50 %); the rewrite dial and the seed cube (3.3; a tap on the seed draws a new one,
+  the plate shows it); the stopwatch (3.2: Finishes, Crashes, Touches, Lap time).
+- **The parts on the car**: five sensor lamps (nose, two flanks, roof) with their names on
+  small plates and the beams drawn long while they are the thing to set (2.1); five move
+  chevrons across the rear deck (2.2) and the limiter at the tail (top speed 2 or 1). A tap
+  takes a part off (it stays as a grey ghost) or puts it back.
+- **The track cards** on the pit lane beyond the shelf (3.1): ten cards, each with its circuit
+  drawn on it; a tap turns a card through off, training (teal) and the test track (amber), one
+  test at a time, the name on a plate while the card is in use.
+- **The guess**: a notch on the fuel gauge's rim, dragged on the pit lane; at the first finish
+  LUMA says "Close: you read the robot well.", "Earlier than you guessed." or "Later than you
+  guessed."; after a run with no finish, "It never finished. The tank ran dry."
+- **The curve in the world**: on the levels whose lesson is the curve (1.2, 2.4, 2.5, 3.3) the
+  points per attempt stand as bars on a board by the grid that turns to the camera, and those
+  levels train in the overview so the board stays on screen (the owner's rule for numbers that
+  are the lesson).
+- **The title**: one big Continue, a small Levels that opens the season's calendar (a card per
+  round with its circuit and the stars it earned); the tier grid is gone.
+- **Two-robot levels** (2.5, 3.2, 3.3) name the robot on the track in the objective line
+  ("Never again: watch it learn."); 3.4 ends on "THE REAL RUN · finished / crashed on the oil".
+- **The briefing** keeps within fifty words on every level: the lines get thirty-one, the
+  track's note going first when it runs over, then the kicker's later sentences; LUMA's stays.
+- **The pit lane's cue** is LUMA's first sentence, or the kicker's when hers runs long; after a
+  failed run, the first and last sentences of the level's "why" and the planned mistake's thing
+  pulses under a teal lamp (the cap, a sensor, a move, the speed sign, a card, the dial).
+
+## Words and controls, all thirteen levels
+
+The walk (`-screenshots`, all levels; `counts.jsonl` in
+`games/robot-racing/Builds/look-audit/game-feel/final2/`) counted the same way as the pilot's
+table. Briefings are within 50 everywhere (37 to 48); every play screen is within 30 but one,
+noted below; every screen has at most three controls plus the main action (the run screens'
+Camera, Details, the menu icon and Skip ahead / Debrief). Every one of the 106 LUMA lines on
+the walk's screens is whole and 15 words or fewer. The seed and the new-move chance appear
+only behind Details (flagged there on purpose); no OPENS AT, ladder or coordinates anywhere.
+
+| Level | Briefing | Pit lane (before / after the thing is set) | Training (first, a moment) | Race, race over | Questions | Debrief |
+|---|---|---|---|---|---|---|
+| 1.1 | 46 | 8 / 11 | 13, 22 | 19, 10 | 5 to 34 (seven questions; the seventh with the board) | 17 (Details: 122) |
+| 1.2 | 38 | 15 / 15 (the fuel can, its cap) | 15, 25 | 18, 9 | 23 (the rule book on the signpost) | 12 |
+| 1.3 | 46 | 14 | – | – | – | – |
+| 2.1 | 39 | 20 / 20 (five sensors, named) | – | – | – | – |
+| 2.2 | 42 | 26 / 26 (five moves, named, the limiter) | – | – | – | – |
+| 2.3 | 47 | 23 / 26 | 14, 23 (Details: 228) | 20, 11 | – | 18 |
+| 2.4 | 37 | 15 / 8 (the speed sign, the prediction field) | – | – | – | – |
+| 2.5 | 47 | 21 / 21 (the die, its cap, the fall, the floor) | 16, 25 | 19, 9 | – | 13 |
+| 2.6 | 45 | 23 (everything open; part names on tap) | – | – | – | – |
+| 3.1 | 48 | 28 / 30 (ten cards, the fuel can) | – | – | – | – |
+| 3.2 | 45 | 17 / 17 (the stopwatch) | – | – | – | – |
+| 3.3 | 40 | 23 / 23 (the rewrite dial, the seed, the fuel can, the die) | – | – | – | – |
+| 3.4 | 43 | 28 (everything, the prediction field) | 15, 24 | 21, 28 (THE REAL RUN) | 22 to 29 (a line of text, then the measure) | 13 (Details: 146) |
+
+The title is 40 words and 3 controls (Continue, Levels, the menu); the calendar 84 words and
+18 (thirteen cards, Close, the menu, and the title's buttons beneath); the menu 38 to 55 and
+13 to 15. The one screen over 30 is 1.1's seventh question (34): its three answers are the
+curriculum's own sentences, and the board above them repeated the question; in the current
+build the board shows only for the rule book or a prompt longer than twelve words, which
+takes that screen to 26. The pilot's before-and-after for 1.1 and 2.3 stands (above); the
+other levels' before counts were not inventoried.
+
+## What the last walk could not verify
+
+The build on disk carries three small fixes after the walk whose frames are in `final2`: the
+question board left out when the objective line already asks it (1.1's seventh question), the
+floodlight mast beside the shelf hidden while placing (it cut through the plates on 2.3's and
+2.6's pit lanes), part levels viewed from 12° so the gantry's beam does not hide the top names
+(2.2), and the rule book's situation board moved clear of the signpost (1.2's question). A walk
+of those six levels (`-levels 1,2,5,6,9,10`) was started three times and drew nothing: the
+player's window was covered by other windows on the same screen, and macOS withholds a covered
+window's drawables (the walk resumes by itself when any part of the window shows). The player
+is still running and will write `final2-fix3/` when it gets its window; until then the frames
+of 02-1.2-8-question-1, 05-2.2-2, 06-2.3-3 and 09-2.6-2 show the state before those fixes.
+
+## Web
+
+Robot Racing: 33 MB transferred (was 31.2: the recorded cues, the world's new pieces), 4.9 s to
+load, runs on the platform (`loadtime.mjs`, headless Chrome, software rendering). The platform
+report is unchanged in form: the same `id:result` string, stars and check list, built from the
+same checks on the same session data (`ResultsScreen.Build`), whatever the training's pace.
+
+## The reviewers, round 3
+
+Two fresh agents, given only the pictures in `final2/` (the frames before the three unverified
+fixes above) and `final2/side-by-sides/`.
+
+**The player test** (1.1's eleven screens, then eight other levels' pit lanes, four more):
+what the game is about came out right ("a robot car that nobody drives: you set the points it
+gets, press Train, watch it crash and eventually finish, then it races five laps on its own;
+then I got quizzed on big green road signs and ended on a podium with a gold medal"), with the
+honest "mostly I watched". It knew what to do on nine of the eleven 1.1 screens; the two it
+could not read are the first question (the parts question: "a glowing car, no answers
+anywhere") and, half, the pit lane before the flag ("could not tell how you move the flag,
+drag?"). On the other levels' pit lanes it read the sensors ("tap the floating words to switch
+sensors on"), the moves, the cards ("tap the small track-map tiles") and the rewards, and could
+not tell what the dials mean on 3.3 ("a column of values with a cube, dice and box"), which
+number is the die on 2.5, how to change the fuel on 1.2, or what to do first on 3.4 ("numbers,
+a dice, a text box to type in"). Felt like a form or a worksheet: 3.4's pit lane ("a typing box
+plus a list of stats, like homework"), 3.3's ("a settings column with unlabelled values"), the
+briefing ("a reading panel next to a car"), the sign questions ("obvious test, though the signs
+look nicer than a worksheet"). Broken or cut, as it saw it: plates cut by the gantry post or
+the floodlight mast (1.1 set, 2.3 set, 3.4; the mast is the fix not yet walked), the rule book's
+board behind the signpost (1.2; also fixed, not walked), the title's letters showing through
+the calendar's cards (the dim is now opaque), the two teal wedges under the car in the race (the
+side sensors' rays, as in the pilot), the flag "floating mid-air" on the shelf. Liked most: the
+debrief ("podium, medal, stars: it feels like winning"), the title ("looks like an actual
+game"), 2.1's pit lane ("words hanging over the car with the stadium behind, like fitting a
+real car"). Least: 3.4's pit lane ("a wall of numbers through a pole plus a homework text box").
+
+**The Claude Bomb test** (the side-by-sides): RIGHT on the briefing ("the car on a sunset grid
+beats a dimmed title card, but the right half is still a text column with a button"), the pit
+lane ("score markers standing on the track is a game idea"), the training ("chase cam on a
+moving car reads as play"), the race ("LAP 4/5 and the sensor cones say watch this") and the
+debrief ("podium, stars, flags: a results screen a player recognises"); EVEN on the title
+("both are landing pages"); LEFT on the questions ("a three-line multiple-choice billboard is
+a quiz, however far into the world you push it"). The redesign of the level select "beats a
+curriculum node map, but it's still a modal card grid"; the sensors on the car are "a game
+scene, though they're still floating labels, not parts" against the old "settings modal plus
+OPENS AT lock list, pure admin". The tells, most visible first: the title's layout (hero line,
+tagline, two pills, the menu icon); the briefing's panel ("onboarding slide"); the stacked
+answers ("form validation, not a race"); LUMA's bar ("a chat toast") and the bottom-right
+buttons; the objective strip ("a notification banner"); the menu icon. Its three changes: give
+the player something to operate in the scene (drag the markers and the sensors as physical
+things, Train as a start light or lever); one persistent HUD strip (attempts, lap, crashes,
+points); delete the reading screens (the briefing as one spoken line over the car rolling out,
+the quiz as three things on the track you pick). Broken, as it saw it: the Details button
+under LUMA's bar on the run and debrief screens (the strip did overlap the buttons by a few
+pixels; LUMA's line now sits 16 px higher and the prediction field above it, in the build on
+disk, not yet walked); the mast through the plates (fixed, not walked); the plates overlapping
+on 2.3's set pit lane; the labels "drifting off the car" on 2.1 (they lift clear of each other,
+so the top ones stand over the barrier); the medal "an untextured yellow sphere"; the camera
+feed's labels showing through the calendar; the car's rear cut on the title.
+
+## Where Robot Racing stands
+
+All thirteen levels run on the new screens and meet the brief's machine checks (one screen at
+34 words, fixed in the build on disk). The player test reads nine of eleven screens on 1.1 and
+every pit lane that puts parts or cards in the world; what it cannot read is what stays
+abstract: the dials (the die, the fall, the floor, the rewrite) on 2.5, 3.3 and 3.4, which are
+posts and cubes with a number, and the parts question, which asks without showing its answers.
+The Claude Bomb test prefers the new screens on five of seven and names the same two
+remaining distances as in round 2: the quiz is still a quiz, and the player watches more than
+operates. Both are the owner's calls beyond this pass: the dials could become readable
+instruments (a tank that fills, a die that rolls, a clock that runs) at the cost of a model
+pass; the parts question could show its five candidates as plates on the things themselves;
+the buttons and LUMA's bar are the next polish round, as agreed. The three fixes that no frame
+shows yet, and the two from this round (LUMA's line 16 px higher, the calendar opaque), need
+one walk of six levels when the screen is free.

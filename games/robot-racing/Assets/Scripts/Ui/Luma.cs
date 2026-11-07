@@ -33,6 +33,12 @@ public class Luma : MonoBehaviour
                 ["cue-dark"] = "Points only at the finish leave the robot in the dark for hundreds of attempts.",
                 ["cue-path"] = "Add the small on-the-way points and compare attempts to the first finish.",
                 ["cue-real"] = "One lap on the real track, no learning.",
+                ["cue-right"] = "Right.",
+                ["cue-wrong"] = "Not quite.",
+                ["guess-close"] = "Close: you read the robot well.",
+                ["guess-early"] = "Earlier than you guessed.",
+                ["guess-late"] = "Later than you guessed.",
+                ["guess-never"] = "It never finished. The tank ran dry.",
             };
             foreach (var l in Ladder.All)
             {
@@ -40,6 +46,18 @@ public class Luma : MonoBehaviour
                 lines["live-" + l.number] = l.live;
                 var take = FirstSentence(l.takeaway);
                 if (take != null) lines["take-" + l.number] = take;
+                // The pit lane's cue: LUMA's first sentence, or the kicker's when hers runs long.
+                var pit = FirstSentence(l.luma);
+                var kick = FirstSentence(l.kicker);
+                if (pit != null && Words(pit) > 10 && kick != null && Words(kick) < Words(pit)) pit = kick;
+                if (pit != null && l.number != 1) lines["pit-" + l.number] = pit;
+                if (l.broken != null)
+                {
+                    var why = FirstSentence(l.broken.why);
+                    if (why != null) lines["why-" + l.number] = why;
+                    var fix = LastSentence(l.broken.why);
+                    if (fix != null && fix != why) lines["fix-" + l.number] = fix;
+                }
                 foreach (var q in l.quiz)
                     if (!string.IsNullOrEmpty(q.prompt) && Words(q.prompt) <= CueWords) lines[$"q-{l.number}-{q.key}"] = q.prompt;
             }
@@ -56,6 +74,15 @@ public class Luma : MonoBehaviour
         if (string.IsNullOrEmpty(text)) return null;
         var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
         foreach (var p in parts) if (Words(p) <= CueWords && Words(p) > 0) return p.Trim();
+        return null;
+    }
+
+    // The last sentence of a line, when short enough to say as a cue: what to do about it.
+    public static string LastSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
+        for (int i = parts.Length - 1; i >= 0; i--) if (Words(parts[i]) <= CueWords && Words(parts[i]) > 0) return parts[i].Trim();
         return null;
     }
 
@@ -115,7 +142,7 @@ public class Luma : MonoBehaviour
 
     // A cue: one of her short lines, said and shown whole (it fades in, never typed out
     // mid-sentence), gone once she is done unless it is to stay. The id must be in Lines.
-    public RectTransform Cue(Transform parent, string id, float x = 40, float y = 960, float w = 820, bool stay = false)
+    public RectTransform Cue(Transform parent, string id, float x = 40, float y = 944, float w = 820, bool stay = false)
         => Line(parent, x, y, w, Say(id), true, stay, 18, type: false);
 
     // One line of coaching over a screen: her small portrait and the line, typed out as she

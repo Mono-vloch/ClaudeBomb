@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -103,6 +104,11 @@ public class LessonScreen
                 foreach (var s in Sentences(l.kicker)) if (lines.Count < 3) lines.Add(s);
                 var cue = Luma.FirstSentence(l.luma);
                 if (cue != null && lines.Count < 4 && !lines.Contains(cue)) lines.Add(cue);
+                // The screen holds fifty words with its frame: the lines get thirty-one. The
+                // track's note goes first, then the kicker's later sentences; LUMA's stays.
+                int Words() => lines.Sum(x => Luma.Words(x));
+                if (Words() > 31 && lines.Count > 1) lines.RemoveAt(0);
+                while (Words() > 31 && lines.Count > 1) lines.RemoveAt(lines.Count - 2);
                 break;
         }
         return ("Race control", sub, lines);

@@ -38,6 +38,7 @@ public class Session
     public readonly Dictionary<string, int> picks = new Dictionary<string, int>();
     public readonly Dictionary<string, string> texts = new Dictionary<string, string>();
     public string prediction = "";
+    public float guess = -1f;            // the fuel gauge's notch: the guess for the first finish, 0..1 of the budget
     public Training Last => runs.LastOrDefault();
     public Race LastRace => races.LastOrDefault();
     public bool Picked(string key, int answer) => picks.TryGetValue(key, out int p) && p == answer;

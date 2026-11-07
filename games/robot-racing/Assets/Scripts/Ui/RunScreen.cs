@@ -27,7 +27,7 @@ public class RunScreen
     public Phase phase = Phase.Training;
     readonly RectTransform frame, labelsLayer, bannerLayer;
     readonly Hud.Gauge gauge;
-    readonly TextMeshProUGUI lapText;
+    readonly TextMeshProUGUI lapText, objective;
     readonly Button skip, details, camera, results;
     readonly Follower follower;
     readonly Queue<(string text, string sub, Color colour, float seconds, bool big)> banners = new Queue<(string, string, Color, float, bool)>();
@@ -36,10 +36,9 @@ public class RunScreen
     RectTransform bookContent;
     TextMeshProUGUI readingsText;
     int pace;              // 0 every attempt, 1 montage, 2 max
-    bool paused, showing, skipping, overview, saidFirst, saidSettled, saidLoophole;
+    bool paused, showing, skipping, overview, saidFirst, saidSettled, saidLoophole, saidGuess;
     int attemptAt, stepAt;  // where the replay is
     float stepTimer, attemptTimer, sheetTimer;
-    readonly List<(RectTransform rt, float born)> floats = new List<(RectTransform, float)>();
     const float RaceStep = 0.1f;   // seconds per move in the race
     const float WatchStep = 0.2f;  // seconds per move when an attempt is watched
     const float Montage = 30f;     // seconds the montage takes, whatever the budget
@@ -59,8 +58,10 @@ public class RunScreen
         Ui.Place(frame, 0, 0, Ui.W, Ui.H);
         StartRun();
 
-        Hud.Objective(root, l != null ? Objective(l) : "Watch it learn.");
+        objective = Hud.Objective(root, l != null ? Objective(l) : "Watch it learn.");
+        ObjectiveForRun();
         gauge = new Hud.Gauge(root, Ui.W - 40 - 52 - 24 - 92, 20);
+        if (app.session != null && app.session.guess >= 0) gauge.Guess = app.session.guess;
         GameMenu.Icon(root);
         lapText = Ui.Text(root, "", 24, Theme.Teal, true, TextAlignmentOptions.Center);
         Ui.Place(lapText.rectTransform, Ui.W / 2 - 160, 30, 320, 40);
@@ -85,7 +86,24 @@ public class RunScreen
         Sfx.EngineAudible = true;
     }
 
-    static string Objective(Lesson l) => l.number switch { 1 => "Get it to the finish.", 6 => "Light the path to the finish.", _ => "Watch it learn." };
+    static string Objective(Lesson l) => l.number switch
+    {
+        1 => "Get it to the finish.", 2 => "Watch the curve settle.", 3 => "Watch it learn the hairpin.", 4 => "Watch what it can sense.", 5 => "Watch what it can do.",
+        6 => "Light the path to the finish.", 7 => "Watch the points. Does it finish?", 8 => "Watch how often it tries new moves.", 9 => "Watch it learn, then race.",
+        10 => "Watch it train, then the test track.", 11 => "Watch the laps. Judge by the measure.", 12 => "Watch the two curves.", 13 => "Watch it train, then the real run.", _ => "Watch it learn.",
+    };
+
+    // A level that runs two robots names the one on the track.
+    void ObjectiveForRun()
+    {
+        if (objective == null) return;
+        var l = app.lesson;
+        if (!string.IsNullOrEmpty(training.label)) objective.text = $"{training.label}: watch it learn.";
+        else objective.text = l != null ? Objective(l) : "Watch it learn.";
+    }
+
+    // The levels whose lesson is the curve keep it on a board by the grid.
+    bool CurveInWorld => app.lesson != null && (app.lesson.number == 2 || app.lesson.number == 7 || app.lesson.number == 8 || app.lesson.number == 12);
 
     void View()
     {
@@ -99,11 +117,15 @@ public class RunScreen
         replay = new Replay(training);          // the whole run, computed now
         app.world.Build(training.track, false);
         app.world.LapBoard("");
-        if (Circuit.HasKit) app.world.ShowFollow(frame); else app.world.ShowOverview(frame);
+        if (CurveInWorld) app.world.CurveBoard(true);
+        // A level whose lesson is the curve watches from above, the board by the grid in view.
+        overview = CurveInWorld || !Circuit.HasKit;
+        if (overview) app.world.ShowOverview(frame); else app.world.ShowFollow(frame);
         phase = Phase.Training;
+        saidGuess = false;
+        ObjectiveForRun();
         attemptAt = 0; stepAt = 0; stepTimer = attemptTimer = 0f;
         saidFirst = saidSettled = saidLoophole = skipping = false;
-        overview = false;
         Pose(0, 0, 0f);
     }
 
@@ -132,7 +154,6 @@ public class RunScreen
     void Tick(float dt)
     {
         if (paused || GameMenu.Paused || phase == Phase.Done) { Sfx.Engine(0f); return; }
-        Floats(dt);
         if (phase == Phase.Training) { Train(dt); return; }
         if (phase == Phase.Racing || phase == Phase.Real) RaceTick(dt);
     }
@@ -163,7 +184,7 @@ public class RunScreen
             {
                 stepTimer -= per;
                 var st = a.steps[stepAt];
-                if (Mathf.Abs(st.reward) >= 0.9f || st.crashed || st.finished) Float(st.reward, st.crashed ? Theme.Danger : st.finished ? Theme.Teal : st.reward > 0 ? Theme.Teal : Theme.Amber);
+                if (Mathf.Abs(st.reward) >= 0.9f || st.crashed || st.finished) app.world.PointsFloat(st.reward, st.crashed ? Theme.Danger : st.finished ? Theme.Teal : st.reward > 0 ? Theme.Teal : Theme.Amber);
                 stepAt++;
                 if (stepAt >= a.steps.Count) { EndAttempt(a, true); break; }
             }
@@ -192,10 +213,10 @@ public class RunScreen
     void EndAttempt(AttemptRecord a, bool watched)
     {
         var r = a.result;
-        if (watched) { if (r.finished) app.world.Finished(true); else app.world.Crash(true); }
-        else if (r.finished) app.world.Finished(false);
+        if (watched) { if (r.finished) app.world.FinishFlash(); else app.world.Crash(true); }
         app.world.AddGhost(a.path, r.finished);
-        if (r.finished && !saidFirst) { saidFirst = true; Announce("FIRST FINISH", "", Theme.Amber, 1.2f, true); app.luma.Cue(root, "cue-first"); }
+        if (CurveInWorld) app.world.CurveDraw(replay.attempts.Take(attemptAt + 1).Select(x => x.result.points).ToList(), training.s.finish);
+        if (r.finished && !saidFirst) { saidFirst = true; Announce("FIRST FINISH", "", Theme.Amber, 1.2f, true); follower.StartCoroutine(CueThen("cue-first", GuessCue(a.index))); }
         if (replay.Settled > 0 && a.index >= replay.Settled && !saidSettled) { saidSettled = true; Announce("SETTLED", "", Theme.Teal, 1.2f, true); app.luma.Cue(root, "cue-settled"); }
         if (!saidLoophole && r.points > training.s.finish * 0.6f && !r.finished && training.s.speedBonus > 0) { saidLoophole = true; Announce("REWARD HACKED", "", Theme.Danger, 1.6f, true); }
         attemptAt++; stepAt = 0; stepTimer = 0f;
@@ -210,6 +231,7 @@ public class RunScreen
             if (a.result.finished && !saidFirst) saidFirst = true;
             attemptAt++;
         }
+        if (CurveInWorld) app.world.CurveDraw(replay.attempts.Select(x => x.result.points).ToList(), training.s.finish);
         gauge.Set(0f, true);
         var last = replay.attempts[replay.Count - 1];
         Pose(replay.Count - 1, last.steps.Count - 1, 1f);
@@ -226,7 +248,29 @@ public class RunScreen
     void EndTraining()
     {
         if (training.firstFinish < 0 && app.lesson != null && app.lesson.number == 1) app.luma.Cue(root, "cue-zero");
+        else if (training.firstFinish < 0 && !saidGuess && app.session != null && app.session.guess >= 0) { saidGuess = true; app.luma.Cue(root, "guess-never"); }
         StartRace();
+    }
+
+    // The player's guess on the fuel gauge against the first finish: close when within a
+    // tenth of the tank either way.
+    string GuessCue(int firstFinish)
+    {
+        if (saidGuess || app.session == null || app.session.guess < 0 || which > 0) return null;
+        saidGuess = true;
+        float guessed = app.session.guess * training.s.attempts;
+        float off = (firstFinish - guessed) / Mathf.Max(1f, training.s.attempts);
+        return Mathf.Abs(off) <= 0.1f ? "guess-close" : off < 0 ? "guess-early" : "guess-late";
+    }
+
+    IEnumerator CueThen(string first, string then)
+    {
+        app.luma.Cue(root, first);
+        if (then == null) yield break;
+        yield return new WaitForSecondsRealtime(0.5f);
+        while (app.luma.Busy) yield return null;
+        yield return new WaitForSecondsRealtime(0.6f);
+        if (root != null) app.luma.Cue(root, then);
     }
 
     public void SkipAhead()
@@ -324,35 +368,11 @@ public class RunScreen
     void Finish()
     {
         int home = app.session.races.Count > 0 ? app.session.LastRace.Finishes : 0;
-        Announce("RACE OVER", $"{home} of {lapsWanted} laps", home * 2 >= lapsWanted ? Theme.Teal : Theme.Amber, 1.6f, true);
+        var real = app.session.real;
+        if (real != null) Announce("THE REAL RUN", real.Finishes > 0 ? "finished" : "crashed on the oil", real.Finishes > 0 ? Theme.Teal : Theme.Danger, 1.8f, true);
+        else Announce("RACE OVER", $"{home} of {lapsWanted} laps", home * 2 >= lapsWanted ? Theme.Teal : Theme.Amber, 1.6f, true);
         results.gameObject.SetActive(true);
         Sfx.Engine(0f);
-    }
-
-    // ---- what floats up from the car ----
-
-    void Float(float reward, Color colour)
-    {
-        if (floats.Count > 6) return;
-        var t = Ui.Text(labelsLayer, reward.ToString(Mathf.Abs(reward) >= 10 ? "+0;-0" : "+0.#;-0.#"), 26, colour, true, TextAlignmentOptions.Center);
-        t.outlineWidth = 0.2f; t.outlineColor = Theme.Ink;
-        var p = app.StagePoint(app.world.ScreenOf(app.world.Car.position + Vector3.up * 0.3f));
-        Ui.Place(t.rectTransform, p.x - 60 + Random.Range(-16f, 16f), p.y - 30, 120, 36);
-        floats.Add((t.rectTransform, Time.unscaledTime));
-    }
-
-    void Floats(float dt)
-    {
-        for (int i = floats.Count - 1; i >= 0; i--)
-        {
-            var (rt, born) = floats[i];
-            if (rt == null) { floats.RemoveAt(i); continue; }
-            float age = Time.unscaledTime - born;
-            if (age > 0.9f) { Object.Destroy(rt.gameObject); floats.RemoveAt(i); continue; }
-            rt.anchoredPosition += new Vector2(0, 70f * dt);
-            var t = rt.GetComponent<TextMeshProUGUI>();
-            var c = t.color; c.a = 1f - Mathf.Clamp01((age - 0.4f) / 0.5f); t.color = c;
-        }
     }
 
     // ---- Details: the curve, the rule book, the readings, behind one button ----

@@ -58,7 +58,6 @@ public class ResultsScreen
             app.world.Pose(c.from, c.pos, c.heading, 0, 1f, race.readings, x.settings.sensors);
             app.world.LapBoard($"LAP {race.Finishes}/{race.laps.Count}");
         }
-        if (Circuit.HasKit) app.world.ShowCarOrbit(frame, 1.75f, 17f); else app.world.ShowOrbit(frame);
         app.atmosphere.MenuBlur(false);
 
         // The checks, and the medal they earn.
@@ -84,6 +83,7 @@ public class ResultsScreen
             }
         }
         Medal(medal, l != null);
+        if (Circuit.HasKit) app.world.ShowPodiumView(frame); else app.world.ShowOrbit(frame);
         GameMenu.Icon(root);
 
         if (l != null)
@@ -111,51 +111,21 @@ public class ResultsScreen
         if (root != null) app.luma.Cue(root, id, 40, 920, 820, stay: true);
     }
 
-    // The medal, revealed over the car: the badge comes in with an overshoot, the stars light
-    // one by one, confetti and a fanfare for silver and gold.
+    // The medal, in the world: a podium beside the car, the medal rising on its step with
+    // its stars along the ribbon; a fanfare, confetti for silver and gold.
     void Medal(int medal, bool hasLevel)
     {
         Color colour = medal == 3 ? Gold : medal == 2 ? Silver : medal == 1 ? Bronze : Theme.Faint;
-        var badge = Ui.Glass(root, "Medal", (Ui.W - 440) / 2, 90, 440, 170, true, colour);
-        var b = badge.transform;
-        var name = Ui.Text(b, medal > 0 ? MedalNames[medal] : "", 52, colour, true, TextAlignmentOptions.Center);
-        name.characterSpacing = 8;
-        Ui.Place(name.rectTransform, 0, 28, 440, 64);
-        var stars = new Image[3];
-        for (int s = 0; s < 3; s++)
-        {
-            stars[s] = Ui.Box(b, "Star", s < medal ? colour : new Color(1, 1, 1, 0.16f));
-            Ui.Place(stars[s].rectTransform, 220 - 48 + s * 34 - 14, 108, 28, 28);
-            stars[s].raycastTarget = false;
-        }
-        app.StartCoroutine(Reveal(badge, stars, medal, colour));
+        app.world.Podium(medal, colour);
+        app.StartCoroutine(Reveal(medal));
     }
 
-    IEnumerator Reveal(Image badge, Image[] stars, int medal, Color colour)
+    IEnumerator Reveal(int medal)
     {
-        var group = Ui.Group(badge);
-        group.alpha = 0f;
-        badge.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        badge.rectTransform.anchoredPosition = new Vector2(Ui.W / 2, -(90 + 85));
-        foreach (var s in stars) s.transform.localScale = Vector3.zero;
         yield return new WaitForSecondsRealtime(0.55f);
-        if (badge == null) yield break;
+        if (root == null) yield break;
         if (medal > 0) Sfx.Sting(Sfx.Mood.Fanfare); else Sfx.Tick();
-        yield return Ui.Animate(0.45f, k =>
-        {
-            if (badge == null) return;
-            group.alpha = Mathf.Min(1f, k * 3f);
-            badge.rectTransform.localScale = Vector3.one * Mathf.LerpUnclamped(0.5f, 1f, Ui.EaseOutBack(k));
-        });
-        for (int s = 0; s < medal; s++)
-        {
-            int i = s;
-            Sfx.Chime();
-            yield return Ui.Animate(0.22f, k => { if (stars[i] != null) stars[i].transform.localScale = Vector3.one * Mathf.LerpUnclamped(0f, 1f, Ui.EaseOutBack(k)); });
-            if (medal >= 2) app.world.Celebrate();
-            yield return new WaitForSecondsRealtime(0.1f);
-        }
-        for (int s = medal; s < 3; s++) if (stars[s] != null) stars[s].transform.localScale = Vector3.one;
+        yield return app.world.RaisePodium(medal);
     }
 
     // ---- Details: the curve, the checks, the runs, the stars, behind one button ----

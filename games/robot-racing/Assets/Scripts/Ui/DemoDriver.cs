@@ -6,36 +6,30 @@ using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 
-// Walks through every screen of the pilot's levels (1.1 and 2.3) on its own and saves a
-// screenshot of each, with the game-feel pass's counts: the words and the controls on
-// each screen, what must not be there (OPENS AT, a ladder, coordinates, seeds,
-// probabilities), and whether every LUMA line is whole and short.
-//   "Robot Racing.app/Contents/MacOS/Robot Racing" -screenshots /some/folder
+// Walks through the game on its own and saves a screenshot of each screen, with the
+// game-feel pass's counts: the words and the controls on each screen, what must not be
+// there (OPENS AT, a ladder, coordinates, seeds, probabilities), and whether every LUMA
+// line is whole and short. Every level gets its briefing and its pit lane; 1.1, 1.2, 2.3,
+// 2.5 and 3.4 are played through: training, race, questions, debrief.
+//   "Robot Racing.app/Contents/MacOS/Robot Racing" -screenshots /some/folder [-levels 1,6]
 // Writes counts.jsonl beside the pictures.
 public class DemoDriver : MonoBehaviour
 {
-    public static string Folder
-    {
-        get
-        {
-            var args = System.Environment.GetCommandLineArgs();
-            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-screenshots") return args[i + 1];
-            return null;
-        }
-    }
+    public static string Folder => Arg("-screenshots");
 
     // -cover <file>: one picture of the circuit for the platform's menu instead of the walk.
-    public static string CoverPath
+    public static string CoverPath => Arg("-cover");
+
+    static string Arg(string name)
     {
-        get
-        {
-            var args = System.Environment.GetCommandLineArgs();
-            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-cover") return args[i + 1];
-            return null;
-        }
+        var args = System.Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length - 1; i++) if (args[i] == name) return args[i + 1];
+        return null;
     }
 
     public static bool Wanted => Folder != null || CoverPath != null;
+
+    static readonly int[] Played = { 1, 2, 6, 8, 13 };
 
     IEnumerator Start()
     {
@@ -45,99 +39,115 @@ public class DemoDriver : MonoBehaviour
         File.WriteAllText(Path.Combine(Folder, "counts.jsonl"), "");
         Luma.Silent = true;
         AudioListener.volume = 0f; // the walk is silent: it runs on a desk, not in a class
+        for (int i = 0; i <= Ladder.Count; i++) PlayerPrefs.DeleteKey("robot_racing_seen_" + i);
         PlayerPrefs.DeleteKey("robot_racing_seen_rewards");
         app.pace = 1;
+        var only = Arg("-levels")?.Split(',').Select(int.Parse).ToList();
         yield return new WaitForSeconds(1.2f);
         yield return Shot("01-title");
-
-        // ---- level 1.1 ----
-        app.StartLevel(1);
-        yield return new WaitForSeconds(7f); // the transmission typed
-        yield return Shot("02-briefing-1.1");
-
-        app.ShowPit();
-        yield return new WaitForSeconds(3.6f); // the car, then the track and the shelf
-        yield return Shot("03-pit-lane-1.1");
-        Coverage("03-pit-lane-1.1: the car", app.world.Car);
-        app.world.PlaceMarker("finish", 100f);
-        yield return new WaitForSeconds(0.8f);
-        yield return Shot("03b-pit-lane-1.1-flag");
-
-        app.StartTraining();
-        yield return new WaitForSeconds(3.5f);
-        yield return Shot("04-training-1.1");
-        Coverage("04-training-1.1: the car", app.world.Car);
-        yield return new WaitForSeconds(9f);
-        yield return Shot("04b-training-1.1-later");
-        float waited = 0;
-        while (RunScreen.Current != null && !RunScreen.Current.RaceRunning && waited < 90f) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(1.2f);
-        yield return Shot("05-race-1.1");
-        Coverage("05-race-1.1: the car", app.world.Car);
-        waited = 0;
-        while (RunScreen.Current != null && RunScreen.Current.phase != RunScreen.Phase.Done && waited < 60f) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(2.2f);
-        yield return Shot("05b-race-over-1.1");
-        app.FinishLevel();
-        yield return new WaitForSeconds(1.6f);
-        yield return Shot("06-questions-1.1");
-        for (int i = 0; i < 7 && QuizScreen.Current != null; i++)
-        {
-            if (i == 5) { yield return new WaitForSeconds(0.4f); yield return Shot("06b-questions-1.1-signs"); }
-            QuizScreen.Current?.AutoAnswer();
-            yield return new WaitForSeconds(1.2f);
-        }
-        waited = 0;
-        while (ResultsScreen.Current == null && waited < 10f) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(3.2f); // the medal has been revealed, LUMA's line is up
-        yield return Shot("07-debrief-1.1");
-        ClickButton("Details");
-        yield return new WaitForSeconds(0.6f);
-        yield return Shot("07b-debrief-1.1-details");
-
-        // ---- level 2.3 ----
-        app.StartLevel(Ladder.PointsLevel);
-        yield return new WaitForSeconds(6f);
-        yield return Shot("08-briefing-2.3");
-        app.ShowPit();
-        yield return new WaitForSeconds(5.5f); // the shelf arrives
-        yield return Shot("09-pit-lane-2.3");
-        Coverage("09-pit-lane-2.3: the car", app.world.Car);
-        app.world.PlaceMarker("crash", -100f);
-        yield return new WaitForSeconds(0.4f);
-        app.world.PlaceMarker("toward", 2f);
-        yield return new WaitForSeconds(0.4f);
-        app.world.PlaceMarker("away", -2f);
-        yield return new WaitForSeconds(0.8f);
-        yield return Shot("09b-pit-lane-2.3-placed");
-        app.StartTraining();
-        yield return new WaitForSeconds(3.5f);
-        yield return Shot("10-training-2.3");
-        waited = 0;
-        while (RunScreen.Current != null && !RunScreen.Current.BannerUp && waited < 40f) { waited += Time.deltaTime; yield return null; }
+        ClickButton("Levels");
         yield return new WaitForSeconds(0.5f);
-        yield return Shot("10b-training-2.3-moment");
-        ClickButton("Details");
-        yield return new WaitForSeconds(0.8f);
-        yield return Shot("10c-training-2.3-details");
+        yield return Shot("01b-levels");
         ClickButton("Close");
-        waited = 0;
-        while (RunScreen.Current != null && !RunScreen.Current.RaceRunning && waited < 90f) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(1.5f);
-        yield return Shot("11-race-2.3");
-        Coverage("11-race-2.3: the car", app.world.Car);
-        waited = 0;
-        while (RunScreen.Current != null && RunScreen.Current.phase != RunScreen.Phase.Done && waited < 60f) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(2.2f);
-        app.FinishLevel();
-        yield return new WaitForSeconds(3.2f);
-        yield return Shot("12-debrief-2.3");
+
+        for (int n = 1; n <= Ladder.Count; n++)
+        {
+            if (only != null && !only.Contains(n)) continue;
+            yield return Level(app, n, Played.Contains(n));
+        }
 
         app.menu.Open();
         yield return new WaitForSeconds(0.5f);
-        yield return Shot("13-menu");
+        yield return Shot("99-menu");
         yield return new WaitForSeconds(0.5f);
         Application.Quit();
+    }
+
+    // One level: the briefing and the pit lane always; the run, the questions and the
+    // debrief when it is played. The planned mistake is fixed in the pit lane as a player
+    // would, by acting on the thing in the world.
+    IEnumerator Level(App app, int n, bool play)
+    {
+        var l = Ladder.Get(n);
+        string tag = $"{n:00}-{l.id}";
+        app.StartLevel(n);
+        yield return new WaitForSeconds(7f); // the transmission typed
+        yield return Shot($"{tag}-1-briefing");
+
+        app.ShowPit();
+        yield return new WaitForSeconds(5.5f); // the car, the track, the shelf; the arrival
+        yield return Shot($"{tag}-2-pit-lane");
+        Coverage($"{tag}-2-pit-lane: the car", app.world.Car);
+        bool fixedIt = Fix(app, n);
+        if (fixedIt) { yield return new WaitForSeconds(0.9f); yield return Shot($"{tag}-3-pit-lane-set"); }
+        if (!play) yield break;
+
+        if (l.prediction) app.session.prediction = "It will learn the bend and finish most laps.";
+        app.StartTraining();
+        yield return new WaitForSeconds(3.5f);
+        yield return Shot($"{tag}-4-training");
+        Coverage($"{tag}-4-training: the car", app.world.Car);
+        float waited = 0;
+        while (RunScreen.Current != null && !RunScreen.Current.BannerUp && waited < 40f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(0.5f);
+        yield return Shot($"{tag}-5-training-moment");
+        if (n == 6)
+        {
+            ClickButton("Details");
+            yield return new WaitForSeconds(0.8f);
+            yield return Shot($"{tag}-5b-training-details");
+            ClickButton("Close");
+        }
+        waited = 0;
+        while (RunScreen.Current != null && !RunScreen.Current.RaceRunning && waited < 150f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(1.5f);
+        yield return Shot($"{tag}-6-race");
+        Coverage($"{tag}-6-race: the car", app.world.Car);
+        waited = 0;
+        while (RunScreen.Current != null && RunScreen.Current.phase != RunScreen.Phase.Done && waited < 240f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(2.2f);
+        yield return Shot($"{tag}-7-race-over");
+        app.FinishLevel();
+        yield return new WaitForSeconds(1.6f);
+        int q = 0;
+        while (QuizScreen.Current != null && q < 12)
+        {
+            yield return Shot($"{tag}-8-question-{q + 1}");
+            QuizScreen.Current?.AutoAnswer();
+            yield return new WaitForSeconds(1.4f);
+            q++;
+        }
+        waited = 0;
+        while (ResultsScreen.Current == null && waited < 10f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(3.4f); // the medal has risen, LUMA's line is up
+        yield return Shot($"{tag}-9-debrief");
+        if (n == 1 || n == 13)
+        {
+            ClickButton("Details");
+            yield return new WaitForSeconds(0.6f);
+            yield return Shot($"{tag}-9b-debrief-details");
+            ClickButton("Close");
+        }
+    }
+
+    // What a player does in the pit lane of each level to set it right.
+    static bool Fix(App app, int n)
+    {
+        var w = app.world;
+        switch (n)
+        {
+            case 1: w.PlaceMarker("finish", 100f); return true;
+            case 2: if (app.settings.stopAtFirstFinish) w.TapMarker("stopcap"); return true;
+            case 4: for (int i = 0; i < Sensors.Count; i++) if (app.settings.sensors[i] != Lesson.Fixed.sensors[i]) w.TapMarker("sense" + i); return true;
+            case 5: for (int i = 0; i < Moves.Count; i++) if (!app.settings.moves[i]) w.TapMarker("move" + i); return true;
+            case 6: w.PlaceMarker("crash", -100f); w.PlaceMarker("toward", 2f); w.PlaceMarker("away", -2f); return true;
+            case 7: if (app.settings.speedBonus > 0) w.PlaceMarker("bonus", 0f); return true;
+            case 8: if (app.settings.exploreOffAfterFinish) w.TapMarker("nevercap"); return true;
+            case 10: if (!app.settings.training.Contains("bend")) w.TapMarker("track:bend"); return true;
+            case 11: w.PlaceMarker("measure", 2f); return true;
+            case 12: w.PlaceMarker("rewrite", 0.1f); return true;
+            default: return false;
+        }
     }
 
     // Presses a button on the screen by its label.
@@ -227,7 +237,7 @@ public class DemoDriver : MonoBehaviour
             words += n;
             lines.Add(plain.Replace("\n", " / "));
             if (Regex.IsMatch(plain, @"OPENS AT", RegexOptions.IgnoreCase)) flags.Add("OPENS AT");
-            if (Regex.IsMatch(plain, @"\bseed\b", RegexOptions.IgnoreCase)) flags.Add("seed");
+            if (Regex.IsMatch(plain, @"\bseed\b\s*[:=]?\s*\d", RegexOptions.IgnoreCase)) flags.Add("seed"); // a seed's number, not the word
             if (Regex.IsMatch(plain, @"\(\s*\d+\s*,\s*\d+\s*\)")) flags.Add("coordinates");
             if (Regex.IsMatch(plain, @"\b0\.\d\d\b")) flags.Add("probability");
             if (t.transform.parent != null && t.transform.parent.name == "Luma line")
@@ -242,7 +252,6 @@ public class DemoDriver : MonoBehaviour
         {
             if (!s.isActiveAndEnabled || !s.interactable) continue;
             if (!Visible(s.GetComponentsInParent<CanvasGroup>(true))) continue;
-            if (s.GetComponent<UnityEngine.UI.Image>() != null && s.GetComponent<UnityEngine.UI.Image>().color.a < 0.02f && s.name.StartsWith("Level ")) { controls++; continue; }
             controls++;
         }
         int ladder = lines.Count(l => Regex.IsMatch(l, @"^\d\.\d+$"));
@@ -258,7 +267,7 @@ public class DemoDriver : MonoBehaviour
         yield return new WaitForEndOfFrame();
         Count(name);
         var world = GetComponent<App>().world;
-        foreach (var m in world.Markers) { var sp = world.ScreenOf(m.root.position + Vector3.up * 0.3f); Debug.Log($"[Markers] {name}: {m.kind} at screen {sp.x:0},{sp.y:0} z {sp.z:0.0} value {m.Value}"); }
+        foreach (var m in world.Markers) { if (m.root == null) continue; var sp = world.ScreenOf(m.root.position + Vector3.up * 0.3f); Debug.Log($"[Markers] {name}: {m.kind} at screen {sp.x:0},{sp.y:0} z {sp.z:0.0} value {m.Value}{(m.dim ? " dim" : "")}"); }
         ScreenCapture.CaptureScreenshot(Path.Combine(Folder, name + ".png"));
         yield return new WaitForSeconds(0.8f);
     }

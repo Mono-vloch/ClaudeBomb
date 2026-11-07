@@ -51,40 +51,53 @@ so a tester or a class can go straight to one idea. Free play opens every settin
 ## How a run goes
 
 The game-feel pass (7 November 2026, `Docs/game-feel/robot-racing.md`) made every decision an
-action on the world and took the forms off the screens. Levels 1.1 and 2.3 are built this way
-(the pilot); the other levels still open their settings in the pit lane as before.
+action on the world and took the forms off the screens. All thirteen levels run this way.
 
-1. **Briefing.** A transmission from race control, as Claude Bomb's: the car on its grid in
+1. **The title.** The car on the grid in the trackside camera's feed, one big Continue, and a
+   small Levels that opens the season's calendar: a card per round with its circuit and the
+   stars it earned; tap one to go there.
+2. **Briefing.** A transmission from race control, as Claude Bomb's: the car on its grid in
    the trackside camera's feed, three short lines typed in, one button. The level's full text
    is in the file, in the menu.
-2. **The pit lane.** The car on its grid, the track beyond, and the rewards as things to
-   place on it: on 1.1 the chequered flag alone leans on the pit wall (on the finish it turns
-   the points on: the finish is the player's, the rest return to the ready robot's values);
-   from 2.3 the shelf holds the cones (a crash), the teal chevrons (each step toward the
-   finish), the red one pointing back (each step away), the clock post (each moment) and the
-   orange speed sign (the bonus). Drag one onto the track, tap it to turn its number. One line
-   says what to do; "Train" is the main action. (`World/Markers.cs`; no physics: the markers
-   are picked by projecting them to the screen and dragged along the pointer's ray.)
-3. **Training.** The run is computed first (`Core/Replay.cs`) and played back: every attempt
+3. **The pit lane.** The car on its grid, the track beyond, and everything the level opens as
+   a thing in the world (`World/Markers.cs`): the rewards on the shelf by the pit wall, to
+   drag onto the track and tap to turn their number (on 1.1 the chequered flag alone; on the
+   finish it turns the points on, and race control's other points show dim on the track, to
+   be edited from 2.3); the dials on the shelf, tapped to turn: the fuel can (the attempts,
+   with a red cap on 1.2 that stops at the first finish), the die, the fall and the floor
+   (the chance of a new move, with the "never again" cap on 2.5), the rewrite dial and the
+   seed (the knobs), the stopwatch (the measure); the sensors and the moves as parts on the
+   car, tapped off and on, and the limiter at its tail (the top speed); the track cards on the
+   board by the pit lane, each tapped through off, training and the test track. The fuel
+   gauge at the top right carries the player's guess for the first finish: a notch dragged
+   round the rim. One line says what to do; "Train" is the main action. No physics: the
+   markers are picked by projecting them to the screen and dragged along the pointer's ray;
+   their number plates face the camera and lift clear of each other.
+4. **Training.** The run is computed first (`Core/Replay.cs`) and played back: every attempt
    at race speed, a thirty-second montage that slows for the first attempt, the first finish,
    the settle and the last, or straight to the end (the pace is in the menu; "Skip ahead" is
    the main action). The world shows the learning: every attempt leaves its ghost line on the
-   asphalt, each move's points float up from the car, the fuel gauge drains with the
-   attempts. "Camera" swaps the chase for the whole track. The curve, the rule book, the
+   asphalt, each move's points rise off the car's roof on a thread, the fuel gauge drains with
+   the attempts, and at the first finish LUMA says how close the guess was. On the levels
+   whose lesson is the curve (1.2, 2.4, 2.5, 3.3) the points per attempt stand on a board by
+   the grid. "Camera" swaps the chase for the whole track. The curve, the rule book, the
    readings and the seed are behind "Details", closed by default.
-4. **The race.** The start lights under the gantry go out, then five laps on the test track
+5. **The race.** The start lights under the gantry go out, then five laps on the test track
    with the rule book as it is: no new moves, no learning. The lap is on the board by the grid
    and at the top of the screen. Level 3.4 then sends it to the real track, which has oil the
    simulator did not.
-5. **The questions**, where the world can carry them (1.1): LUMA asks one at a time and the
-   player taps the answer on the world: the car, the track, its sensors' rays, its wheels, the
-   points floating over the track, or one of three signs beside the grid (`Ui/QuizScreen.cs`).
-   Other levels' questions (the rule book, a line of text) keep the old list.
-6. **Debrief.** The car where the race left it, the lap board, the medal with its stars over
-   it, LUMA's one line, "Next" and a quiet "Again". The curve of every run, the checks, the
-   runs' numbers, the stars in all and the rank, the takeaway and the question for work, and
-   on a capstone the two if-then plans, are behind "Details". The platform is told the result
-   in the curriculum's form (`2.3:complete`, `:partial` or `:incomplete`, with the checks).
+6. **The questions** (`Ui/QuizScreen.cs`): the question is the objective line ("Who makes the
+   decisions?"); the things to tap glow with a ring of light: the car, the track, its sensors'
+   rays, its wheels, the points floating over the track, or the signs beside the grid carrying
+   the answers (the rule book's situation stands on a board, the five moves on signs). A
+   question that wants a line of text gets the one text field. LUMA says nothing until the
+   answer, then "Right." or "Not quite."
+7. **Debrief.** The car where the race left it, a podium beside it, the medal rising on its
+   step (gold on 1, silver on 2, bronze on 3) with its three stars along the ribbon, LUMA's one
+   line, "Next" and a quiet "Again". The curve of every run, the checks, the runs' numbers,
+   the stars in all and the rank, the takeaway and the question for work, and on a capstone
+   the two if-then plans, are behind "Details". The platform is told the result in the
+   curriculum's form (`2.3:complete`, `:partial` or `:incomplete`, with the checks).
 
 Esc or the icon in the top-right corner opens the game menu (`Ui/GameMenu.cs`): resume, the
 briefing, the file, this level again, the title screen, the games menu, and the settings
@@ -105,7 +118,7 @@ briefing, the file, this level again, the title screen, the games menu, and the 
 | The menu (Esc, the icon) and the HUD's few pieces (the objective line, the fuel gauge, the small buttons) | `Scripts/Ui/GameMenu.cs`, `Hud.cs` |
 | The curve | `Scripts/Ui/Chart.cs` |
 | The circuit in three dimensions: the track, the stands, the robot, the crash and the finish | `Scripts/World/Circuit.cs`, `Circuit.Kit.cs` (the realism pass's kit) |
-| The rewards as markers on the track; the lap board, the start lights, the taps on the world | `Scripts/World/Markers.cs`, `Circuit.Play.cs` |
+| Every setting as a thing in the world (rewards, dials, parts, cards); the lap board, the curve board, the start lights, the signs, the podium, the points off the car | `Scripts/World/Markers.cs`, `Circuit.Play.cs` |
 | The camera: overview, follow, orbit, portrait | `Scripts/World/SceneCamera.cs` |
 | Shapes and materials, made in code; the three shaders | `Scripts/World/MeshKit.cs`, `Look.cs`, `Resources/Shaders` |
 | Look and feel, from the Maaloomatiia brand guidelines | `Scripts/Ui/Theme.cs`, `UiKit.cs`, `Sfx.cs` |
@@ -125,8 +138,10 @@ Notes:
   that keeps the circuit in a given part of the stage so the cards sit next to it.
 - **LUMA's voice.** After changing or adding any line she says (her cues are in `Luma.cs`,
   the level lines in `Lesson.cs`), run **Robot Racing > Generate LUMA Voice** (macOS `say`; a
-  published trailer needs a licensed voice). A build fails when a recording is missing
-  (`Editor/LumaVoiceGuard.cs`). The walk below is silent.
+  published trailer needs a licensed voice; `say` hangs now and then, so each line gets a
+  minute and a second try, and `LUMA_VOICE_MISSING_ONLY=1` records only the lines without a
+  file). A build fails when a recording is missing (`Editor/LumaVoiceGuard.cs`). The walk
+  below is silent.
 - **Settings and progress persist** in PlayerPrefs on the machine.
 
 ## Checking it without opening the Editor
@@ -138,9 +153,10 @@ $UNITY -batchmode -nographics -projectPath . -executeMethod Builder.BuildMac -lo
 "Builds/mac/Robot Racing.app/Contents/MacOS/Robot Racing" -cover /tmp/cover.png -screen-width 1600 -screen-height 1000 -screen-fullscreen 0
 ```
 
-The built app, started with `-screenshots <folder>`, walks through every screen of levels 1.1
-and 2.3 (title, briefing, pit lane before and after placing, training, race, the questions,
-the debrief and its details, the menu) and saves a picture of each, then quits, with
+The built app, started with `-screenshots <folder>`, walks through the game (the title and
+its calendar; every level's briefing and pit lane, before and after the thing the level is
+about is set; levels 1.1, 1.2, 2.3, 2.5 and 3.4 played through: training, race, the questions,
+the debrief; the menu) and saves a picture of each, then quits (`-levels 1,6` limits it), with
 `counts.jsonl` beside them: the words and the controls on each screen, whether any LUMA line
 is cut or long, and anything that should not be there (OPENS AT, a ladder, coordinates,
 seeds, probabilities). `-cover` takes the platform's cover picture. The current set is in

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -59,11 +60,17 @@ public static class LumaVoiceTools
     static bool RecordWithSay(Dictionary<string, string> spoken, string outDir)
     {
         string textFile = Path.Combine(Path.GetTempPath(), "luma-line.txt");
+        // `say` hangs now and then (a stuck speech server): each line gets a minute, then a
+        // second try. LUMA_VOICE_MISSING_ONLY=1 records only the lines that have no file yet,
+        // for a batch that was cut short.
+        bool missingOnly = Environment.GetEnvironmentVariable("LUMA_VOICE_MISSING_ONLY") == "1";
         foreach (var line in spoken)
         {
-            File.WriteAllText(textFile, line.Value);
             string wav = Path.Combine(outDir, line.Key + ".wav");
-            if (!RunProgram("/usr/bin/say", $"-v \"{MacVoice}\" -r {MacWordsPerMinute} -f \"{textFile}\" -o \"{wav}\" --file-format=WAVE --data-format=LEI16@22050"))
+            if (missingOnly && File.Exists(wav)) continue;
+            File.WriteAllText(textFile, line.Value);
+            string args = $"-v \"{MacVoice}\" -r {MacWordsPerMinute} -f \"{textFile}\" -o \"{wav}\" --file-format=WAVE --data-format=LEI16@22050";
+            if (!RunProgram("/usr/bin/say", args, 60000) && !RunProgram("/usr/bin/say", args, 60000))
                 return false;
         }
         File.Delete(textFile);
@@ -80,7 +87,7 @@ public static class LumaVoiceTools
             $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\" -LinesJson \"{json}\" -OutDir \"{outDir}\" -Voice \"{WindowsVoice}\"");
     }
 
-    static bool RunProgram(string program, string arguments)
+    static bool RunProgram(string program, string arguments, int timeoutMs = 0)
     {
         var psi = new ProcessStartInfo(program, arguments)
         {
@@ -88,10 +95,18 @@ public static class LumaVoiceTools
         };
         using (var p = Process.Start(psi))
         {
-            string output = p.StandardOutput.ReadToEnd(), errors = p.StandardError.ReadToEnd();
+            var output = p.StandardOutput.ReadToEndAsync();
+            var errors = p.StandardError.ReadToEndAsync();
+            if (timeoutMs > 0 ? !p.WaitForExit(timeoutMs) : false)
+            {
+                try { p.Kill(); } catch (Exception) { }
+                Debug.LogWarning($"[LumaVoice] {program} took more than {timeoutMs / 1000} s and was stopped: {arguments}");
+                return false;
+            }
             p.WaitForExit();
-            if (p.ExitCode != 0 || errors.Length > 0) { Debug.LogError("[LumaVoice] " + errors); return false; }
-            if (output.Trim().Length > 0) Debug.Log("[LumaVoice] " + output.Trim());
+            string err = errors.Result, outText = output.Result;
+            if (p.ExitCode != 0 || err.Length > 0) { Debug.LogError("[LumaVoice] " + (err.Length > 0 ? err : $"exit {p.ExitCode}")); return false; }
+            if (outText.Trim().Length > 0) Debug.Log("[LumaVoice] " + outText.Trim());
         }
         return true;
     }
