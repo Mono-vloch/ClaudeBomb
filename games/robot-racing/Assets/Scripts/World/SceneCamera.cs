@@ -20,6 +20,8 @@ public class SceneCamera : MonoBehaviour
     public float pitch = 55f, yaw = 20f, fov = 30f;
     public float orbitPitch = 26f, orbitDistance = 15f, orbitSpeed = 3.5f;
     public float portraitAhead = 4.2f, portraitSide = 1.5f, portraitUp = 1.5f, portraitAnchor = 0.78f; // the portrait's distance and the height it looks at
+    public float portraitLook = 0f, portraitFov = 30f, orbitFov = 36f; // how far ahead of the car the portrait looks; the lenses
+    public float orbitArc = 0f, orbitBase = 0f; // an arc instead of a full turn: its half-width and its middle, in degrees
     public event Action Framed;   // after every frame's placing: labels follow
 
     Camera cam;
@@ -32,7 +34,7 @@ public class SceneCamera : MonoBehaviour
     {
         cam = GetComponent<Camera>();
         cam.orthographic = false;
-        cam.nearClipPlane = 0.3f;
+        cam.nearClipPlane = 0.12f;
         cam.farClipPlane = 400f;
         cam.clearFlags = CameraClearFlags.SolidColor;
     }
@@ -103,9 +105,9 @@ public class SceneCamera : MonoBehaviour
                 var turn = Quaternion.Euler(0, Mathf.Sin(Time.unscaledTime * 0.3f) * 5f, 0); // a slow look around it
                 var offset = turn * (follow.forward * portraitAhead - follow.right * portraitSide + Vector3.up * portraitUp);
                 targetPos = follow.position + offset;
-                anchor = follow.position + Vector3.up * portraitAnchor;
+                anchor = follow.position + Vector3.up * portraitAnchor + follow.forward * portraitLook;
                 targetRot = Quaternion.LookRotation(anchor - targetPos);
-                targetFov = 30f;
+                targetFov = portraitFov;
                 break;
             }
             case Mode.Follow:
@@ -120,10 +122,11 @@ public class SceneCamera : MonoBehaviour
             case Mode.Orbit:
             {
                 orbitYaw += orbitSpeed * dt;
-                var dir = Quaternion.Euler(orbitPitch, orbitYaw, 0) * Vector3.back;
+                float yawNow = orbitArc > 0f ? orbitBase + Mathf.Sin(orbitYaw * 0.05f) * orbitArc : orbitYaw;
+                var dir = Quaternion.Euler(orbitPitch, yawNow, 0) * Vector3.back;
                 targetPos = subject + dir * orbitDistance;
                 targetRot = Quaternion.LookRotation(subject - targetPos);
-                targetFov = 36f;
+                targetFov = orbitFov;
                 anchor = subject;
                 break;
             }

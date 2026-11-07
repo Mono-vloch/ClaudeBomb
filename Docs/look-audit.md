@@ -914,3 +914,411 @@ points table, the capstone with everything, Settings, a run, the debrief) and th
 
 Frames: `games/tech-escape/Builds/look-audit/room/` (1.3 as handed over, 1.1, the attack's
 end, the debrief) and the walk in `text/`.
+
+---
+
+# Phase 6: realism pass (Tech Escape pilot)
+
+7 November 2026, branch `realism-pass`, from `Docs/realism-pass-prompt.md`. The previous
+passes lit, graded and framed boxes; this one changes what the world is made of. Step 1,
+Claude Bomb measured, is `Docs/claude-bomb-recipe.md`: URP Lit everywhere, textured surfaces
+tinted to the palette, one detailed hero at about a metre filling about 40 % of the frame, a
+real room that recedes into exponential fog, a warm key over the hero and the facility's own
+lamps for the rest, neutral tonemapping with bloom 0.25 and a 0.2 vignette, a camera-feed
+frame. Step 2, the pilot: one room (the Suspicious Inbox, level 1.3), the corridor and the
+attacker. The other eleven rooms keep their old interiors until the pilot is approved.
+
+## What changed
+
+1. **A facility kit made in the Editor** (`Assets/Editor/FacilityKit.cs`,
+   `FacilityKit.Prefabs.cs`, menu Tech Escape > Build facility kit), the way Claude Bomb's
+   `LabBuilder` makes Bay 3: URP Lit materials from CC0 texture sets (Poly Haven ARM maps split
+   into metallic-smoothness and occlusion), architecture as boxes with UVs in metres (a 4.2 m
+   bay tiles a 2.1 m texture seamlessly), and prefabs in `Resources/Facility`: three corridor
+   bays with their props, the entrance, the exit wall with a pair of doors and a lit EXIT
+   sign, the outside ground, a door (the hero leaf on a hinge, a painted steel frame, the
+   status lamp, an enamel sign plate, a badge reader), a lamp for the rooms' boards, the post
+   room, and the attacker. `Building` places them from the level data; nothing it places in
+   the corridor, the doors, the exit, the post room or the attacker is MeshKit or Flat.
+2. **Six hero models from Higgsfield**, approved list, 128.75 credits: the hooded attacker
+   (rigged, with idle, a sneaking walk and a step-and-push for forcing a door, one Animator
+   per clip because the three rigs do not share bone orientations), the mail sorter (the
+   room's misconfiguration prop), a server rack with LEDs and cables, a monitor, a security
+   door leaf (its stray closer arm clipped) and an office chair. Each was split into a
+   geometry-only GLB and URP maps (base, normal, metal-smoothness mask, emission where it
+   glows), downsized to 2K (attacker, sorter) or 1K, scaled in metres, pivoted at its base and
+   turned to face +Z. Credits, job ids and sources: `games/tech-escape/Docs/credits.md`.
+3. **The post room**, 3.6 × 3.4 m and 2.8 m high, closed: linoleum floor, painted plaster
+   walls with skirting and cornice, a ceiling with a fluorescent fitting, the mail sorter
+   against the back wall under a warm key spot, "POST ROOM" stencilled beside it (Claude
+   Bomb's "BAY 3"), the board of decision lamps under the stencil, the rack in the corner,
+   the desk with the monitor showing the inbox, the chair, parcels on steel shelves, a bin,
+   the clock, the fire alarm, a security camera, a poster. `RoomLife` makes the rack's LEDs
+   wink, the screen's glow waver and the tube stutter.
+4. **The room is seen from inside**, at shoulder height (1.5 m, 48° field of view, a degree
+   of drift), framed as a security camera's feed: corner brackets, a blinking REC dot,
+   "CAM 02 / SUSPICIOUS INBOX", a running clock from 23:47, "PERMIT OFFICE / LOCKDOWN".
+5. **The corridor is a corridor**: ceilings (hidden only in the overview, which becomes a
+   building section with wall thickness and the fittings seen from above), concrete floor,
+   plaster walls with skirting and a dado rail, the twelve doors with frames, lamps, signs and
+   readers, extinguishers, alarms, bins, boxes, a wet-floor sign, power boxes, clocks,
+   security cameras. The chase camera stays under the ceiling, the opening shot looks in from
+   outside the entrance, the end moment sweeps an arc on the corridor side of the door.
+6. **Light and air per view** (`Building.Mood`): in the room, an overhead key with shadows
+   over 12 m, the warm spot, the cool tube, the screen's glow, exponential fog 0.05 in the
+   night colour; in the corridor, a dim cool key, the door lamps, fog 0.04; from above, the
+   moon and the old linear fog. The door lamps go off in the room (the web's light budget).
+7. **Post as Claude Bomb's**: neutral tonemapping (was ACES), bloom 0.25 at threshold 1.0,
+   a black vignette at 0.2, no extra saturation or contrast (`Atmosphere`).
+8. **The play screens' panels are dark**: the room's sheet is a dark drawer of 640 px (33 %
+   of the width) that folds to a 72 px tab with the rows' lamps, the world keeps the rest;
+   the level, the mistake and the buttons moved into the drawer's head; every text there and
+   on the attack screen is 16 px or more; the attack's line cards are dark with a coloured
+   keyline (they were light salmon and teal fills).
+9. **Web budget**: every kit texture is crunched DXT (quality 50), the maps' sizes as the prompt
+   asks (2K heroes, 1K surfaces, 512 props). Without it the first web build was 73.6 MB.
+
+## Machine checks
+
+| Check | Result |
+|---|---|
+| World materials on the kit (229 renderers, 43 materials) are URP Lit with a base map and a normal map | 42 of 43; the one left is the lamp's beam, an additive light effect (VFX, exempt) |
+| No Flat shader or MeshKit mesh on the pilot's world | met in the corridor, doors, exit, post room and attacker; not yet in the other 11 rooms' interiors, which the overview still shows; the attacker's floor ring, the trail and the breach puffs are MeshKit/Glass effects |
+| The hero fills at least 25 % of the main play screen | the mail sorter's box 36 % × 77 % = 28 % of the room screen (Claude Bomb's device: 40 %); the attacker in the chase 14 % (a moving shot, not the main play screen) |
+| No light-theme panel on a play screen | the room and the attack: met (dark drawer 33 % of the width, dark line cards, text 16 px and up); the briefing and the debrief still have white cards (outside the pilot) |
+| Under 45 MB transferred, loads and runs on the platform | 46.6 MB transferred (0.6 MB over), loads in 3.6 s and runs (`Builds/look-audit/realism/platform-tech-escape.png`) |
+
+## Web, before and after
+
+| | Text pass (Phase 4c) | Realism pilot |
+|---|---|---|
+| Transferred | 22.5 MB | 46.6 MB |
+| Load (headless Chrome, software GL) | 2.4 s | 3.6 s |
+| data / wasm on disk | – / 9.3 MB | 37.0 MB / 9.3 MB |
+| Textures in the build (uncompressed) | – | 29.0 MB (88.8 MB before crunch) |
+| Meshes in the build | – | 11.8 MB (the attacker's three rigged copies are 6 MB of it) |
+
+## The side-by-sides and the reviewer
+
+`games/tech-escape/Builds/look-audit/realism/side-by-side-*.png`: Claude Bomb on the left
+(its play screen, its title shot, its wide orbit), Tech Escape on the right, 1600 × 900
+each. Judged by a separate agent given only the images and the prompt's question.
+
+Round 1 (`realism/round1/`): NO on all three. Fixed after it: a visible light source over the
+sorter (Claude Bomb's hanging lamp, a beam and dust), conduit and a breaker box on the back
+wall, round lit indicator lamps on the board, YOU FIX moved into the drawer so nothing covers
+the sorter, long rows and chips wrap instead of being cut, the shot taken after LUMA's line,
+the corridor's tubes off, softer door lamps, a stronger key, polished concrete, the attacker
+caught walking rather than mid-lunge, its floor ring only from above.
+
+Round 2 (the current images): still NO on all three. What it says still looks cheaper:
+
+- **Room**: the drawer reads as a web form (stacked cards of outlined fields, crowded text,
+  the next card cut at the bottom); the back wall is still plain and the sorter is the only
+  dressed object; the lamp row reads as a light strip on a bar; the beam is a hard-edged
+  cone; the boxes are muddy; the linoleum's pattern repeats in a grid; cropped clutter at the
+  left edge; the palette is grey with one red envelope against Claude Bomb's saturated,
+  glowing modules.
+- **Corridor and attacker**: the WHAT IT TRIED column is a large, mostly empty glass box;
+  the ceiling and its fittings look smeared; the light is a flat wash with no contact
+  shadows; the floor still reads untextured; the attacker's pose reads stiff; identical
+  doors and signs; props float.
+- **Attack map**: the other rooms are the old boxes, the facility floats in a void, the
+  attacker's path reads as a debug line, the list repeats one room.
+
+Frames of every step: `realism/walk1` to `walk9`, the kit previews in `realism/kit`, the
+heroes from four sides in `realism/models`, before and after in `realism/before-after-*.png`.
+
+---
+
+# Phase 6b: Tech Escape, finished
+
+7 November 2026, after the pilot: "finish tech escape". The whole facility on the kit, the
+remaining white screens dark, the pilot reviewer's world items fixed, the web build back
+toward the budget.
+
+## What changed
+
+1. **Twelve real rooms** (`Assets/Editor/FacilityKit.Rooms.cs`): one builder for every room,
+   the same kind of place and a different room each. The shell (concrete floor, painted
+   plaster, skirting, cornice, conduit, a ceiling with its fitting), Claude Bomb's hanging lamp
+   over the room's prop with its beam and dust, the prop against the back wall, the room's name
+   stencilled beside it, the board of decision lamps, an amber lockdown beacon turning in the
+   corner (Claude Bomb's beacon, its two beams), and furniture by kind: offices keep a filing
+   cabinet and a notice board, labs a rack, shelves and a toolbox; every room a desk with a lit
+   screen, a chair, a bin, a clock, an extinguisher, a fire alarm, a security camera. The
+   Operations Center's prop is six of the pilot's monitors on a rail, each with its board.
+2. **Twelve more Higgsfield models** (the second approved list, 207.75 credits): the rooms'
+   props (a rolling board of risk cards, a floor safe, a glass isolation chamber, a badge
+   turnstile, a workbench of small servers, a wall network cabinet of tangled cables, a console
+   of toggle switches, a lockbox with its key, a cloud lamp, a tape library) and a filing
+   cabinet and a notice board for every room. `games/tech-escape/Docs/credits.md`.
+3. **Each room framed by measurement**: the kit projects the prop's box through a camera at
+   shoulder height and keeps the farthest distance where it covers about 30 % of the frame
+   without spilling out of the feed; the stencil and the board go only where that camera sees
+   them. In the game every room measures 30 to 31 %.
+4. **The other screens**: the debrief on dark glass (it was white cards), the warm-up question
+   on dark glass, every small-caps label and the ladder at 16 px, the attack's column as tall as
+   its lines, the corridor's tubes replaced by recessed panels that belong to the ceiling (not
+   seen from above), reflection probes for the corridor and the room on screen rendered once
+   the lamps are on.
+5. **Budget**: kit textures crunched; metal-smoothness maps dropped where a model has almost no
+   metal (one smoothness instead); the rooms' props' normal and mask maps at 512 (their colour
+   at 1K); the Poly Haven meshes compressed.
+6. **The pilot reviewer's world items**: the octagon linoleum replaced by the polished concrete
+   (it read blurry and oversized); the board of lamps never jammed against the top of the feed
+   (it goes on a side wall when the view has no room for it beside the prop); the corridor
+   brighter (a stronger cool key, a lighter ambient, the ceiling panels faintly lit).
+
+## Machine checks
+
+| Check | Result |
+|---|---|
+| Kit materials (1,144 renderers, 62 materials): URP Lit with a base map and a normal map | 61 of 62; the one left is the lamps' beam, an additive light effect (exempt as VFX) |
+| No Flat shader or MeshKit mesh on the world | met for the corridor, every door, the exit, all twelve rooms and the attacker; the Flat/MeshKit code stays only for effects (the trail, the attacker's ring from above, the breach puffs) and as the fallback when the kit is missing |
+| The hero fills at least 25 % of the main play screen | every room 30 to 31 % (the mail sorter 38 % × 82 %; the cloud lamp and the tape library 31 % × 100 %, cropped slightly); Claude Bomb's device: 40 % |
+| No light-theme panel on a play screen | met: room, attack, briefing, warm-up and debrief are dark glass; every small-caps label at 16 px |
+| Under 45 MB transferred, loads and runs on the platform | 44.5 MB transferred, 3.7 s to load, runs (`realism/platform-tech-escape-full.png`) |
+
+## Web, before and after
+
+| | Text pass (Phase 4c) | Pilot | Tech Escape finished |
+|---|---|---|---|
+| Transferred | 22.5 MB | 46.6 MB | 44.5 MB |
+| Load (headless Chrome, software GL) | 2.4 s | 3.6 s | 3.7 s |
+| data / wasm on disk | – / 9.3 MB | 37.0 / 9.3 MB | 34.8 / 9.3 MB |
+
+The first full build was 53.9 MB; the metal-smoothness maps (9 MB in the build) were the
+biggest single cost, most of them on surfaces with no metal in them.
+
+## The side-by-sides and the reviewer
+
+`games/tech-escape/Builds/look-audit/realism/final2/`: seven screens, Claude Bomb on the left
+(its title, its briefing transmission, its play screen twice, its room view, its wide orbit,
+its title panel against our debrief). Two rounds with a fresh reviewer each (`final1`, then
+`final2` after the fixes above). **Round 2: NO on all seven.** What it still says looks
+cheaper, grouped:
+
+- **The interface, on every screen**: the room's drawer reads as a form or a spreadsheet
+  (Verdict / The reason / The report rows), labels cut with ellipses, the list running off the
+  bottom; the briefing is a dashboard of blocks (the 12 room chips, the 19-chip ladder); the
+  title's level map reads as a progress tracker; the debrief's panels are half empty and the
+  medal is three grey circles without art; LUMA's line is sometimes caught mid-word; mixed
+  button cases; translucent panels let the scene show through and look muddy.
+- **The world**: the lamp's beam is a hard-edged wedge; the ceiling panels light nothing; the
+  floor and walls read plain next to Claude Bomb's device; the dust reads as specks; the
+  attacker's walk is caught in a stiff pose; the wire bins render as solid jars; door signs
+  are soft at a distance; the attack map is a small diorama in a dark void with a flat red
+  route.
+- **What already holds**: the rooms' props (the mail sorter, the safe and the others) stand
+  next to Claude Bomb's device.
+
+The interface items go beyond what the world is made of: they are the screens' design, which
+the prompt keeps (forms collapse to a side drawer, never wider than 35 %), and they are the
+reason no screen passes. Frames: `realism/game4` (the walk with every room), the kit's renders
+in `realism/kit`.
+
+---
+
+# Phase 6c: Robot Racing
+
+7 November 2026, run in parallel with AI Arena by its own agent ("can u run all remaining
+games in parallel?"), on the approved list (cap 100 credits). Full report:
+`games/robot-racing/Docs/realism-report.md`; assets and jobs: `games/robot-racing/Docs/credits.md`.
+
+## What changed
+
+1. **A track kit made in the Editor** (`Assets/Editor/TrackKit.cs`, `TrackKit.Prefabs.cs`),
+   on Tech Escape's FacilityKit pattern: 25 prefabs in `Resources/Track`, URP Lit from CC0
+   sets (Poly Haven, ambientCG) and textures painted in the project, crunched. `Circuit.Kit.cs`
+   places them from each track's grid; without the kit the old blocks are built as before.
+2. **A real small circuit**: asphalt with painted lines, red and white kerbs at every bend,
+   jersey barriers with a hazard band, tyre walls with a belt, the start gantry with its
+   lights, the pit wall with a chain-link fence, the pit lane and a pit box (Claude Bomb's tool
+   chest, cart, extinguisher, barrel), cones, the grandstand, a chequered finish with flags,
+   floodlight masts, trees of bark and leaf cards, grass with patches, a sky dome.
+3. **The car is a hero model**: a Higgsfield body with four separate Higgsfield wheels, the
+   sensor pod, glowing eyes and antenna, the "07" roundel. `CarRig.cs` spins the wheels with the
+   distance, steers the front pair, leans the body out of a bend and squats it at speed.
+4. **Evening practice under floodlights**, fog in the dusk colour, a reflection probe; post as
+   Claude Bomb's (neutral tonemapping, bloom 0.25 from 1, vignette 0.2).
+5. **The camera low and close by default** (the pit lane in front of the car, the run's chase
+   just behind it), the overview as the exception.
+6. **Dark play screens**: the run and the pit lane in a 640 px dark drawer (33 %) that folds
+   to a tab; the debrief, its questions, the warm-up and the settings on dark glass; every label
+   16 px or more; the title in a trackside camera's frame (LIVE, CAM 3).
+
+## Machine checks
+
+| Check | Result |
+|---|---|
+| Kit materials (87 renderers, 33 materials): URP Lit with a base map and a normal map | 33 of 33; the sky dome's gradient is exempt like a skybox |
+| No Flat shader or MeshKit mesh on the world | 0 on the title, briefing, pit lane, run, race and debrief (sensor beams, trails and ghost lines are effects) |
+| The hero fills at least 25 % of the main play screen | pit lane 30 % (2.3) and 33 % (1.1), training run 31 %, race 31 %; Claude Bomb's device: 40 % |
+| No light-theme panel on a play screen | 0 |
+| Text at least 16 px at 1080p | 0 under 16 px on all six screens |
+| Under 45 MB transferred, loads and runs on the platform | 28.5 MB, 5.0 s, runs (`realism/platform-robot-racing.png`) |
+
+## Web, before and after
+
+| | Text pass (6 November) | Realism pass |
+|---|---|---|
+| Transferred | 20.5 MB | 28.5 MB |
+| Load (headless Chrome, software GL) | 3.3 s | 5.0 s (median of three) |
+| data / wasm on disk | 10.8 / 9.3 MB | 18.8 / 9.3 MB |
+
+## Credits
+
+79.25 of the 100 cap (5 design images at 0.25, three detailed 3D models at 18, two standard
+at 12), no retries; matches the account's transactions of 7 November 2026.
+
+## The side-by-sides and the reviewer
+
+`games/robot-racing/Builds/look-audit/realism/final/`: seven screens (title, briefing, pit
+lane at 2.3 and 1.1, training run, race, debrief), Claude Bomb on the left. One fresh reviewer,
+given only the images and the question. **NO on all seven.** What it says looks cheaper,
+grouped:
+
+- **The interface, on every screen**: the drawers read as an inspector (the points table as a
+  6 x 4 grid of number buttons, the rule book's rows, sensor bars, "seed 7"); the briefing is
+  nested cards (LUMA card, track card, seven part chips, the 13-chip ladder); the title's level
+  map reads as a web stepper; the debrief is six boxes like an analytics dashboard with an empty
+  chart as its largest element and the medal as three grey dots; two button styles in one row;
+  the pit lane's eight callouts with leader lines read as debug gizmos (and show the parts that
+  open at later levels on 1.1); about 120 words on the pit lane against Claude Bomb's 40;
+  translucent panels muddy with the scene behind them.
+- **Text cut or caught mid-line**: LUMA's line on the title and the pit lane, "lap time 0 m..."
+  on the race HUD, the rule book running off the bottom.
+- **Empty states as the hero**: the run's chart with nothing plotted, "REWARD 0 / BEST 0 /
+  LAP -", the debrief's flat line at 0.
+- **The camera**: the training chase so low and close that the car's rear deck fills half the
+  view and its soft texture shows; the race frame pressed into the car facing a barrier, no
+  track ahead.
+- **The world**: the red and white barrier texture stretched and blurry (the most visible
+  material failure); flat grey walls and jersey barriers; the headlight pools and the teal
+  floor stripe clipping to white; the wheel arches black voids from the front; flat dusk sky,
+  low-detail trees.
+- **What already holds**: the car model and the dusk circuit in the pit lane's hero shots.
+
+Some of the strings it names are what the game teaches and stay as they are (the rule book's
+"front wall, left wall, right wall, speed stopped" are the words the robot reads); others are
+display problems to fix (the cut HUD line; the debrief's run line "settled {n} of {attempts}",
+which reads "settled never of 120" when the curve never settled, wording older than this pass;
+the score line shown twice on the debrief). As with Tech Escape, the interface is why no
+screen passes.
+
+---
+
+# Phase 6d: AI Arena
+
+7 November 2026, run in parallel with Robot Racing by its own agent, on the approved list (cap
+220 credits). Full report: `games/ai-arena/Docs/realism-report.md`; assets and jobs:
+`games/ai-arena/Docs/credits.md`.
+
+## What changed
+
+1. **A market kit made in the Editor** (`Assets/Editor/MarketKit.cs`, `MarketKit.Prefabs.cs`),
+   on Tech Escape's FacilityKit pattern, prefabs in `Resources/Market`: the square of cobbles
+   with sandstone bands laid between the arena's cells (the grid the lesson needs, in stone),
+   a ring of 24 houses (the two Higgsfield houses alternating and mirrored), the Higgsfield
+   fountain in one corner, street lamps, planters, benches, crates; two Higgsfield stall styles
+   with a lantern under each awning; every item's goods heaped in the Higgsfield crate and piled
+   on the counter (Kenney's Food Kit for 14 of the 15 items, Poly Haven's potatoes). Without the
+   kit every path falls back to the old boxes.
+2. **The agent is a rigged robot** (Meshy, 1.2 m, 15,559 triangles, 2K maps, emissive eyes;
+   `World/AgentRig.cs`): its coral panels are a mask so each team's colour paints them; it walks,
+   looks around on every LOOK, reaches into the stall to buy (the piece flies into its basket),
+   holds its head when it is sent home. One rigged copy per clip, as Tech Escape's attacker.
+   Meshy's idle clip swung the hips through about 90 degrees (unusable on the one retry too); the
+   look clip, slowed, is the idle.
+3. **To scale**: a cell is 2.4 m, a step 1.4 s at the fastest speed, and the next turn waits for
+   the walk (pacing only: no rule, turn or score changed).
+4. **The camera**: the main view of a round is the street, behind the agent at its shoulder; a
+   second view is the agent's eye, framed like Claude Bomb's camera feed (brackets, REC); the
+   market from above is a third button, only when asked for. The title shows the agent close in
+   the lantern-lit evening square.
+5. **Light and post, Claude Bomb's**: neutral tonemapping (was ACES with grading), bloom 0.25
+   from 1, vignette 0.2, haze; dusk on the title and the story, day on the rounds.
+6. **Dark play screens**: the brand's ink glass everywhere; the run's drawer 31 %, the garage's
+   33 %, the decide errand's 34 % (it was a white sheet over 96 % of the screen); the run's and
+   the garage's fold to a tab; every text clamped to 16 px at 1080p.
+
+## Machine checks
+
+| Check | Result |
+|---|---|
+| Kit materials (183 renderers, 29 materials): URP Lit with a base map and a normal map | 29 of 29 |
+| No Flat shader or MeshKit mesh on the world | Flat 0; one MeshKit mesh, the ring that flashes under the agent on LOOK (an effect); the sight square and the memory's cards are on the Glass shader (effects) |
+| The hero fills at least 25 % of the main play screen | the street 31 %, the garage 30 %; the agent's eye 9 to 17 % (it looks past the agent, by design); Claude Bomb's device: 40 % |
+| No light-theme panel; the world at least 65 %; text at least 16 px at 1080p | 0 light panels; the world 69 % on the run, 67 % in the garage; smallest text 16 |
+| Under 45 MB transferred, loads and runs on the platform | 32.8 MB, 3.1 s, runs (`realism/platform-ai-arena.png`) |
+
+## Web, before and after
+
+| | Before (the platform's build, 7 November) | Realism pass |
+|---|---|---|
+| Transferred | 20.1 MB (the text pass recorded 19.2) | 32.8 MB |
+| Load (headless Chrome, software GL) | 5.4 s with a Unity build alongside (the text pass recorded 3.7) | 3.1 s |
+| data / wasm on disk | 10.4 / 9.3 MB | 23.1 / 9.4 MB |
+
+The four rigged copies of the agent are 5.6 MB of the build's 8.5 MB of meshes.
+
+## Credits
+
+181.75 of the 220 cap (7 design images at 0.25, Meshy image to 3D rigged 38, five detailed
+Tripo models at 18, one standard at 12, five rigging clips at 8, one of them the idle retry);
+matches the account's transactions of 7 November 2026. Robot Racing and AI Arena together:
+261 of the 320 approved.
+
+## The side-by-sides and the reviewer
+
+`games/ai-arena/Builds/look-audit/realism/final/`: eight screens (title, story, briefing,
+garage, market run, the agent's eye, decide, debrief), Claude Bomb on the left. One fresh
+reviewer, given only the images and the question. **NO on all eight.** What it says looks
+cheaper, grouped:
+
+- **The interface, on every screen**: the garage's drawer reads as an order form (12 swatches,
+  a name field, 15 items marked BUY or NEVER, the wallet's ten coin buttons, DEPLOY); the
+  decide errand as a quiz of 15 identical buttons with an empty gap; the debrief as a
+  spreadsheet of rank, score, ticks, tokens, dollars and model, with the medal as the word GOLD
+  and three dots; the run's agent cards are a muddy maroon with coordinates, token counts and
+  bars; three groups of controls on the run; the title crowded with the level strip, three
+  buttons and two toggles; the story's centre a flat 2D slide with web-tab steps and carousel
+  dots; the briefing's message box and grey part buttons read as empty and disabled fields;
+  tab styles that do not match; panels see-through enough to muddy.
+- **What it reads as glitches**: the see-through pink squares beside the agent's head (the
+  memory dial's glass cards), the coloured discs and faint "?" shapes in the agent's eye (most
+  likely its sight and the unknown markers), green blobs at its feet (most likely the LOOK ring), the agent's own antenna
+  poking into its eye view, a name tag with no agent under it, the corn cob in the basket
+  passing through the shoulder.
+- **The world**: the rounds lit flat like noon against the studio's navy (only the title and
+  the story are at dusk); the stalls empty on the briefing and the decide screen (the goods come
+  with a round); the cobbles blurry and repeating close to the camera, the sandstone grid lines
+  visible; no people; no garage set (the garage is the square); the agent lit flat on the title,
+  with no rim and no glow from its eyes.
+- **Text**: LUMA's line caught mid-typing on the title and the decide screen; the title's setup
+  lines ("Claude not connected: agents will use the built-in stand-in brain", the install line).
+
+Some of what it names is what the game teaches and stays: the memory cards, the sight square and the
+unknown markers carry the lesson (their look can change, their meaning cannot); the agent's
+thought ("Stand-in brain: heading for the banana at (3, 2)") is the brain's own line, and it
+reads as the stand-in's because the screenshot machine has no Claude sign-in, which is also
+why the title shows the setup lines; the tokens, the cost and the model on the debrief are the
+lesson about the brain and the effort dials. The reviewer's "12 to 13 px" is the 16 px text in
+frames scaled from 1080 to 900 px tall. The fixable ones are the corn's scale and placement,
+the antenna in the eye view, the orphan name tag, the noon light and the empty stalls on the
+screens before a round.
+
+---
+
+# Phase 6, where the three games stand
+
+All three games are on Editor-made kits of CC0 and Higgsfield models, with every machine check
+met and every web build under 45 MB (Tech Escape 44.5, Robot Racing 28.5, AI Arena 32.8).
+Higgsfield for the pass: 597.5 credits (Tech Escape 336.5, Robot Racing 79.25, AI Arena
+181.75). The reviewer says NO on every screen of every game, and the first reason is the same
+in all three: the screens' design (drawers as forms and inspectors, briefings and debriefs as
+dashboards of boxes, chip strips, empty states as the hero, two button styles), which the
+realism prompt keeps as it was and only moves into drawers. The world's remaining items are
+second. Closing the gap needs an interface pass across the three games, which is a decision
+for the owner, not this pass.

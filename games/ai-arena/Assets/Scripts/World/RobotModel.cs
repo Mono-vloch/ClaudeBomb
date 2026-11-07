@@ -1,27 +1,32 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// One household robot in the market: a chunky body in its team colour on two
-// wheels, a white head with a visor, an antenna that glows while it is asking
-// Claude, and a basket on its back that fills with what it buys. The root sits
-// on the robot's cell and turns the way it walks; the body bobs on top.
+// One household robot in the market. In the real square (the market kit) it is the
+// rigged robot from Higgsfield (AgentRig): its coral panels in the team colour, an antenna
+// whose bulb is its brain and whose glow is its effort, a wicker basket on its back that
+// fills with what it buys, and its clips (idle, walk, look, pick up, sent home). Without
+// the kit it is the robot built in code: a chunky body in its team colour on two wheels, a
+// white head with a visor, the antenna and a basket. The root sits on the robot's cell and
+// turns the way it walks.
 public class RobotModel
 {
     public readonly AgentState agent;
-    public readonly Transform root, body;
-    readonly Transform basket;
+    public readonly Transform root;
+    public Transform body;
+    readonly AgentRig rig;           // the kit's robot, or null for the one built in code
+    Transform basket;
     readonly List<GameObject> goods = new List<GameObject>();
-    readonly Renderer[] parts;
-    readonly Material[] worn;        // what each part wears when nothing is the matter
-    readonly Material antenna;       // its own, so it can pulse
-    readonly Renderer[] eyes;
-    readonly Transform antennaBall, leftHand;
+    Renderer[] parts;
+    Material[] worn;                 // what each part wears when nothing is the matter
+    Material antenna;                // its own, so it can pulse
+    Renderer[] eyes;
+    Transform antennaBall, leftHand;
     readonly List<GameObject> carried = new List<GameObject>(); // what its memory looks like
     readonly Color colour;
     float glow;                      // the antenna at rest: how hard it thinks
     bool ghost, dim, outed;
 
-    public const float Scale = 1.25f; // a cell is 1; the robot is built 1 tall and shown this big
+    public static float Scale => Market.Real ? 1f : 1.25f; // the code-built robot is 1 tall in a 1-unit cell, shown this big
 
     public RobotModel(Transform parent, AgentState a, bool dusk)
     {
@@ -29,6 +34,18 @@ public class RobotModel
         colour = Theme.Team[a.config.colour];
         root = new GameObject("Robot " + a.Name).transform;
         root.SetParent(parent, false);
+        var kit = Market.Real ? Market.Kit("Agent") : null;
+        if (kit != null)
+        {
+            var go = Object.Instantiate(kit, root, false);
+            go.name = "Agent";
+            rig = go.GetComponent<AgentRig>();
+            body = go.transform;
+            basket = rig.goods;
+            rig.SetTeam(colour);
+            Wear(a.config);
+            return;
+        }
         root.localScale = Vector3.one * Scale;
         body = new GameObject("Body").transform;
         body.SetParent(root, false);
@@ -69,6 +86,7 @@ public class RobotModel
     // how brightly the antenna glows at rest.
     public void Wear(AgentConfig c)
     {
+        if (rig != null) { WearKit(c); return; }
         antennaBall.localScale = Vector3.one * (c.model == 0 ? 0.08f : c.model == 1 ? 0.11f : 0.15f);
         antennaBall.localPosition = new Vector3(0, 0.96f + antennaBall.localScale.y / 2, 0);
         foreach (var g in carried) Object.Destroy(g);
@@ -94,31 +112,77 @@ public class RobotModel
         Think(0);
     }
 
+    // The kit robot's dials: the bulb's size is the brain, the glow at rest the effort, the
+    // turns it remembers ride behind it as glass cards, a notebook rides at its side.
+    void WearKit(AgentConfig c)
+    {
+        float b = c.model == 0 ? 0.05f : c.model == 1 ? 0.072f : 0.1f;
+        rig.bulb.localScale = Vector3.one * b;
+        rig.bulb.localPosition = new Vector3(0f, 0.15f + b / 2f, 0f);
+        foreach (var g in carried) Object.Destroy(g);
+        carried.Clear();
+        var book = rig.memory != null ? rig.memory.Find("Notebook") : null;
+        if (book != null) book.gameObject.SetActive(c.memory == MemoryModes.Notebook);
+        if (c.memory != MemoryModes.Notebook && rig.memory != null)
+        {
+            int turns = MemoryModes.Turns(c.memory);
+            var card = Look.Glass(new Color(Mathf.Lerp(colour.r, 1f, 0.35f), Mathf.Lerp(colour.g, 1f, 0.35f), Mathf.Lerp(colour.b, 1f, 0.35f), 0.32f));
+            for (int i = 0; i < Mathf.Min(turns, 5); i++)
+            {
+                var g = GameObject.CreatePrimitive(PrimitiveType.Cube); // a hologram of a remembered turn: an effect, not the world
+                Object.Destroy(g.GetComponent<Collider>());
+                g.name = "turn";
+                g.transform.SetParent(rig.memory, false);
+                // Small cards fanned behind its head on its left: the turns it carries along.
+                g.transform.localPosition = new Vector3(-0.2f - i * 0.025f, -0.1f + i * 0.05f, -0.16f - i * 0.03f);
+                g.transform.localRotation = Quaternion.Euler(10f, -35f, -8f + i * 4f);
+                g.transform.localScale = new Vector3(0.11f, 0.075f, 0.004f);
+                var r = g.GetComponent<Renderer>();
+                r.sharedMaterial = card; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                carried.Add(g);
+            }
+        }
+        glow = c.effort == 0 ? 0f : c.effort == 1 ? 0.3f : 0.7f;
+        Think(0);
+    }
+
     public Vector3 Position { get => root.position; set => root.position = value; }
-    public Vector3 Head => root.position + Vector3.up * 1.12f * Scale;
+    public Vector3 Head => rig != null ? rig.HeadTop + Vector3.up * 0.3f : root.position + Vector3.up * 1.12f * Scale;
     public Vector3 Feet => root.position;
-    public Vector3 BasketPoint => basket.position + Vector3.up * 0.15f;
+    public Vector3 BasketPoint => rig != null ? basket.position + Vector3.up * 0.08f : basket.position + Vector3.up * 0.15f;
     // Where the dials show on it: the brain and the effort on the antenna, the sight at the
     // eyes, the memory on its back.
-    public Vector3 AntennaPoint => antennaBall.position;
-    public Vector3 EyePoint => body.TransformPoint(new Vector3(0.1f, 0.76f, 0.19f));
-    public Vector3 BackPoint => basket.position + Vector3.up * 0.12f;
+    public Vector3 AntennaPoint => rig != null ? rig.AntennaPoint : antennaBall.position;
+    public Vector3 EyePoint => rig != null ? rig.EyePoint : body.TransformPoint(new Vector3(0.1f, 0.76f, 0.19f));
+    public Vector3 BackPoint => rig != null ? rig.BackPoint : basket.position + Vector3.up * 0.12f;
+
+    // The kit robot's clips; the code-built robot bobs instead.
+    public void Walk(float speed) { if (rig != null && !outed) rig.Show(AgentRig.Pose.Walk, Mathf.Clamp(speed, 0.6f, 2.2f)); }
+    public void PickUp() { if (rig != null) rig.Once(AgentRig.Pose.PickUp, 1.6f, AgentRig.Pose.Idle, false, 1.5f); }
+    public void SentHome() { if (rig != null) rig.Once(AgentRig.Pose.SentHome, 2.0f, AgentRig.Pose.SentHome, true, 1.1f); }
+    public void LookAround() { if (rig != null && !outed && rig.Current == AgentRig.Pose.Idle && !rig.Busy) rig.Once(AgentRig.Pose.Look, 1.8f, AgentRig.Pose.Idle, false, 1.3f); }
 
     public static Quaternion Facing(int facing) => Quaternion.Euler(0, facing * 90f, 0); // 0 north (+Z), 1 east, 2 south, 3 west
 
     // Mid-step: k from 0 to 1. A little hop and a lean forward.
     public void Bob(float k)
     {
+        if (rig != null) return;
         body.localPosition = new Vector3(0, Mathf.Abs(Mathf.Sin(k * Mathf.PI * 2)) * 0.045f, 0);
         body.localRotation = Quaternion.Euler(Mathf.Sin(k * Mathf.PI) * 7f, 0, 0);
     }
 
-    public void Rest() { body.localPosition = Vector3.zero; body.localRotation = Quaternion.identity; }
+    public void Rest()
+    {
+        if (rig != null) { if (!outed && !rig.Busy) rig.Show(AgentRig.Pose.Idle); return; }
+        body.localPosition = Vector3.zero; body.localRotation = Quaternion.identity;
+    }
 
     // The antenna, while the robot is asking Claude: pulse 0 off, 1 full.
     public void Think(float pulse)
     {
         if (outed) return;
+        if (rig != null) { rig.SetGlow(Color.Lerp(Look.Lamp * (0.25f + glow * 1.6f), Look.Lamp * 3.5f, pulse * 0.9f)); return; }
         antenna.SetColor("_Emission", Color.Lerp(Look.Lamp * glow, Look.Lamp, pulse * 0.9f));
     }
 
@@ -127,6 +191,7 @@ public class RobotModel
     {
         if (ghost == on) return;
         ghost = on;
+        if (rig != null) { rig.SetGhost(on); foreach (var g in carried) g.SetActive(!on); return; }
         Dress();
     }
 
@@ -135,6 +200,7 @@ public class RobotModel
     {
         if (dim == on) return;
         dim = on;
+        if (rig != null) { rig.SetDim(on); return; }
         Dress();
     }
 
@@ -143,6 +209,7 @@ public class RobotModel
     {
         if (outed) return;
         outed = true;
+        if (rig != null) { rig.SetOut(); return; }
         antenna.SetColor("_Emission", Color.black);
         Dress();
         foreach (var e in eyes) e.sharedMaterial = Look.Mat(Theme.Danger);
@@ -163,6 +230,18 @@ public class RobotModel
     {
         float l = 0.3f * c.r + 0.59f * c.g + 0.11f * c.b;
         return Color.Lerp(new Color(l, l, l), Look.Grey, 0.5f);
+    }
+
+    // One more thing in the basket: the piece itself in the kit robot's wicker basket.
+    public void AddGoods(string id, Color c)
+    {
+        var prefab = rig != null ? Market.Kit("Pieces/" + id) : null;
+        if (prefab == null) { AddGoods(c); return; }
+        int n = goods.Count;
+        var g = Object.Instantiate(prefab, basket, false);
+        g.transform.localPosition = new Vector3((n % 3 - 1) * 0.07f, 0.02f + 0.06f * (n / 6), (n / 3 % 2 == 0 ? -0.04f : 0.04f));
+        g.transform.localRotation = Quaternion.Euler(0f, n * 47f, 0f);
+        goods.Add(g);
     }
 
     // One more thing in the basket, as a little ball of its colour.

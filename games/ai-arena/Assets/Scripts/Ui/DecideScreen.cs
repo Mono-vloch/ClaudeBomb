@@ -21,43 +21,48 @@ public class DecideScreen
         Ui.Stretch(root);
         app.Paper(Color.clear);
         var l = app.lesson;
-        // The market behind the tasks, soft: the question is which of them needs an agent in it.
+        // The market the tasks would run in, turning slowly and sharp, the tasks in a dark
+        // glass drawer on the right (660 of the 1920 units, a third): the question is which
+        // of them needs an agent in it.
         var window = Ui.Node("Window", root);
-        Ui.Stretch(window);
+        Ui.Place(window, 0, 0, Ui.W - DrawerW, Ui.H);
         app.world.Build(new Arena(app.brief, app.configs.ConvertAll(c => c.Clone()), app.budget, 61), false);
-        app.world.ShowMarket(window);
-        app.atmosphere.MenuBlur(true);
-        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.4f), false);
-        Ui.Stretch(scrim.rectTransform);
-        scrim.raycastTarget = false;
-        var sheet = Ui.Float(root, "Sheet", 40, 20, 1840, 1040);
-        sheet.raycastTarget = false;
+        if (Market.Real) app.world.ShowOrbitOf(window); else app.world.ShowMarket(window);
+        app.atmosphere.MenuBlur(false);
+        var drawer = Ui.Node("Drawer", root);
+        Ui.Place(drawer, Ui.W - DrawerW, 0, DrawerW, Ui.H);
+        var glass = Ui.Box(drawer, "Glass", Theme.Panel, false);
+        Ui.Stretch(glass.rectTransform);
+        var edge = Ui.Box(drawer, "Edge", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.5f), false);
+        Ui.Place(edge.rectTransform, 0, 0, 2, Ui.H);
+        edge.raycastTarget = false;
         choices = Enumerable.Repeat(-1, Decide.Tasks.Length).ToArray();
 
-        var eyebrow = Ui.Eyebrow(root, $"ERRAND {l.id}  ·  DECIDE, TASK BY TASK", Theme.TealDeep);
-        Ui.Place(eyebrow.rectTransform, 80, 40, 600, 22);
-        var title = Ui.Text(root, l.title, 40, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 80, 62, 1100, 52);
-        var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.Quiet, 16);
-        Ui.Place(back.GetComponent<RectTransform>(), 1200, 64, 110, 44);
-        run = Ui.Button(root, "RUN THE SHOPPING TASKS", () => app.StartDecide(choices), Ui.ButtonStyle.Accent, 18);
-        Ui.Place(run.GetComponent<RectTransform>(), 1520, 54, 340, 62);
+        var eyebrow = Ui.Eyebrow(drawer, $"ERRAND {l.id}  ·  DECIDE, TASK BY TASK", Theme.TealDeep);
+        Ui.Place(eyebrow.rectTransform, 26, 22, W, 22);
+        var title = Ui.Text(drawer, l.title, 30, Theme.Ink, true);
+        Ui.Place(title.rectTransform, 26, 46, W, 44);
+        title.enableWordWrapping = false; title.overflowMode = TextOverflowModes.Ellipsis;
+        var back = Ui.Button(drawer, "Briefing", app.ShowLesson, Ui.ButtonStyle.Secondary, 16);
+        Ui.Place(back.GetComponent<RectTransform>(), 26, 98, 120, 40);
+        var file = Ui.Button(drawer, "The file", () => app.ShowFile(("HOW THE TASKS RUN",
+            "Then the shopping tasks run with both kinds on the same market, a fixed rule against an agent, so you can see the cost and the result side by side. " +
+            "The rule for each task was written in advance; it takes exactly the things it names.")), Ui.ButtonStyle.Secondary, 16);
+        Ui.Place(file.GetComponent<RectTransform>(), 156, 98, 120, 40);
+        var home = Ui.Button(drawer, "Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 16);
+        Ui.Place(home.GetComponent<RectTransform>(), 286, 98, 150, 40);
+        run = Ui.Button(drawer, "RUN THE SHOPPING TASKS", () => app.StartDecide(choices), Ui.ButtonStyle.Accent, 20);
+        Ui.Place(run.GetComponent<RectTransform>(), 26, 1006, W, 56);
         run.interactable = false;
 
-        app.luma.Line(root, 80, 130, 1780, "Mark each task: an agent, a simple automation, or neither.", false, true);
+        app.luma.Line(root, 40, 960, 820, "Mark each task: an agent, a simple automation, or neither.", false, true, 17);
 
-        rows = Ui.Node("Rows", root);
-        Ui.Place(rows, 80, 214, 1780, 700);
+        rows = Ui.Node("Rows", drawer);
+        Ui.Place(rows, 26, 154, W, 840);
         Build();
-
-        var home = Ui.Button(root, "Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 16);
-        Ui.Place(home.GetComponent<RectTransform>(), 80, 980, 160, 48);
-        var file = Ui.Button(root, "The file", () => app.ShowFile(("HOW THE TASKS RUN",
-            "Then the shopping tasks run with both kinds on the same market, a fixed rule against an agent, so you can see the cost and the result side by side. " +
-            "The rule for each task was written in advance; it takes exactly the things it names.")), Ui.ButtonStyle.Quiet, 16);
-        Ui.Place(file.GetComponent<RectTransform>(), 250, 980, 120, 48);
-        Ui.Emblem(root);
     }
+
+    const float DrawerW = 660f, W = 608f;
 
     void Build()
     {
@@ -68,24 +73,26 @@ public class DecideScreen
             var task = Decide.Tasks[i];
             int index = i;
             var card = Ui.Card(rows, "Task", Theme.Panel, choices[i] >= 0 ? Theme.BorderTeal : Theme.Border1);
-            Ui.Place(card.rectTransform, 0, y, 1780, 126);
             var t = card.transform;
-            var num = Ui.Text(t, (i + 1).ToString(), 34, Theme.Muted, true, TextAlignmentOptions.Center);
-            Ui.Place(num.rectTransform, 14, 36, 60, 50);
-            var from = Ui.Eyebrow(t, $"A MESSAGE FROM {task.from.ToUpperInvariant()}", Theme.TealDeep);
-            Ui.Place(from.rectTransform, 90, 18, 400, 20);
-            var msg = Ui.Text(t, task.message, 20, Theme.Ink);
-            Ui.Place(msg.rectTransform, 90, 42, 1000, 56);
-            var note = Ui.Text(t, task.note, 13, Theme.Text2);
-            Ui.Place(note.rectTransform, 90, 96, 1000, 20);
+            var from = Ui.Eyebrow(t, $"{i + 1}  ·  A MESSAGE FROM {task.from.ToUpperInvariant()}", Theme.TealDeep);
+            Ui.Place(from.rectTransform, 16, 10, W - 32, 20);
+            var msg = Ui.Text(t, task.message, 17, Theme.Ink);
+            float mh = msg.GetPreferredValues(task.message, W - 32, 0).y;
+            Ui.Place(msg.rectTransform, 16, 34, W - 32, mh);
+            var note = Ui.Text(t, task.note, 16, Theme.Text2);
+            Ui.Place(note.rectTransform, 16, 36 + mh, W - 32, 22);
+            note.enableWordWrapping = false; note.overflowMode = TextOverflowModes.Ellipsis;
+            float by = 64 + mh;
             for (int c = 0; c < Decide.Choices.Length; c++)
             {
                 int choice = c;
                 bool on = choices[i] == c;
-                var b = Ui.Button(t, Decide.Choices[c], () => { choices[index] = choice; Build(); }, on ? Ui.ButtonStyle.Primary : Ui.ButtonStyle.Secondary, 14);
-                Ui.Place(b.GetComponent<RectTransform>(), 1120 + c * 216, 40, 204, 46);
+                var b = Ui.Button(t, Decide.Choices[c], () => { choices[index] = choice; Build(); }, on ? Ui.ButtonStyle.Primary : Ui.ButtonStyle.Secondary, 16);
+                Ui.Place(b.GetComponent<RectTransform>(), 16 + c * ((W - 32 - 16) / 3f + 8), by, (W - 32 - 16) / 3f, 38);
             }
-            y += 136;
+            float h = by + 38 + 10;
+            Ui.Place(card.rectTransform, 0, y, W, h);
+            y += h + 8;
         }
         run.interactable = choices.All(c => c >= 0);
     }

@@ -11,7 +11,7 @@ using UnityEngine;
 // Changes glide.
 public class SceneCamera : MonoBehaviour
 {
-    public enum Mode { Off, Overview, Follow, Orbit, Portrait, Rig } // Rig: CameraRig drives the camera
+    public enum Mode { Off, Overview, Follow, Orbit, Portrait, Rig, Inside } // Rig: CameraRig drives the camera; Inside: a room from a fixed point in it
 
     public Mode mode = Mode.Off;
     public RectTransform frame;   // the part of the screen (an overlay-canvas rect) the subject sits in
@@ -21,6 +21,7 @@ public class SceneCamera : MonoBehaviour
     public float pitch = 55f, yaw = 20f, fov = 30f;
     public float orbitPitch = 26f, orbitDistance = 15f, orbitSpeed = 3.5f;
     public event Action Framed;   // after every frame's placing: labels follow
+    Vector3 insideEye, insideLook; float insideFov = 46f;
 
     Camera cam;
     Vector3 pos, velocity;
@@ -32,7 +33,7 @@ public class SceneCamera : MonoBehaviour
     {
         cam = GetComponent<Camera>();
         cam.orthographic = false;
-        cam.nearClipPlane = 0.3f;
+        cam.nearClipPlane = 0.15f;
         cam.farClipPlane = 400f;
         cam.clearFlags = CameraClearFlags.SolidColor;
     }
@@ -64,6 +65,15 @@ public class SceneCamera : MonoBehaviour
         mode = Mode.Orbit;
         this.frame = frame;
         subject = centre;
+    }
+
+    // Inside a room: the camera stands at a point in it, at shoulder height, and looks at
+    // the room's prop, like a security camera's feed; it drifts a degree or two.
+    public void Inside(RectTransform frame, Vector3 eye, Vector3 look, float fieldOfView)
+    {
+        mode = Mode.Inside;
+        this.frame = frame;
+        insideEye = eye; insideLook = look; insideFov = fieldOfView;
     }
 
     // One thing up close, from the front and a little to its side.
@@ -115,6 +125,15 @@ public class SceneCamera : MonoBehaviour
                 targetRot = Quaternion.LookRotation(follow.position + fwd * 2.2f + Vector3.up * 0.2f - targetPos);
                 targetFov = 52f;
                 anchor = follow.position + fwd * 0.8f + Vector3.up * 0.5f;
+                break;
+            }
+            case Mode.Inside:
+            {
+                float pan = Mathf.Sin(Time.unscaledTime * 0.17f) * 1.2f;
+                targetPos = insideEye;
+                targetRot = Quaternion.Euler(0f, pan, 0f) * Quaternion.LookRotation(insideLook - insideEye);
+                targetFov = insideFov;
+                anchor = insideLook;
                 break;
             }
             case Mode.Orbit:

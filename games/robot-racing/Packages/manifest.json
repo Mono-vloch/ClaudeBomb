@@ -2,6 +2,7 @@
   "dependencies": {
     "com.maaloomatiia.games-kit": "file:../../../kit",
     "com.unity.cinemachine": "2.10.5",
+    "com.unity.cloud.gltfast": "6.0.1",
     "com.unity.modules.animation": "1.0.0",
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",

@@ -13,35 +13,42 @@ public class Chart
     readonly RectTransform plot;
     readonly TextMeshProUGUI title, legend, yMax, yMin, xMax;
     readonly float w, h;
+    readonly bool dark;
+    Color AxisColour => dark ? new Color(1f, 1f, 1f, 0.28f) : Theme.Border;
 
-    public Chart(Transform parent, float x, float y, float width, float height, string heading)
+    // dark: on the play screens' glass (the realism pass), its labels at 16 px.
+    public Chart(Transform parent, float x, float y, float width, float height, string heading, bool dark = false)
     {
+        this.dark = dark;
         root = Ui.Node("Chart", parent);
         Ui.Place(root, x, y, width, height);
-        var card = Ui.Box(root, "Card", new Color(1, 1, 1, 0.9f));
+        var card = dark ? Ui.DarkCard(root, "Card") : Ui.Box(root, "Card", new Color(1, 1, 1, 0.9f));
         Ui.Stretch(card.rectTransform);
         card.raycastTarget = false;
-        title = Ui.Eyebrow(root, heading, Theme.TealDeep);
-        Ui.Place(title.rectTransform, 16, 10, 400, 20);
-        legend = Ui.Text(root, "", 12, Theme.Text2, false, TextAlignmentOptions.TopRight);
-        Ui.Place(legend.rectTransform, width - 616, 10, 600, 20);
+        float small = dark ? 16 : 11;
+        title = Ui.Eyebrow(root, heading, dark ? Theme.Teal : Theme.TealDeep);
+        Ui.Place(title.rectTransform, 16, 10, width - 32, 22);
+        legend = Ui.Text(root, "", dark ? 16 : 12, dark ? Theme.Faint : Theme.Text2, false, TextAlignmentOptions.TopRight);
+        Ui.Place(legend.rectTransform, width - 616, dark ? height - 30 : 10, 600, 22);
         plot = Ui.Node("Plot", root);
-        w = width - 72; h = height - 60;
-        Ui.Place(plot, 56, 36, w, h);
-        yMax = Ui.Text(root, "", 11, Theme.Muted, false, TextAlignmentOptions.TopRight);
-        Ui.Place(yMax.rectTransform, 4, 32, 48, 16);
-        yMin = Ui.Text(root, "", 11, Theme.Muted, false, TextAlignmentOptions.TopRight);
-        Ui.Place(yMin.rectTransform, 4, 36 + h - 14, 48, 16);
-        xMax = Ui.Text(root, "", 11, Theme.Muted, false, TextAlignmentOptions.TopRight);
-        Ui.Place(xMax.rectTransform, 56 + w - 120, 36 + h + 4, 120, 16);
+        w = width - (dark ? 84 : 72); h = height - (dark ? 78 : 60);
+        Ui.Place(plot, dark ? 64 : 56, 38, w, h);
+        yMax = Ui.Text(root, "", small, dark ? Theme.Faint : Theme.Muted, false, TextAlignmentOptions.TopRight);
+        Ui.Place(yMax.rectTransform, 4, 32, dark ? 54 : 48, 20);
+        yMin = Ui.Text(root, "", small, dark ? Theme.Faint : Theme.Muted, false, TextAlignmentOptions.TopRight);
+        Ui.Place(yMin.rectTransform, 4, 38 + h - 16, dark ? 54 : 48, 20);
+        xMax = Ui.Text(root, "", small, dark ? Theme.Faint : Theme.Muted, false, TextAlignmentOptions.TopRight);
+        Ui.Place(xMax.rectTransform, (dark ? 64 : 56) + w - 160, 38 + h + 4, 160, 20);
+        if (dark) xMax.alignment = TextAlignmentOptions.TopLeft;
+        if (dark) Ui.Place(xMax.rectTransform, 64, 38 + h + 4, 200, 20);
     }
 
     public void Draw(IList<Training> runs, int highlight = -1)
     {
         Ui.Clear(plot);
-        var axis = Ui.Box(plot, "Axis", Theme.Border, false);
+        var axis = Ui.Box(plot, "Axis", AxisColour, false);
         Ui.Place(axis.rectTransform, 0, 0, 1, h);
-        var baseLine = Ui.Box(plot, "Axis", Theme.Border, false);
+        var baseLine = Ui.Box(plot, "Axis", AxisColour, false);
         Ui.Place(baseLine.rectTransform, 0, h - 1, w, 1);
         if (runs == null || runs.Count == 0) { yMax.text = yMin.text = xMax.text = ""; legend.text = ""; return; }
 
@@ -51,7 +58,7 @@ public class Chart
         if (hi - lo < 10) { hi = lo + 10; }
         lo = Mathf.Min(lo, 0); hi = Mathf.Max(hi, 0);
         float zeroY = h - (0 - lo) / (hi - lo) * h;
-        var zero = Ui.Box(plot, "Zero", new Color(0.8f, 0.84f, 0.88f, 0.6f), false);
+        var zero = Ui.Box(plot, "Zero", dark ? new Color(1f, 1f, 1f, 0.18f) : new Color(0.8f, 0.84f, 0.88f, 0.6f), false);
         Ui.Place(zero.rectTransform, 0, zeroY, w, 1);
         yMax.text = hi.ToString("0"); yMin.text = lo.ToString("0"); xMax.text = longest + " attempts";
 
@@ -74,7 +81,7 @@ public class Chart
                 prev = p;
             }
             if (last && r.firstFinish > 0) Mark(r.firstFinish / (float)longest * w, Theme.Amber, "first finish");
-            if (last && r.settled > 0) Mark(r.settled / (float)longest * w, Theme.TealDeep, "settled");
+            if (last && r.settled > 0) Mark(r.settled / (float)longest * w, dark ? Theme.Teal : Theme.TealDeep, "settled");
         }
         legend.text = string.Join("   ", names);
     }
@@ -110,8 +117,8 @@ public class Chart
         var line = Ui.Box(plot, "Mark", new Color(colour.r, colour.g, colour.b, 0.7f), false);
         line.raycastTarget = false;
         Ui.Place(line.rectTransform, x, 0, 1.5f, h);
-        var t = Ui.Text(plot, label, 10, colour, true);
-        Ui.Place(t.rectTransform, x + 4, 2, 90, 14);
+        var t = Ui.Text(plot, label, dark ? 16 : 10, colour, true);
+        Ui.Place(t.rectTransform, x + 4, 2, 140, dark ? 20 : 14);
         t.enableWordWrapping = false;
     }
 }

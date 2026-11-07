@@ -22,8 +22,7 @@ No Claude, no key, no network: the robot learns on the machine, from the points 
 
 ## The ladder
 
-Every level is a question, opens with a warm-up question from an earlier level (no score),
-and gives two training runs before the student's own: **Watch the pro** (a ready robot that
+Every level is a question and gives two training runs before the student's own: **Watch the pro** (a ready robot that
 does the job), **Fix the broken bot** (the same robot with the level's planned mistake in it;
 the class trains it, watches it fail, fixes the setting and trains again) and **Your run**,
 the one that counts.
@@ -51,7 +50,7 @@ briefing, so a tester or a class can go straight to one idea. Free play opens ev
 
 ## How a run goes
 
-1. **Briefing.** The warm-up question, then LUMA opens the level: the idea, the track, which
+1. **Briefing.** LUMA opens the level: the idea, the track, which
    setting opens. The robot's parts are listed on the right with the ones this level opens.
 2. **The pit lane.** The track in three dimensions with the robot on its grid, and the
    settings: the tracks to train on and the test track, the sensors (front, left, right,
@@ -84,7 +83,7 @@ briefing, so a tester or a class can go straight to one idea. Free play opens ev
 | The learner: the rule book, an attempt, training, the race | `Scripts/Core/Learner.cs` |
 | The ladder: thirteen levels, what each opens, the ready and broken setups, questions, checks, lines | `Scripts/Core/Lesson.cs` |
 | LUMA: the coach, her lines, portrait and voice | `Scripts/Ui/Luma.cs`, `Resources/Luma`, `Resources/LumaVoice`, `Editor/LumaVoiceTools.cs` |
-| Screens | `Scripts/Ui/TitleScreen.cs`, `LessonScreen.cs` (the briefing and its warm-up), `PitScreen.cs` (the settings), `RunScreen.cs` (training and the race), `ResultsScreen.cs` (the debrief) |
+| Screens | `Scripts/Ui/TitleScreen.cs`, `LessonScreen.cs` (the briefing; its warm-up question is turned off), `PitScreen.cs` (the settings), `RunScreen.cs` (training and the race), `ResultsScreen.cs` (the debrief) |
 | The curve | `Scripts/Ui/Chart.cs` |
 | The circuit in three dimensions: the track, the stands, the robot, the crash and the finish | `Scripts/World/Circuit.cs` |
 | The camera: overview, follow, orbit, portrait | `Scripts/World/SceneCamera.cs` |
@@ -119,7 +118,7 @@ $UNITY -batchmode -nographics -projectPath . -executeMethod Builder.BuildMac -lo
 ```
 
 The built app, started with `-screenshots <folder>`, walks through every screen (title,
-briefing, warm-up, pit lane, training, race, the debrief's questions, the debrief) and saves a
+briefing, pit lane, training, race, the debrief's questions, the debrief) and saves a
 picture of each, then quits; `-cover` takes the platform's cover picture. The current set is in
 `Docs/screenshots`. Grep the build log for `error CS` and `Build:`.
 

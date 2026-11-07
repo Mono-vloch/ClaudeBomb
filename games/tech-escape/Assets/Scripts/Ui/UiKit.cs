@@ -155,8 +155,8 @@ public static class Ui
     // The small caps label above a block: the one place the brand tracks its type.
     public static TextMeshProUGUI Eyebrow(Transform parent, string text, Color color)
     {
-        var t = Text(parent, text, 13, color);
-        t.characterSpacing = 5;
+        var t = Text(parent, text, 16, color);
+        t.characterSpacing = 4;
         return t;
     }
 

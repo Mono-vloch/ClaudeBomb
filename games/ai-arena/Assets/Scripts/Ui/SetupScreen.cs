@@ -5,18 +5,21 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // The garage: where the agent is fitted out before it leaves. The agent stands in
-// the market on the left, big, and its four dials hang off it as tags: tap the
-// antenna to switch brains (the ball swaps and the agent pops), the eyes for how far
-// it sees, its back for what it remembers, the antenna's glow for effort; a dial an
-// errand has not opened wears a lock. On the right the one thing the player writes:
-// the list the agent will read, word for word, and under it the pocket money as a
-// wallet of coins. The agents run by themselves; this is the last word before they do.
+// the market, big, and its four dials hang off it as tags: tap the antenna to switch
+// brains (the bulb swaps and the agent pops), the eyes for how far it sees, its back for
+// what it remembers, the antenna's glow for effort; a dial an errand has not opened wears
+// a lock. In a dark glass drawer on the right (640 of the 1920 units, a third, folding to
+// a tab) the one thing the player writes: the list the agent will read, word for word,
+// and under it the pocket money as a wallet of coins, and the button that sends it. The
+// agents run by themselves; this is the last word before they do.
 public class SetupScreen
 {
     public readonly RectTransform root;
     readonly App app;
     readonly Market world;
-    readonly RectTransform strip, editor, frame, tags;
+    readonly RectTransform strip, editor, frame, tags, drawer;
+    const float DrawerW = 640f, EdW = 584f; // the drawer, and the width of what is in it
+    bool folded;
     readonly TextMeshProUGUI briefTitle, briefRule, briefNote;
     readonly Image message;
     readonly Button send;
@@ -39,49 +42,63 @@ public class SetupScreen
         if (lesson != null) foreach (var cfg in app.configs) lesson.Apply(cfg);
 
         frame = Ui.Node("Frame", root);
-        Ui.Place(frame, 60, 290, 700, 700);
+        Ui.Place(frame, 0, 110, Ui.W - DrawerW, Ui.H - 110);
         selected = Mathf.Clamp(selected, 0, app.configs.Count - 1);
 
-        // Frosted glass along the top: the errand, the way back, the file, the settings, deploy.
-        var top = Ui.Box(root, "Top", new Color(1, 1, 1, 0.86f), false);
-        Ui.Place(top.rectTransform, -400, -300, 2800, 436);
+        // Dark glass along the top of the world: the errand, the way back, the file, the settings.
+        var top = Ui.Box(root, "Top", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.82f), false);
+        Ui.Place(top.rectTransform, 0, 0, Ui.W - DrawerW, 104);
         top.raycastTarget = false;
-        var eyebrow = Ui.Eyebrow(root, lesson != null ? $"ERRAND {lesson.id}  ·  THE GARAGE" : "FREE PLAY  ·  THE GARAGE", Theme.TealDeep);
-        Ui.Place(eyebrow.rectTransform, 60, 24, 600, 20);
-        var title = Ui.Text(root, lesson != null ? lesson.title : "Fit out the agent", 34, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 60, 48, 1000, 50);
-        title.enableWordWrapping = false;
-        float bx = 1140;
+        var eyebrow = Ui.Eyebrow(root, lesson != null ? $"ERRAND {lesson.id}  ·  THE GARAGE" : "FREE PLAY  ·  THE GARAGE", Theme.Teal);
+        Ui.Place(eyebrow.rectTransform, 40, 18, 600, 22);
+        var title = Ui.Text(root, lesson != null ? lesson.title : "Fit out the agent", 32, Theme.Ink, true);
+        Ui.Place(title.rectTransform, 40, 44, 760, 50);
+        title.enableWordWrapping = false; title.overflowMode = TextOverflowModes.Ellipsis;
+        float bx = Ui.W - DrawerW - 24;
+        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, Reload), Ui.ButtonStyle.Quiet, 16);
+        bx -= 112; Ui.Place(settings.GetComponent<RectTransform>(), bx, 32, 108, 44);
+        var file = Ui.Button(root, "The file", () => app.ShowFile(), Ui.ButtonStyle.Quiet, 16);
+        bx -= 108; Ui.Place(file.GetComponent<RectTransform>(), bx, 32, 104, 44);
         if (lesson != null)
         {
-            var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.Quiet, 15);
-            Ui.Place(back.GetComponent<RectTransform>(), bx, 44, 100, 42); bx += 104;
-            var tour = Ui.Button(root, "Tour", () => { if (touring == null) touring = app.StartCoroutine(RunTour()); }, Ui.ButtonStyle.Quiet, 15);
-            Ui.Place(tour.GetComponent<RectTransform>(), bx, 44, 70, 42); bx += 74;
+            var tour = Ui.Button(root, "Tour", () => { if (touring == null) touring = app.StartCoroutine(RunTour()); }, Ui.ButtonStyle.Quiet, 16);
+            bx -= 84; Ui.Place(tour.GetComponent<RectTransform>(), bx, 32, 80, 44);
+            var back = Ui.Button(root, "Briefing", app.ShowLesson, Ui.ButtonStyle.Quiet, 16);
+            bx -= 114; Ui.Place(back.GetComponent<RectTransform>(), bx, 32, 110, 44);
         }
-        var file = Ui.Button(root, "The file", () => app.ShowFile(), Ui.ButtonStyle.Quiet, 15);
-        Ui.Place(file.GetComponent<RectTransform>(), bx, 44, 90, 42); bx += 94;
-        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, Reload), Ui.ButtonStyle.Quiet, 15);
-        Ui.Place(settings.GetComponent<RectTransform>(), bx, 44, 100, 42);
-        send = Ui.Button(root, app.configs.Count > 1 ? "DEPLOY AGENTS" : "DEPLOY THE AGENT", () => { foreach (var c in app.configs) c.Compose(); app.SaveConfigs(); app.StartRound(); }, Ui.ButtonStyle.Accent, 20);
-        Ui.Place(send.GetComponent<RectTransform>(), 1580, 32, 280, 64);
 
-        // The mission: the family's message
+        // The mission: the family's message, on glass over the world.
         message = Ui.Soft(root, "Message");
-        Ui.Place(message.rectTransform, 60, 152, 1800, 108);
+        Ui.Place(message.rectTransform, 40, 124, 780, 112);
         var tag = Ui.Eyebrow(message.transform, "", Theme.TealDeep);
-        Ui.Place(tag.rectTransform, 24, 12, 900, 22);
+        Ui.Place(tag.rectTransform, 20, 12, 600, 22);
         briefTitle = tag;
-        briefRule = Ui.Text(message.transform, "", 22, Theme.Ink);
-        Ui.Place(briefRule.rectTransform, 24, 36, 1500, 36);
-        briefNote = Ui.Text(message.transform, "", 14, Theme.Text2);
-        Ui.Place(briefNote.rectTransform, 24, 72, 1500, 26);
+        briefRule = Ui.Text(message.transform, "", 21, Theme.Ink);
+        Ui.Place(briefRule.rectTransform, 20, 38, 740, 34);
+        briefRule.overflowMode = TextOverflowModes.Ellipsis;
+        briefNote = Ui.Text(message.transform, "", 16, Theme.Text2);
+        Ui.Place(briefNote.rectTransform, 20, 76, 740, 26);
+        briefNote.enableWordWrapping = false; briefNote.overflowMode = TextOverflowModes.Ellipsis;
         if (lesson == null)
         {
-            var newBrief = Ui.Button(message.transform, "New message", () => { app.NewBrief(); ShowBrief(); BuildWorld(); }, Ui.ButtonStyle.Secondary, 14);
-            Ui.Place(newBrief.GetComponent<RectTransform>(), 1616, 32, 160, 40);
+            var newBrief = Ui.Button(root, "New message", () => { app.NewBrief(); ShowBrief(); BuildWorld(); }, Ui.ButtonStyle.Secondary, 16);
+            Ui.Place(newBrief.GetComponent<RectTransform>(), 832, 124, 170, 44);
         }
         ShowBrief();
+
+        // The drawer: the list, the wallet, the button that sends the agent.
+        drawer = Ui.Node("Drawer", root);
+        Ui.Place(drawer, Ui.W - DrawerW, 0, DrawerW, Ui.H);
+        var glass = Ui.Box(drawer, "Glass", Theme.Panel, false);
+        Ui.Stretch(glass.rectTransform);
+        var edge = Ui.Box(drawer, "Edge", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.5f), false);
+        Ui.Place(edge.rectTransform, 0, 0, 2, Ui.H);
+        edge.raycastTarget = false;
+        Button tab = null;
+        tab = Ui.Button(drawer, "›", () => { Fold(!folded); Ui.SetLabel(tab, folded ? "‹" : "›"); }, Ui.ButtonStyle.Secondary, 30);
+        Ui.Place(tab.GetComponent<RectTransform>(), -52, 470, 48, 120);
+        send = Ui.Button(drawer, app.configs.Count > 1 ? "DEPLOY AGENTS" : "DEPLOY THE AGENT", () => { foreach (var c in app.configs) c.Compose(); app.SaveConfigs(); app.StartRound(); }, Ui.ButtonStyle.Accent, 22);
+        Ui.Place(send.GetComponent<RectTransform>(), 28, 1000, EdW, 60);
 
         // The dials, on the agent.
         tags = Ui.Node("Tags", root);
@@ -89,10 +106,10 @@ public class SetupScreen
 
         // The agents, one chip each, only when there is more than one (a class).
         strip = Ui.Node("Strip", root);
-        Ui.Place(strip, 60, 1000, 700, 60);
+        Ui.Place(strip, 40, 1010, 1200, 56);
 
-        editor = Ui.Node("Editor", root);
-        Ui.Place(editor, 780, 290, 1080, 770);
+        editor = Ui.Node("Editor", drawer);
+        Ui.Place(editor, 0, 0, DrawerW, 990);
 
         BuildWorld();
         RefreshStrip();
@@ -101,7 +118,6 @@ public class SetupScreen
         Coach();
         var follower = root.gameObject.AddComponent<Follower>();
         follower.Bind(this);
-        Ui.Emblem(root);
 
         if (lesson != null && lesson.number == 1 && !Tour.Seen) touring = app.StartCoroutine(RunTour());
     }
@@ -122,7 +138,7 @@ public class SetupScreen
         var start = app.StartingSetup;
         if (start == null) return;
         bool broken = app.lesson.broken != null;
-        coachLine = app.luma.Line(root, 60, 880, 700, (broken ? "Fix it: " + start.name + ". " : "") + start.why, true, false, 15);
+        coachLine = app.luma.Line(root, 40, 880, 780, (broken ? "Fix it: " + start.name + ". " : "") + start.why, true, false, 17);
     }
 
     // The settings closed: the roster may have changed.
@@ -185,21 +201,21 @@ public class SetupScreen
         bool free = l == null;
         // Beside the parts, never over them: the brain and the effort to the right of the
         // antenna, the sight and the memory to the left of the eyes and the back.
-        Tag(0, new Vector2(70, -74), "BRAIN", Models.All[c.model].label, free || l.model, Ladder.ModelLevel, () => { c.model = (c.model + 1) % Models.All.Length; Dressed(); });
-        Tag(0, new Vector2(70, -10), "EFFORT", Efforts.Labels[c.effort], free || l.effort, Ladder.EffortLevel, () => { c.effort = (c.effort + 1) % Efforts.Labels.Length; Dressed(); });
-        Tag(1, new Vector2(-290, -28), "SIGHT", $"{c.vision} cell{(c.vision > 1 ? "s" : "")}", free || l.vision, Ladder.VisionLevel, () => { c.vision = c.vision % 3 + 1; Dressed(); });
-        Tag(2, new Vector2(-250, -4), "MEMORY", MemoryModes.Labels[c.memory], free || l.memory, Ladder.MemoryLevel, () => { c.memory = (c.memory + 1) % MemoryModes.Labels.Length; Dressed(); });
+        Tag(0, new Vector2(80, -30), "BRAIN", Models.All[c.model].label, free || l.model, Ladder.ModelLevel, () => { c.model = (c.model + 1) % Models.All.Length; Dressed(); });
+        Tag(0, new Vector2(80, 72), "EFFORT", Efforts.Labels[c.effort], free || l.effort, Ladder.EffortLevel, () => { c.effort = (c.effort + 1) % Efforts.Labels.Length; Dressed(); });
+        Tag(1, new Vector2(-330, -90), "SIGHT", $"{c.vision} cell{(c.vision > 1 ? "s" : "")}", free || l.vision, Ladder.VisionLevel, () => { c.vision = c.vision % 3 + 1; Dressed(); });
+        Tag(2, new Vector2(-330, 10), "MEMORY", MemoryModes.Labels[c.memory], free || l.memory, Ladder.MemoryLevel, () => { c.memory = (c.memory + 1) % MemoryModes.Labels.Length; Dressed(); });
         PlaceTags();
     }
 
     void Tag(int part, Vector2 offset, string name, string value, bool open, int opensAt, System.Action turn)
     {
-        var card = Ui.Glass(tags, name, 0, 0, 180, 56, true, open ? Theme.Teal : new Color(1f, 1f, 1f, 0.25f));
+        var card = Ui.Glass(tags, name, 0, 0, 220, 62, true, open ? Theme.Teal : new Color(1f, 1f, 1f, 0.25f));
         var n = Ui.Eyebrow(card.transform, open ? name : name + "  ·  OPENS AT 1." + opensAt, open ? Theme.Teal : Theme.Faint);
-        Ui.Place(n.rectTransform, 16, 8, 160, 16);
-        n.enableWordWrapping = false;
-        var v = Ui.Text(card.transform, value, 17, open ? Color.white : Theme.Faint, true);
-        Ui.Place(v.rectTransform, 16, 26, 160, 24);
+        Ui.Place(n.rectTransform, 16, 8, 200, 20);
+        n.enableWordWrapping = false; n.overflowMode = TextOverflowModes.Ellipsis;
+        var v = Ui.Text(card.transform, value, 18, open ? Color.white : Theme.Faint, true);
+        Ui.Place(v.rectTransform, 16, 30, 200, 26);
         v.enableWordWrapping = false; v.overflowMode = TextOverflowModes.Ellipsis;
         if (open)
         {
@@ -225,7 +241,7 @@ public class SetupScreen
             if (!on) continue;
             var p = app.StagePoint(s);
             Ui.Place(t.dot.rectTransform, p.x - 6, p.y - 6, 12, 12);
-            Ui.Place(t.rect, p.x + t.offset.x, p.y + t.offset.y, 180, 56);
+            Ui.Place(t.rect, Mathf.Clamp(p.x + t.offset.x, 16, Ui.W - (folded ? 56 : DrawerW) - 236), Mathf.Clamp(p.y + t.offset.y, 250, Ui.H - 140), 220, 62);
         }
     }
 
@@ -292,13 +308,14 @@ public class SetupScreen
             Ui.Place(rt, i % 5 * (w + gap), i / 5 * (h + 8), w, h);
             pill.GetComponent<Image>().color = on ? Theme.Team[c.colour] : Theme.Border;
             pill.transform.Find("Fill").GetComponent<Image>().color = on ? Theme.Surface2 : Theme.Panel;
+            pill.GetComponentInChildren<TextMeshProUGUI>().color = Theme.Chalk;
             var dot = Ui.Box(pill.transform, "Dot", Theme.Team[c.colour]);
             Ui.Place(dot.rectTransform, 14, h / 2 - 7, 14, 14);
             dot.raycastTarget = false;
             var label = pill.GetComponentInChildren<TextMeshProUGUI>();
             label.text = string.IsNullOrWhiteSpace(c.name) ? "(unnamed)" : c.name;
             label.alignment = TextAlignmentOptions.MidlineLeft;
-            label.fontSize = 15;
+            label.fontSize = 16;
             label.enableWordWrapping = false;
             label.overflowMode = TextOverflowModes.Ellipsis;
             Ui.Stretch(label.rectTransform, 34, 0, 10, 0);
@@ -316,24 +333,24 @@ public class SetupScreen
     {
         Ui.Clear(editor);
         var c = Current;
-        var card = Ui.Float(editor, "Card", 0, 0, 1080, 770);
-        var t = card.transform;
+        var t = editor;
+        const float x0 = 28;
 
         // The agent's name and colour: the player's character.
         var nameLabel = Ui.Eyebrow(t, "YOUR AGENT", Theme.Muted);
-        Ui.Place(nameLabel.rectTransform, 28, 16, 200, 20);
-        var name = Ui.Input(t, "Its name", false, 20);
-        Ui.Place(name.GetComponent<RectTransform>(), 28, 38, 300, 48);
+        Ui.Place(nameLabel.rectTransform, x0, 22, 300, 22);
+        var name = Ui.Input(t, "Its name", false, 18);
+        Ui.Place(name.GetComponent<RectTransform>(), x0, 50, 220, 46);
         name.text = c.name;
         name.onValueChanged.AddListener(v => { c.name = v; });
         name.onEndEdit.AddListener(_ => RefreshStrip());
         for (int i = 0; i < Theme.Team.Length; i++)
         {
             int index = i;
-            var ring = Ui.Box(t, "Swatch", c.colour == i ? Theme.Ink : Theme.Panel);
-            Ui.Place(ring.rectTransform, 350 + i * 44, 42, 40, 40);
+            var ring = Ui.Box(t, "Swatch", c.colour == i ? Theme.Chalk : new Color(1f, 1f, 1f, 0.12f));
+            Ui.Place(ring.rectTransform, x0 + 236 + i * 35, 56, 33, 33);
             var swatch = Ui.Box(ring.transform, "Colour", Theme.Team[i]);
-            Ui.Stretch(swatch.rectTransform, 4, 4, 4, 4);
+            Ui.Stretch(swatch.rectTransform, 3, 3, 3, 3);
             var b = ring.gameObject.AddComponent<Button>();
             b.targetGraphic = swatch;
             b.onClick.AddListener(() => { c.colour = index; world.RefreshRobot(Chosen); RefreshStrip(); BuildEditor(); BuildTags(); });
@@ -341,29 +358,31 @@ public class SetupScreen
 
         // The list
         listArea = Ui.Node("List", t);
-        Ui.Place(listArea, 16, 96, 1048, 420);
+        Ui.Place(listArea, 16, 106, DrawerW - 32, 740);
         var listLabel = Ui.Eyebrow(t, "THE LIST  ·  EVERYTHING IT WILL KNOW", Theme.TealDeep);
-        Ui.Place(listLabel.rectTransform, 28, 104, 800, 20);
+        Ui.Place(listLabel.rectTransform, x0, 116, 400, 22);
+        listLabel.enableWordWrapping = false;
         var mode = Ui.Button(t, c.freeText ? "Build it from parts" : "Write it yourself", () =>
         {
             if (c.freeText) { c.freeText = false; c.Compose(); } else { c.freeText = true; }
             BuildEditor();
-        }, Ui.ButtonStyle.Quiet, 13);
-        Ui.Place(mode.GetComponent<RectTransform>(), 870, 96, 182, 34);
+        }, Ui.ButtonStyle.Secondary, 16);
+        Ui.Place(mode.GetComponent<RectTransform>(), x0 + EdW - 196, 106, 196, 38);
 
         if (c.freeText) BuildWords(t, c);
         else { c.Compose(); BuildParts(t, c); }
 
         // The wallet: coins of pocket money, and how far they go.
         var fuelLabel = Ui.Eyebrow(t, "POCKET MONEY  ·  TAP THE COINS", Theme.TealDeep);
-        Ui.Place(fuelLabel.rectTransform, 28, 540, 500, 20);
+        Ui.Place(fuelLabel.rectTransform, x0, 856, 400, 22);
         wallet = Ui.Node("Wallet", t);
-        Ui.Place(wallet, 28, 566, 1024, 60);
+        Ui.Place(wallet, x0, 850, EdW, 90);
         BuildWallet();
-        fuel = Ui.Bar(t, Theme.Border, Theme.Aqua, 1024, 12);
-        Ui.Place(fuel.track.rectTransform, 28, 640, 1024, 12);
-        estimate = Ui.Text(t, "", 15, Theme.Text2);
-        Ui.Place(estimate.rectTransform, 28, 660, 1024, 30);
+        fuel = Ui.Bar(t, Theme.Border, Theme.Aqua, EdW, 10);
+        Ui.Place(fuel.track.rectTransform, x0, 944, EdW, 10);
+        estimate = Ui.Text(t, "", 16, Theme.Text2);
+        Ui.Place(estimate.rectTransform, x0, 960, EdW, 26);
+        estimate.enableWordWrapping = false; estimate.overflowMode = TextOverflowModes.Ellipsis;
         RefreshEstimate();
     }
 
@@ -372,51 +391,54 @@ public class SetupScreen
     {
         Ui.Clear(wallet);
         int taken = Mathf.Clamp((int)(app.budget / Coin), 1, Coins);
+        float step = (EdW - 52) / (Coins - 1);
         for (int i = 0; i < Coins; i++)
         {
             int n = i + 1;
             bool on = i < taken;
             var coin = Ui.Box(wallet, "Coin", on ? Theme.Amber : Theme.Surface3);
-            Ui.Place(coin.rectTransform, i * 66, 4, 52, 52);
-            var inner = Ui.Box(coin.transform, "Face", on ? Theme.Hex("#FFD27A") : Theme.Panel);
+            Ui.Place(coin.rectTransform, i * step, 34, 52, 52);
+            var inner = Ui.Box(coin.transform, "Face", on ? Theme.Hex("#FFD27A") : Theme.Surface1);
             Ui.Stretch(inner.rectTransform, 5, 5, 5, 5);
             inner.raycastTarget = false;
-            var k = Ui.Text(inner.transform, "10k", 13, on ? Theme.Hex("#7A5A10") : Theme.Muted, true, TextAlignmentOptions.Center);
+            var k = Ui.Text(inner.transform, "10k", 16, on ? Theme.Hex("#7A5A10") : Theme.Muted, true, TextAlignmentOptions.Center);
             Ui.Stretch(k.rectTransform);
             var b = coin.gameObject.AddComponent<Button>();
             b.targetGraphic = coin;
             b.onClick.AddListener(() => { Sfx.Chime(); app.budget = n * Coin; BuildWallet(); RefreshEstimate(); });
         }
-        var total = Ui.Text(wallet, $"{taken * Coin:N0} tokens", 17, Theme.Ink, true, TextAlignmentOptions.MidlineRight);
-        Ui.Place(total.rectTransform, 680, 4, 344, 52);
+        var total = Ui.Text(wallet, $"{taken * Coin:N0} tokens", 18, Theme.Ink, true, TextAlignmentOptions.TopRight);
+        Ui.Place(total.rectTransform, EdW - 240, 4, 240, 26);
     }
 
     // The list from parts: tap the goods on the shelf, pick the rule for an empty
     // view, add your own words. The words the agent reads are shown underneath.
     void BuildParts(Transform t, AgentConfig c)
     {
+        const float x0 = 28;
         var all = Items.All;
-        float slot = 1024f / all.Length;
+        const int cols = 5;
+        float slot = EdW / cols;
         for (int i = 0; i < all.Length; i++)
         {
             var k = all[i];
-            float x = 28 + i * slot;
+            float x = x0 + (i % cols) * slot, y = 154 + (i / cols) * 104;
             bool buy = c.buy.Contains(k.id), never = c.never.Contains(k.id);
             var ring = Ui.Box(t, "Ring", buy ? Theme.Aqua : never ? Theme.Danger : Theme.Surface3);
-            Ui.Place(ring.rectTransform, x + slot / 2 - 27, 132, 54, 54);
-            var inner = Ui.Box(ring.transform, "Fill", buy ? Theme.Surface2 : never ? Theme.DangerSoft : Theme.Panel);
+            Ui.Place(ring.rectTransform, x + slot / 2 - 28, y, 56, 56);
+            var inner = Ui.Box(ring.transform, "Fill", buy ? Theme.Surface2 : never ? Theme.DangerSoft : Theme.Surface1);
             Ui.Stretch(inner.rectTransform, 4, 4, 4, 4);
-            var icon = Ui.Icon(ring.transform, k.id, 34);
+            var icon = Ui.Icon(ring.transform, k.id, 36);
             icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             icon.rectTransform.anchoredPosition = Vector2.zero;
-            var label = Ui.Text(t, k.id, 11, buy ? Theme.TealDeep : never ? Theme.Danger : Theme.Text2, buy || never, TextAlignmentOptions.Center);
-            Ui.Place(label.rectTransform, x, 188, slot, 16);
+            var label = Ui.Text(t, k.id, 16, buy ? Theme.TealDeep : never ? Theme.Danger : Theme.Text2, buy || never, TextAlignmentOptions.Center);
+            Ui.Place(label.rectTransform, x - 4, y + 60, slot + 8, 22);
             label.enableWordWrapping = false;
             if (buy || never)
             {
-                var state = Ui.Text(t, buy ? "BUY" : "NEVER", 9, buy ? Theme.TealDeep : Theme.Danger, true, TextAlignmentOptions.Center);
+                var state = Ui.Text(t, buy ? "BUY" : "NEVER", 16, buy ? Theme.TealDeep : Theme.Danger, true, TextAlignmentOptions.Center);
                 state.characterSpacing = 3;
-                Ui.Place(state.rectTransform, x, 202, slot, 14);
+                Ui.Place(state.rectTransform, x, y + 80, slot, 20);
             }
             var btn = ring.gameObject.AddComponent<Button>();
             btn.targetGraphic = inner;
@@ -432,40 +454,54 @@ public class SetupScreen
         }
 
         var ruleLabel = Ui.Eyebrow(t, "IF NOTHING IS IN VIEW", Theme.Muted);
-        Ui.Place(ruleLabel.rectTransform, 28, 226, 500, 20);
-        var rule = new Ui.Segmented(t, AgentConfig.FallbackLabels, c.fallback, 560, 38, 13);
-        Ui.Place(rule.root, 28, 248, 560, 38);
+        Ui.Place(ruleLabel.rectTransform, x0, 474, 400, 22);
+        var rule = new Ui.Segmented(t, AgentConfig.FallbackLabels, c.fallback, EdW, 56, 16);
+        Ui.Place(rule.root, x0, 500, EdW, 56);
         rule.OnSelect = i => { c.fallback = i; c.Compose(); RefreshRead(); };
 
         var wordsLabel = Ui.Eyebrow(t, "YOUR OWN WORDS", Theme.Muted);
-        Ui.Place(wordsLabel.rectTransform, 610, 226, 460, 20);
-        var words = Ui.Input(t, "For example: in this house a tomato counts as a vegetable.", false, 14);
-        Ui.Place(words.GetComponent<RectTransform>(), 610, 248, 442, 38);
+        Ui.Place(wordsLabel.rectTransform, x0, 572, 400, 22);
+        var words = Ui.Input(t, "For example: in this house a tomato counts as a vegetable.", false, 16);
+        Ui.Place(words.GetComponent<RectTransform>(), x0, 598, EdW, 46);
         words.text = c.words;
         words.onValueChanged.AddListener(v => { c.words = v; c.Compose(); RefreshRead(); });
 
         var readsLabel = Ui.Eyebrow(t, "WHAT THE AGENT WILL READ", Theme.Muted);
-        Ui.Place(readsLabel.rectTransform, 28, 298, 400, 20);
-        readsTokens = Ui.Text(t, "", 13, Theme.Muted, false, TextAlignmentOptions.TopRight);
-        Ui.Place(readsTokens.rectTransform, 852, 298, 200, 20);
+        Ui.Place(readsLabel.rectTransform, x0, 660, 360, 22);
+        readsTokens = Ui.Text(t, "", 16, Theme.Muted, false, TextAlignmentOptions.TopRight);
+        Ui.Place(readsTokens.rectTransform, x0 + EdW - 220, 660, 220, 22);
         var readsCard = Ui.Soft(t, "Reads");
-        Ui.Place(readsCard.rectTransform, 28, 320, 1024, 196);
-        reads = Ui.Text(readsCard.transform, "", 15, Theme.Ink);
-        Ui.Stretch(reads.rectTransform, 16, 10, 16, 10);
+        Ui.Place(readsCard.rectTransform, x0, 688, EdW, 154);
+        reads = Ui.Text(readsCard.transform, "", 16, Theme.Ink);
+        Ui.Stretch(reads.rectTransform, 14, 10, 14, 10);
+        reads.overflowMode = TextOverflowModes.Ellipsis;
         RefreshRead();
     }
 
     // The list in the player's own words, as it will be read.
     void BuildWords(Transform t, AgentConfig c)
     {
-        readsTokens = Ui.Text(t, "", 13, Theme.Muted, false, TextAlignmentOptions.TopRight);
-        Ui.Place(readsTokens.rectTransform, 660, 104, 200, 20);
+        readsTokens = Ui.Text(t, "", 16, Theme.Muted, false, TextAlignmentOptions.TopRight);
+        Ui.Place(readsTokens.rectTransform, 28 + EdW - 220, 812, 220, 22);
         var field = Ui.Input(t, "For example: Buy apples, bananas and pears. Never buy tomatoes, potatoes or mushrooms. If nothing on this list is in view, keep walking.", true, 18);
-        Ui.Place(field.GetComponent<RectTransform>(), 28, 134, 1024, 382);
+        Ui.Place(field.GetComponent<RectTransform>(), 28, 154, EdW, 650);
         field.text = c.instructions;
         field.onValueChanged.AddListener(v => { c.instructions = v; RefreshRead(); });
         reads = null;
         RefreshRead();
+    }
+
+    // The drawer folds to a tab and the agent takes the whole stage; open again to write.
+    void Fold(bool fold)
+    {
+        folded = fold;
+        float from = drawer.anchoredPosition.x, to = fold ? Ui.W - 56f : Ui.W - DrawerW;
+        app.StartCoroutine(Ui.Animate(0.3f, k =>
+        {
+            if (drawer == null) return;
+            drawer.anchoredPosition = new Vector2(Mathf.Lerp(from, to, k), drawer.anchoredPosition.y);
+            Ui.Place(frame, 0, 110, Mathf.Lerp(from, to, k), Ui.H - 110);
+        }, Ui.EaseOut));
     }
 
     void RefreshRead()

@@ -6,8 +6,7 @@ using UnityEngine.UI;
 // right, sharp, the agents at their houses; on the left, in dark glass, the errand's
 // question, its headline, LUMA's opening line spoken and typed, the family's message,
 // and the agent's six parts with this errand's lit. Everything the course says beyond
-// that is in the file. A warm-up question from an earlier errand comes first (no
-// score; a wrong answer shows the right one).
+// that is in the file.
 public class LessonScreen
 {
     public readonly RectTransform root;
@@ -24,7 +23,7 @@ public class LessonScreen
         var window = Ui.Node("Window", root);
         Ui.Place(window, 900, 150, 980, 880);
         app.world.Build(new Arena(app.brief, app.configs.ConvertAll(c => c.Clone()), app.budget, l.number * 17 + 3), false);
-        app.world.ShowMarket(window);
+        if (Market.Real) app.world.ShowOrbitOf(window); else app.world.ShowMarket(window); // the real square turning slowly, at the height of its roofs
         app.atmosphere.MenuBlur(false);
 
         // The briefing, left, in dark glass over the park.
@@ -97,7 +96,8 @@ public class LessonScreen
         }
         Ui.Emblem(root);
 
-        if (l.recall != null) Recall(app, l.recall);
+        // The warm-up question (Recall) is off: the briefing opens straight onto the level.
+        // To bring it back: if (l.recall != null) Recall(app, l.recall);
     }
 
     // The warm-up: one question from an earlier errand, over the briefing. No

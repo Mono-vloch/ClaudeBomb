@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 // Walks through every screen on its own and saves a screenshot of each, so the
@@ -68,9 +69,6 @@ public class DemoDriver : MonoBehaviour
         app.ShowSetup();
         yield return new WaitForSeconds(1.5f);
         yield return Shot("4-tour");
-        app.StartLevel(2);
-        yield return new WaitForSeconds(0.5f);
-        yield return Shot("3b-warm-up");
         app.StartLevel(Ladder.DecideLevel);
         app.ShowSetup();
         yield return new WaitForSeconds(0.5f);
@@ -98,22 +96,38 @@ public class DemoDriver : MonoBehaviour
             app.turns = 4;
         }
         app.ShowSetup();
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1.2f);
         yield return Shot("5-setup");
+        Coverage("5-setup: the agent in the garage", app.world.BodyOf(app.world.Highlighted));
+        UiCheck("5-setup", app);
 
         app.StartRound();
         float waited = 0;
-        int shotAt = Live ? 2 : 5;
-        float shotTimeout = Live ? 180f : 7f;
+        int shotAt = Live ? 2 : 4;
+        float shotTimeout = Live ? 180f : 60f;
         while (app.Sim != null && !app.Sim.finished && app.Sim.turn < shotAt && waited < shotTimeout) { waited += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(1.5f);
-        yield return Shot("6-market");
-        app.world.SetView(Market.View.RobotsEye);
-        yield return new WaitForSeconds(1.6f);
-        yield return Shot("6b-agents-eye");
-        app.world.SetView(Market.View.Market);
+        // The main play screen as the player sees it between steps: the agent standing, LUMA's line said.
         waited = 0;
-        while (app.Sim != null && !app.Sim.finished && waited < (Live ? 300f : 30f)) { waited += Time.deltaTime; yield return null; }
+        while (app.world.Animating && waited < 10f) { waited += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(0.9f);
+        yield return Shot("6-market");
+        Coverage("6-market: the agent on the street (main play screen)", app.world.BodyOf(app.world.Highlighted));
+        UiCheck("6-market", app);
+        WorldCheck("6-market");
+        if (Market.Real && ArenaScreen.Current != null) ArenaScreen.Current.SelectView(1); else app.world.SetView(Market.View.RobotsEye);
+        yield return new WaitForSeconds(1.8f);
+        yield return Shot("6b-agents-eye");
+        Coverage("6b-agents-eye: the agent", app.world.BodyOf(app.world.Highlighted));
+        if (Market.Real)
+        {
+            if (ArenaScreen.Current != null) ArenaScreen.Current.SelectView(2); else app.world.SetView(Market.View.Market);
+            yield return new WaitForSeconds(1.8f);
+            yield return Shot("6c-overview");
+            if (ArenaScreen.Current != null) ArenaScreen.Current.SelectView(0); else app.world.SetView(Market.View.Street);
+        }
+        else app.world.SetView(Market.View.Market);
+        waited = 0;
+        while (app.Sim != null && !app.Sim.finished && waited < (Live ? 300f : 150f)) { waited += Time.deltaTime; yield return null; }
         yield return new WaitForSeconds(0.5f);
         app.ShowResults(app.CurrentArena, app.Sim);
         yield return new WaitForSeconds(2.6f); // the medal has been revealed by then
@@ -122,15 +136,34 @@ public class DemoDriver : MonoBehaviour
         Application.Quit();
     }
 
-    // The cover: four robots out shopping on a market day, placed by hand so the
-    // picture is the same every time, the market filling the whole window and
-    // nothing drawn over it.
+    // The cover, as Claude Bomb's: the agent close among the lit stalls of the evening
+    // square (the title's picture), filling the whole window with nothing drawn over it.
+    // Without the kit, the market day from above as before.
     IEnumerator Cover(App app)
     {
         ClaudeAccess.ForceOffline = true;
         Luma.Silent = true;
         AudioListener.volume = 0f;
         yield return null; // the title has built by now; the market takes its place
+        if (Market.Real)
+        {
+            var top = app.Stage.parent;
+            var hero = Ui.Node("Cover", top);
+            Ui.Stretch(hero);
+            foreach (Transform t in top) if (t != hero) t.gameObject.SetActive(false);
+            app.Paper(Color.clear);
+            app.world.ShowCover(hero, hero: true);
+            yield return new WaitForSeconds(2.0f);
+            // The memory's glass cards read as a glitch without the game round them.
+            foreach (var t in FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                if (t.name == "turn") t.gameObject.SetActive(false);
+            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(CoverPath);
+            yield return new WaitForSeconds(1f);
+            Application.Quit();
+            yield break;
+        }
         var rng = new System.Random(4);
         var configs = new List<AgentConfig>();
         for (int i = 0; i < 4; i++) configs.Add(new AgentConfig { name = Theme.TeamNames[i], colour = i, vision = 1 + i % 2 });
@@ -156,6 +189,76 @@ public class DemoDriver : MonoBehaviour
         ScreenCapture.CaptureScreenshot(CoverPath);
         yield return new WaitForSeconds(1f);
         Application.Quit();
+    }
+
+    // How much of the frame the agent's bounding box covers, as the realism pass measures it:
+    // its skinned meshes only (not the antenna or the basket), the eight corners projected.
+    static void Coverage(string what, Transform hero)
+    {
+        var cam = Camera.main;
+        if (hero == null || cam == null) { Debug.Log($"[Coverage] {what}: none"); return; }
+        var all = hero.GetComponentsInChildren<Renderer>().Where(r => r.enabled && r.gameObject.activeInHierarchy && !(r is ParticleSystemRenderer)).ToArray();
+        var rs = all.OfType<SkinnedMeshRenderer>().Any() ? all.OfType<SkinnedMeshRenderer>().Cast<Renderer>().ToArray() : all;
+        if (rs.Length == 0) { Debug.Log($"[Coverage] {what}: no renderer"); return; }
+        var b = rs[0].bounds;
+        foreach (var r in rs) b.Encapsulate(r.bounds);
+        float x0 = 1, x1 = 0, y0 = 1, y1 = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            var c = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+            var v = cam.WorldToViewportPoint(c);
+            x0 = Mathf.Min(x0, v.x); x1 = Mathf.Max(x1, v.x); y0 = Mathf.Min(y0, v.y); y1 = Mathf.Max(y1, v.y);
+        }
+        float w = Mathf.Clamp01(x1) - Mathf.Clamp01(x0), h = Mathf.Clamp01(y1) - Mathf.Clamp01(y0);
+        Debug.Log($"[Coverage] {what}: {w:P0} x {h:P0} of the frame = {w * h:P0} (box {b.size.x:F2} x {b.size.y:F2} x {b.size.z:F2} m, {Vector3.Distance(cam.transform.position, b.center):F2} m from the camera)");
+    }
+
+    // The realism pass's UI rules, measured on a play screen: no light-theme panel (a fill
+    // brighter than 75 % luminance, over half opaque, bigger than 200 by 120 units), the drawer's
+    // and so the world's share of the stage, and the smallest text on screen.
+    static void UiCheck(string what, App app)
+    {
+        var canvas = app.Stage.parent;
+        var light = new List<string>();
+        foreach (var img in canvas.GetComponentsInChildren<UnityEngine.UI.Image>())
+        {
+            if (!img.enabled || !img.gameObject.activeInHierarchy) continue;
+            var c = img.color; var r = img.rectTransform.rect;
+            float lum = 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b;
+            if (lum > 0.75f && c.a > 0.5f && r.width > 200 && r.height > 120) light.Add(img.name);
+        }
+        float minText = 999f; string smallest = "";
+        foreach (var t in canvas.GetComponentsInChildren<TMPro.TextMeshProUGUI>())
+            if (t.enabled && t.gameObject.activeInHierarchy && !string.IsNullOrWhiteSpace(t.text) && t.fontSize < minText) { minText = t.fontSize; smallest = t.text.Length > 30 ? t.text.Substring(0, 30) : t.text; }
+        var drawer = canvas.GetComponentsInChildren<RectTransform>().FirstOrDefault(x => x.name == "Drawer" && x.gameObject.activeInHierarchy);
+        float drawerW = drawer != null ? drawer.rect.width : 0f;
+        Debug.Log($"[UiCheck] {what}: {light.Count} light panel(s){(light.Count > 0 ? " (" + string.Join(", ", light.Take(6)) + ")" : "")}; drawer {drawerW:F0} of {Ui.W:F0} units = {drawerW / Ui.W:P0}, world {1f - drawerW / Ui.W:P0}; smallest text {minText:F0} on the 1080 canvas (" + smallest + ")");
+    }
+
+    // The realism pass's world check, at run time: every renderer in the scene, by shader; the
+    // old Flat shader or a MeshKit mesh is listed by name (the effects, the sight square, the
+    // ring of the loop and the memory's glass cards are the expected exceptions).
+    static void WorldCheck(string what)
+    {
+        string[] kitMeshes = { "box", "sphere", "cylinder", "cone", "capsule", "dome", "pear", "pyramid", "tube", "thintube" };
+        var byShader = new Dictionary<string, int>();
+        var flat = new List<string>(); var meshKit = new List<string>();
+        int total = 0;
+        foreach (var r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            if (!r.enabled || !r.gameObject.activeInHierarchy || r is ParticleSystemRenderer) continue;
+            total++;
+            foreach (var m in r.sharedMaterials)
+            {
+                string sh = m != null && m.shader != null ? m.shader.name : "(none)";
+                byShader[sh] = byShader.TryGetValue(sh, out var n) ? n + 1 : 1;
+                if (sh.Contains("Flat")) flat.Add(r.name);
+            }
+            var f = r.GetComponent<MeshFilter>();
+            if (f != null && f.sharedMesh != null && System.Array.IndexOf(kitMeshes, f.sharedMesh.name) >= 0) meshKit.Add(r.name);
+        }
+        Debug.Log($"[WorldCheck] {what}: {total} renderers; shaders: " + string.Join(", ", byShader.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}")) +
+                  $"; Flat: {flat.Count}{(flat.Count > 0 ? " (" + string.Join(", ", flat.Distinct().Take(8)) + ")" : "")}; MeshKit meshes: {meshKit.Count}{(meshKit.Count > 0 ? " (" + string.Join(", ", meshKit.Distinct().Take(8)) + ")" : "")}");
     }
 
     IEnumerator Shot(string name)

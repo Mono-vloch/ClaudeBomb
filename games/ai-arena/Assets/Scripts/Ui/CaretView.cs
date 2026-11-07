@@ -18,7 +18,7 @@ public class CaretView : MonoBehaviour
     {
         this.field = field;
         this.text = text;
-        bar = Ui.Box(text.transform, "Caret", Theme.Ink, false);
+        bar = Ui.Box(text.transform, "Caret", Theme.Chalk, false);
         bar.raycastTarget = false;
         var rt = bar.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); // the text's local origin

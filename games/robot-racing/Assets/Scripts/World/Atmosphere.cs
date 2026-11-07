@@ -3,17 +3,18 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-// The camera's post-processing, from Docs/art-bible.md: ACES tonemapping, a little bloom
-// on the glowing parts only (the lamps, the antenna, the eyes, a scoring moment), an
-// ink vignette, a touch more saturation and contrast, SMAA for the box edges (cheaper
-// than MSAA on the web), and a depth of field that comes in behind menus and briefings.
+// The camera's post-processing, Claude Bomb's (Docs/claude-bomb-recipe.md): neutral
+// tonemapping, bloom 0.25 from a threshold of 1 on the glowing parts only (the floodlights,
+// the start lights, the eyes and the antenna, a moment), a black vignette at 0.2, no grading
+// on top; SMAA for the thin edges (cheaper than MSAA on the web), and a depth of field that
+// comes in behind menus and briefings.
 // Built in code on the scene's camera, like everything else in the game; no motion blur.
 [RequireComponent(typeof(Camera))]
 public class Atmosphere : MonoBehaviour
 {
     public static Atmosphere Current { get; private set; }
 
-    public float bloomIntensity = 0.35f, bloomThreshold = 1.1f, vignetteStrength = 0.22f, saturation = 8f, contrast = 5f;
+    public float bloomIntensity = 0.25f, bloomThreshold = 1.0f, vignetteStrength = 0.2f, saturation = 0f, contrast = 0f; // Claude Bomb's values
     public float blurRadius = 0.9f, blurStart = 9f, blurEnd = 30f;
 
     Volume volume;
@@ -41,11 +42,11 @@ public class Atmosphere : MonoBehaviour
         profile = ScriptableObject.CreateInstance<VolumeProfile>();
         profile.name = "Atmosphere";
         var tone = profile.Add<Tonemapping>(true);
-        tone.mode.value = TonemappingMode.ACES;
+        tone.mode.value = TonemappingMode.Neutral;
         bloom = profile.Add<Bloom>(true);
-        bloom.intensity.value = bloomIntensity; bloom.threshold.value = bloomThreshold; bloom.scatter.value = 0.65f; bloom.highQualityFiltering.value = false;
+        bloom.intensity.value = bloomIntensity; bloom.threshold.value = bloomThreshold; bloom.scatter.value = 0.5f; bloom.highQualityFiltering.value = true;
         vignette = profile.Add<Vignette>(true);
-        vignette.intensity.value = vignetteStrength; vignette.smoothness.value = 0.45f; vignette.color.value = Theme.Ink;
+        vignette.intensity.value = vignetteStrength; vignette.smoothness.value = 0.2f; vignette.color.value = Color.black;
         grading = profile.Add<ColorAdjustments>(true);
         grading.saturation.value = saturation; grading.contrast.value = contrast; grading.postExposure.value = 0f;
         depth = profile.Add<DepthOfField>(true);
@@ -99,11 +100,11 @@ public class Atmosphere : MonoBehaviour
         {
             t += Time.unscaledDeltaTime;
             float k = 1f - t / seconds;
-            vignette.color.value = Color.Lerp(Theme.Ink, colour, k);
+            vignette.color.value = Color.Lerp(Color.black, colour, k);
             vignette.intensity.value = vignetteStrength + strength * k;
             yield return null;
         }
-        vignette.color.value = Theme.Ink;
+        vignette.color.value = Color.black;
         vignette.intensity.value = vignetteStrength;
     }
 

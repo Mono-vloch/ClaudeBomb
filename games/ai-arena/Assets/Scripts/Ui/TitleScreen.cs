@@ -21,7 +21,7 @@ public class TitleScreen
         // The market behind, on the right.
         var frame = Ui.Node("Frame", root);
         Ui.Place(frame, 1020, 40, 900, 960);
-        app.world.ShowCover(frame);
+        app.world.ShowCover(frame, hero: true);
 
         // Ink over the left, fading into the picture.
         var shade = Ui.Box(root, "Shade", Theme.Ink, false);

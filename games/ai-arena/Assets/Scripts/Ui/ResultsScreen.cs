@@ -36,7 +36,7 @@ public class ResultsScreen
         app.world.Build(arena, false);
         app.world.ShowOrbitOf(window);
         app.atmosphere.MenuBlur(true);
-        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.28f), false);
+        var scrim = Ui.Box(root, "Scrim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.55f), false); // the market dimmed behind the glass
         Ui.Stretch(scrim.rectTransform);
         scrim.raycastTarget = false;
 

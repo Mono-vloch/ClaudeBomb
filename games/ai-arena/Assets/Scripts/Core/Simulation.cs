@@ -13,6 +13,7 @@ public class Simulation : MonoBehaviour
     public int turn;
     public float speed = 2f;
     public bool paused;
+    public Func<bool> Holding;     // the screen is still showing the last turn (a real walk takes real time)
     public bool finished;
     public string phase = "";
 
@@ -76,6 +77,8 @@ public class Simulation : MonoBehaviour
             OnTurnResolved?.Invoke();
             OnChanged?.Invoke();
             yield return new WaitForSeconds(0.9f / Mathf.Max(0.25f, speed));
+            float held = 0f;
+            while (Holding != null && Holding() && held < 30f) { held += Time.deltaTime; yield return null; }
 
             if (turn % 2 == 0 && arena.ItemCount < 30) arena.SpawnItems(2);
         }

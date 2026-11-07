@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Maaloomatiia.Games;
 using Maaloomatiia.Games.Claude;
 
@@ -25,21 +26,26 @@ public class ClaudeReply
 public static class ClaudeProxy
 {
     // The conversation as the keeper wants it: user and assistant turns, ending with the user's.
-    public static List<object> Messages(List<(string user, string assistant)> history, string userTurn)
+    // Built as JObjects, not anonymous types: the web build strips an anonymous type's
+    // getters, so Newtonsoft wrote every message as {} and the keeper refused each call
+    // ("messages must alternate"), which left the agents standing (found 7 Nov 2026).
+    public static JArray Messages(List<(string user, string assistant)> history, string userTurn)
     {
-        var messages = new List<object>();
+        var messages = new JArray();
         foreach (var (u, a) in history)
         {
-            messages.Add(new { role = "user", content = u });
-            messages.Add(new { role = "assistant", content = a });
+            messages.Add(Message("user", u));
+            messages.Add(Message("assistant", a));
         }
-        messages.Add(new { role = "user", content = userTurn });
+        messages.Add(Message("user", userTurn));
         return messages;
     }
 
+    static JObject Message(string role, string content) => new JObject { ["role"] = role, ["content"] = content ?? "" };
+
     // What goes up, as JSON. The smoke test reads it; Send lets the Relay build the same.
     public static string Body(string model, string effort, string system, List<(string user, string assistant)> history, string userTurn) =>
-        JsonConvert.SerializeObject(new { model, effort, system, messages = Messages(history, userTurn) });
+        new JObject { ["model"] = model, ["effort"] = effort, ["system"] = system, ["messages"] = Messages(history, userTurn) }.ToString(Formatting.None);
 
     public static IEnumerator Send(string model, string effort, string system, List<(string user, string assistant)> history, string userTurn, Action<ClaudeReply> done)
     {

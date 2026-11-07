@@ -5,9 +5,10 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The run: the robot trains on the track in three dimensions on the left, the
-// curve of points per attempt underneath, and on the right what the student must
-// always see: the attempt count, each sensor's reading, the move it just made and
+// The run: the robot trains on the track in three dimensions, the camera low behind it
+// (the whole track is the exception), the screen's world; and in a dark drawer on the
+// right (a third of the screen, it folds away) what the student must always see: the
+// curve of points per attempt, the attempt count, each sensor's reading, the move it just made and
 // what it earned, the chance of a new move, and the rule book it is writing.
 // Then the race on the test track, and for the capstone one real run. Training
 // runs many attempts a second with a visible speed control.
@@ -51,32 +52,29 @@ public class RunScreen
         Ui.Stretch(root);
         app.Paper(Color.clear);
 
-        var frame = Ui.Node("Frame", root);
-        Ui.Place(frame, 40, 104, 940, 600);
+        frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 0, 0, Ui.W - DrawerW, Ui.H);
         StartRun(frame);
 
-        var column = Ui.Box(root, "Column", new Color(1, 1, 1, 0.84f), false);
-        Ui.Place(column.rectTransform, 1000, -300, 1600, 1700);
-        column.raycastTarget = false;
         // The mission HUD, dark glass over the world: the level and the step, the attempt,
         // the reward score, the best, the lap.
-        var hud1 = Ui.Glass(root, "Hud", 40, 16, 500, 96);
+        var hud1 = Ui.Glass(root, "Hud", 40, 16, 500, 100);
         var levelTag = Ui.Eyebrow(hud1.transform, l != null ? $"LEVEL {l.id}" : "FREE PLAY", Theme.Teal);
         levelTag.font = Theme.Bold;
-        Ui.Place(levelTag.rectTransform, 20, 10, 460, 18);
+        Ui.Place(levelTag.rectTransform, 20, 10, 460, 22);
         turnText = Ui.Text(hud1.transform, "", 28, Color.white, true);
-        Ui.Place(turnText.rectTransform, 20, 28, 460, 40);
+        Ui.Place(turnText.rectTransform, 20, 32, 460, 40);
         turnText.enableWordWrapping = false;
-        phaseText = Ui.Text(hud1.transform, "", 12, Look.AsphaltLine);
-        Ui.Place(phaseText.rectTransform, 20, 68, 460, 22);
+        phaseText = Ui.Text(hud1.transform, "", 16, Look.AsphaltLine);
+        Ui.Place(phaseText.rectTransform, 20, 70, 460, 24);
         phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
-        var hud2 = Ui.Glass(root, "Score", 550, 16, 440, 96);
+        var hud2 = Ui.Glass(root, "Score", 550, 16, 440, 100);
         TextMeshProUGUI Stat(string name, float x, float w)
         {
             var e = Ui.Eyebrow(hud2.transform, name, Theme.Teal);
-            Ui.Place(e.rectTransform, x, 12, w, 16);
-            var v = Ui.Text(hud2.transform, "", 26, Color.white, true);
-            Ui.Place(v.rectTransform, x, 32, w, 40);
+            Ui.Place(e.rectTransform, x, 12, w, 22);
+            var v = Ui.Text(hud2.transform, "", 28, Color.white, true);
+            Ui.Place(v.rectTransform, x, 38, w, 40);
             v.enableWordWrapping = false; v.overflowMode = TextOverflowModes.Ellipsis;
             return v;
         }
@@ -84,75 +82,85 @@ public class RunScreen
         bestText = Stat("BEST", 180, 130);
         lapText = Stat("LAP", 320, 110);
 
-        viewToggle = new Ui.Segmented(root, new[] { "The track", "Follow" }, 0, 260, 40, 14);
-        Ui.Place(viewToggle.root, 40, 1032, 260, 40);
-        viewToggle.OnSelect = i => { if (i == 0) app.world.ShowOverviewAgain(); else app.world.ShowFollow(frame); };
+        // Under the world: the view (behind the car by default; the whole track is the
+        // exception), pause, race now, the settings.
+        viewToggle = new Ui.Segmented(root, new[] { "Follow", "The track" }, 0, 300, 48, 16, dark: true);
+        Ui.Place(viewToggle.root, 40, 1012, 300, 48);
+        viewToggle.OnSelect = i => View();
         Sfx.EngineAudible = speedIndex <= 1;
-        pause = Ui.Button(root, "Pause", () => { paused = !paused; Ui.SetLabel(pause, paused ? "Resume" : "Pause"); if (paused) Sfx.Engine(0f); }, Ui.ButtonStyle.Secondary, 14);
-        Ui.Place(pause.GetComponent<RectTransform>(), 312, 1032, 90, 40);
-        stop = Ui.Button(root, "Stop, race now", RaceNow, Ui.ButtonStyle.Quiet, 14);
-        Ui.Place(stop.GetComponent<RectTransform>(), 410, 1032, 150, 40);
-        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, null), Ui.ButtonStyle.Quiet, 14); // the speed, among others
-        Ui.Place(settings.GetComponent<RectTransform>(), 570, 1032, 100, 40);
+        pause = Ui.Button(root, "Pause", () => { paused = !paused; Ui.SetLabel(pause, paused ? "Resume" : "Pause"); if (paused) Sfx.Engine(0f); }, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(pause.GetComponent<RectTransform>(), 352, 1012, 120, 48);
+        stop = Ui.Button(root, "Stop, race now", RaceNow, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(stop.GetComponent<RectTransform>(), 484, 1012, 190, 48);
+        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, null), Ui.ButtonStyle.GhostOnDark, 16); // the speed, among others
+        Ui.Place(settings.GetComponent<RectTransform>(), 686, 1012, 130, 48);
 
-        chart = new Chart(root, 40, 716, 940, 304, "POINTS PER ATTEMPT  ·  THE CURVE");
         labelsLayer = Ui.Node("Labels", root);
         Ui.Stretch(labelsLayer);
         bannerLayer = Ui.Node("Banners", root);
         Ui.Stretch(bannerLayer);
 
-        // The mission, at the top of the column.
-        var mission = Ui.Soft(root, "Mission");
-        Ui.Place(mission.rectTransform, 1020, 28, 840, 58);
-        var missionTag = Ui.Eyebrow(mission.transform, l != null ? $"LEVEL {l.id}" : "FREE PLAY", Theme.TealDeep);
-        Ui.Place(missionTag.rectTransform, 16, 8, 800, 18);
-        missionText = Ui.Text(mission.transform, "", 15, Theme.Ink);
-        Ui.Place(missionText.rectTransform, 16, 28, 808, 24);
-        missionText.enableWordWrapping = false;
-        missionText.overflowMode = TextOverflowModes.Ellipsis;
+        // The drawer: the mission, the numbers, the curve, the sensors, the move, the rule book.
+        drawer = Ui.Node("Drawer", root);
+        Ui.Place(drawer, Ui.W - DrawerW, 0, DrawerW, Ui.H);
+        var bg = Ui.Box(drawer, "Glass", Ui.DarkFill, false);
+        Ui.Stretch(bg.rectTransform);
+        var keyline = Ui.Box(drawer, "Keyline", Theme.Teal, false);
+        Ui.Place(keyline.rectTransform, 0, 0, 3, Ui.H);
+        const float DW = DrawerW - 56;
+        var missionTag = Ui.Eyebrow(drawer, l != null ? $"LEVEL {l.id}  ·  THE RUN" : "FREE PLAY  ·  THE RUN", Theme.Teal);
+        missionTag.font = Theme.Bold;
+        Ui.Place(missionTag.rectTransform, 28, 26, 460, 22);
+        var fold = Ui.Button(drawer, "Hide", () => Fold(false), Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(fold.GetComponent<RectTransform>(), DrawerW - 112, 18, 88, 40);
+        missionText = Ui.Text(drawer, "", 18, Color.white, true);
+        Ui.Place(missionText.rectTransform, 28, 64, DW, 52);
 
-        // The HUD: the attempt, the points, the chance of a new move.
-        var hud = Ui.Card(root, "Hud", Theme.Panel, Theme.Border1);
-        Ui.Place(hud.rectTransform, 1020, 98, 840, 118);
-        pointsText = Ui.Text(hud.transform, "", 16, Theme.Ink);
-        Ui.Place(pointsText.rectTransform, 18, 14, 560, 50);
-        exploreText = Ui.Text(hud.transform, "", 14, Theme.Text2);
-        Ui.Place(exploreText.rectTransform, 18, 66, 800, 40);
-        bookCount = Ui.Text(hud.transform, "", 14, Theme.TealDeep, true, TextAlignmentOptions.TopRight);
-        Ui.Place(bookCount.rectTransform, 580, 14, 240, 24);
+        pointsText = Ui.Text(drawer, "", 16, Color.white);
+        Ui.Place(pointsText.rectTransform, 28, 124, DW, 24);
+        pointsText.enableWordWrapping = false; pointsText.overflowMode = TextOverflowModes.Ellipsis;
+        exploreText = Ui.Text(drawer, "", 16, Theme.Faint);
+        Ui.Place(exploreText.rectTransform, 28, 152, 360, 24);
+        bookCount = Ui.Text(drawer, "", 16, Theme.Teal, true, TextAlignmentOptions.TopRight);
+        Ui.Place(bookCount.rectTransform, 28 + DW - 220, 152, 220, 24);
 
-        // The sensors, live.
-        var senses = Ui.Card(root, "Senses", Theme.Panel, Theme.Border1);
-        Ui.Place(senses.rectTransform, 1020, 228, 410, 206);
-        var sl = Ui.Eyebrow(senses.transform, "WHAT IT SENSES", Theme.TealDeep); Ui.Place(sl.rectTransform, 16, 10, 300, 16);
+        chart = new Chart(drawer, 20, 190, DrawerW - 40, 236, "POINTS PER ATTEMPT  ·  THE CURVE", dark: true);
+
+        // The sensors, live, and the move it just made beside them.
+        var sl = Ui.Eyebrow(drawer, "WHAT IT SENSES", Theme.Teal); Ui.Place(sl.rectTransform, 28, 444, 300, 22);
         for (int i = 0; i < Sensors.Count; i++)
         {
-            var name = Ui.Text(senses.transform, Sensors.Names[i], 13, Theme.Ink, true);
-            Ui.Place(name.rectTransform, 16, 34 + i * 34, 110, 20);
-            sensorBar[i] = Ui.Bar(senses.transform, Theme.Border, Theme.Aqua, 140, 8);
-            Ui.Place(sensorBar[i].track.rectTransform, 130, 40 + i * 34, 140, 8);
-            sensorText[i] = Ui.Text(senses.transform, "", 13, Theme.Text2);
-            Ui.Place(sensorText[i].rectTransform, 284, 34 + i * 34, 120, 20);
+            var name = Ui.Text(drawer, Sensors.Names[i], 16, Color.white, true);
+            Ui.Place(name.rectTransform, 28, 474 + i * 30, 120, 24);
+            sensorBar[i] = Ui.Bar(drawer, new Color(1f, 1f, 1f, 0.15f), Theme.Aqua, 140, 8);
+            Ui.Place(sensorBar[i].track.rectTransform, 150, 483 + i * 30, 140, 8);
+            sensorText[i] = Ui.Text(drawer, "", 16, Theme.Faint);
+            Ui.Place(sensorText[i].rectTransform, 302, 474 + i * 30, 110, 24);
+            sensorText[i].enableWordWrapping = false;
         }
-        // The move it just made, and what it earned.
-        var moveCard = Ui.Card(root, "Move", Theme.Panel, Theme.Border1);
-        Ui.Place(moveCard.rectTransform, 1450, 228, 410, 206);
-        var ml = Ui.Eyebrow(moveCard.transform, "THE MOVE", Theme.TealDeep); Ui.Place(ml.rectTransform, 16, 10, 380, 16);
-        moveText = Ui.Text(moveCard.transform, "", 15, Theme.Ink);
-        Ui.Place(moveText.rectTransform, 16, 34, 378, 160);
+        var ml = Ui.Eyebrow(drawer, "THE MOVE", Theme.Teal); Ui.Place(ml.rectTransform, 428, 444, 180, 22);
+        moveText = Ui.Text(drawer, "", 16, Color.white);
+        Ui.Place(moveText.rectTransform, 428, 474, DrawerW - 452, 150);
 
         // The rule book it writes itself.
-        var book = Ui.Card(root, "Book", Theme.Panel, Theme.Border1);
-        Ui.Place(book.rectTransform, 1020, 446, 840, 436);
-        var bl = Ui.Eyebrow(book.transform, "THE RULE BOOK  ·  THE SITUATION, THE MOVE THAT PAID", Theme.TealDeep); Ui.Place(bl.rectTransform, 16, 10, 800, 16);
-        var scroll = Ui.Scroll(book.transform, "Scroll", out bookContent);
-        Ui.Place(scroll.GetComponent<RectTransform>(), 16, 32, 808, 392);
+        var bl = Ui.Eyebrow(drawer, "THE RULE BOOK  ·  THE MOVE THAT PAID", Theme.Teal); Ui.Place(bl.rectTransform, 28, 634, DW, 22);
+        var scroll = Ui.Scroll(drawer, "Scroll", out bookContent);
+        Ui.Place(scroll.GetComponent<RectTransform>(), 20, 664, DrawerW - 40, Ui.H - 664 - 24);
+
+        // The folded drawer: a slim tab and a way back.
+        tab = Ui.Node("Tab", root);
+        Ui.Place(tab, Ui.W - TabW, 0, TabW, Ui.H);
+        var tabBg = Ui.Box(tab, "Glass", Ui.DarkFill, false);
+        Ui.Stretch(tabBg.rectTransform);
+        var unfold = Ui.Button(tab, "Open", () => Fold(true), Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(unfold.GetComponent<RectTransform>(), 6, 18, TabW - 12, 44);
+        tab.gameObject.SetActive(false);
 
         string opening = app.luma.Say(l != null ? "live-" + l.number : "welcome");
         SayLine(opening, true);
 
-        results = Ui.Button(root, "See the debrief", app.FinishLevel, Ui.ButtonStyle.Primary, 18);
-        Ui.Place(results.GetComponent<RectTransform>(), 1620, 1016, 240, 46);
+        results = Ui.Button(root, "See the debrief", app.FinishLevel, Ui.ButtonStyle.Accent, 20);
+        Ui.Place(results.GetComponent<RectTransform>(), Ui.W - DrawerW - 40 - 280, 1004, 280, 56);
         results.gameObject.SetActive(false);
 
         follower = root.gameObject.AddComponent<Follower>();
@@ -160,7 +168,28 @@ public class RunScreen
         Mission();
         Refresh();
         follower.StartCoroutine(Countdown());
-        Ui.Emblem(root);
+    }
+
+    const float DrawerW = 640f, TabW = 72f; // the drawer: a third of the screen at most; the world keeps the rest
+    readonly RectTransform frame, drawer, tab;
+    bool open = true;
+    float WorldW => Ui.W - (open ? DrawerW : TabW);
+
+    // Fold the drawer away (the world takes the screen) or bring it back.
+    void Fold(bool show)
+    {
+        open = show;
+        drawer.gameObject.SetActive(show);
+        tab.gameObject.SetActive(!show);
+        Ui.Place(frame, 0, 0, WorldW, Ui.H);
+        View();
+    }
+
+    // The view the toggle asks for: behind the car (the default), or the whole track.
+    void View()
+    {
+        if (viewToggle == null || viewToggle.Selected == 0) app.world.ShowFollow(frame);
+        else app.world.ShowOverview(frame);
     }
 
     void StartRun(RectTransform frame)
@@ -168,7 +197,7 @@ public class RunScreen
         var (s, label) = queue[which];
         training = new Training(s, label);
         app.world.Build(training.track, false);
-        app.world.ShowOverview(frame);
+        if (Circuit.HasKit) app.world.ShowFollow(frame); else app.world.ShowOverview(frame);
         phase = Phase.Training;
         saidFirst = saidSettled = saidLoophole = false;
     }
@@ -178,7 +207,7 @@ public class RunScreen
     void SayLine(string text, bool stay = false)
     {
         if (coachLine != null) Object.Destroy(coachLine.gameObject);
-        coachLine = app.luma.Line(root, 1020, 896, 840, Labels.Lead(text), false, stay, 15);
+        coachLine = app.luma.Line(root, 40, 900, 900, Labels.Lead(text), true, stay, 18);
     }
 
     void Mission()
@@ -191,6 +220,8 @@ public class RunScreen
     int lapsWanted => app.lesson != null ? app.lesson.laps : 5;
 
     public void SetSpeed(int i) { speedIndex = i; Sfx.EngineAudible = i <= 1; }
+    public bool RaceRunning => phase == Phase.Racing && !paused && race != null && race.car.steps > 1; // the screenshot walk waits for it
+    public bool BannerUp => showing || banners.Count > 0;
     public void RaceNow() { if (phase == Phase.Training) training.done = true; }
 
     // ---- every frame ---------------------------------------------------------------------
@@ -262,7 +293,7 @@ public class RunScreen
         banners.Clear();
         phase = Phase.Racing;
         race = new Race(training, Track.Get(training.s.test), lapsWanted, training.s.seed + 1);
-        if (race.track != training.track || true) { app.world.Build(race.track, false); app.world.ShowOverview(app.world.frame); }
+        if (race.track != training.track || true) { app.world.Build(race.track, false); if (Circuit.HasKit) View(); else app.world.ShowOverview(app.world.frame); }
         if (speedIndex > 1) SetSpeed(1);
         SayLine($"The race: {lapsWanted} laps on {race.track.name.ToLowerInvariant()} with the rule book as it is. No new moves, no learning.");
         Mission();
@@ -278,7 +309,7 @@ public class RunScreen
         // wrong reward) is shown first: at the fast speeds the training ends under it.
         while (banners.Count > 0 || showing) yield return null;
         app.world.ShowCountdown(app.world.frame, 2.6f);
-        viewToggle.Set(1, false);
+        viewToggle.Set(0, false);
         yield return new WaitForSecondsRealtime(0.3f);
         foreach (var n in new[] { "3", "2", "1" }) Announce(n, "", Theme.Teal, 0.5f, true);
         Announce("GO", $"{lapsWanted} laps, the rule book as it is", Theme.Teal, 0.9f, true);
@@ -316,7 +347,7 @@ public class RunScreen
         phase = Phase.Real;
         race = new Race(training, Track.Get("real"), 1, training.s.seed + 2);
         app.world.Build(race.track, false);
-        app.world.ShowOverview(app.world.frame);
+        if (Circuit.HasKit) View(); else app.world.ShowOverview(app.world.frame);
         SetSpeed(0);
         Announce("THE REAL RUN", "one lap, no learning, on a track the simulator never had", Theme.Danger, 1.8f, true);
         SayLine("One lap on the real track, no learning. The oil on the straight is something the simulator never had.");
@@ -374,10 +405,10 @@ public class RunScreen
             bool on = training.s.sensors[i];
             int v = r != null ? r[i] : 0;
             sensorText[i].text = on ? Sensors.Describe(i, v) : "off";
-            sensorText[i].color = on ? Theme.Ink : Theme.Muted;
+            sensorText[i].color = on ? Color.white : Theme.Faint;
             float max = i == Sensors.Speed ? 2 : i == Sensors.Bend ? 1 : Sensors.Far;
             Ui.SetBar(sensorBar[i], on ? v / max : 0);
-            sensorBar[i].fill.color = !on ? Theme.Border : i == Sensors.Front || i == Sensors.Left || i == Sensors.Right ? (v == 0 ? Theme.Danger : v == 1 ? Theme.Amber : Theme.Aqua) : Theme.Aqua;
+            sensorBar[i].fill.color = !on ? new Color(1f, 1f, 1f, 0.15f) : i == Sensors.Front || i == Sensors.Left || i == Sensors.Right ? (v == 0 ? Theme.Danger : v == 1 ? Theme.Amber : Theme.Aqua) : Theme.Aqua;
         }
     }
 
@@ -395,20 +426,20 @@ public class RunScreen
         {
             bool current = page.Key == now;
             int best = training.book.Best(page.Key, s.moves);
-            var row = Ui.Box(bookContent, "Row", current ? Theme.Surface2 : Theme.Panel, false);
-            Ui.Place(row.rectTransform, 0, y, 800, 28);
-            var sit = Ui.Text(row.transform, Driving.Words(Driving.Parse(page.Key), s.sensors), 13, current ? Theme.Ink : Theme.Text2, current);
-            Ui.Place(sit.rectTransform, 10, 4, 560, 22);
+            var row = Ui.Box(bookContent, "Row", current ? new Color(0.07f, 0.32f, 0.36f, 0.95f) : Ui.RowFill, false);
+            Ui.Place(row.rectTransform, 0, y, DrawerW - 40, 32);
+            var sit = Ui.Text(row.transform, Driving.Words(Driving.Parse(page.Key), s.sensors), 16, current ? Color.white : Theme.Faint, current);
+            Ui.Place(sit.rectTransform, 12, 5, DrawerW - 40 - 170, 24);
             sit.enableWordWrapping = false; sit.overflowMode = TextOverflowModes.Ellipsis;
-            var mv = Ui.Text(row.transform, best >= 0 ? Moves.Names[best] : "?", 13, Theme.TealDeep, true, TextAlignmentOptions.TopRight);
-            Ui.Place(mv.rectTransform, 580, 4, 210, 22);
-            y += 30;
+            var mv = Ui.Text(row.transform, best >= 0 ? Moves.Names[best] : "?", 16, Theme.Teal, true, TextAlignmentOptions.TopRight);
+            Ui.Place(mv.rectTransform, DrawerW - 40 - 160, 5, 148, 24);
+            y += 36;
         }
         if (pages.Count == 0)
         {
-            var empty = Ui.Text(bookContent, "Nothing yet", 13, Theme.Muted);
-            Ui.Place(empty.rectTransform, 10, 4, 600, 22);
-            y = 30;
+            var empty = Ui.Text(bookContent, "Nothing yet", 16, Theme.Faint);
+            Ui.Place(empty.rectTransform, 12, 5, 600, 24);
+            y = 32;
         }
         bookContent.sizeDelta = new Vector2(0, y);
     }
@@ -441,13 +472,13 @@ public class RunScreen
         if (big)
         {
             flash = Ui.Box(bannerLayer, "Flash", new Color(colour.r, colour.g, colour.b, 0f), false);
-            Ui.Place(flash.rectTransform, 40, 104, 940, 600);
+            Ui.Place(flash.rectTransform, 0, 0, WorldW, Ui.H);
             flash.raycastTarget = false;
         }
         var card = Ui.Box(bannerLayer, "Moment", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f));
         float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : 92;
         float w = big ? 760 : 620;
-        Ui.Place(card.rectTransform, 40 + (940 - w) / 2, 404 - h / 2, w, h);
+        Ui.Place(card.rectTransform, (WorldW - w) / 2, 420 - h / 2, w, h);
         card.raycastTarget = false;
         var keyline = Ui.Box(card.transform, "Keyline", colour, false);
         Ui.Place(keyline.rectTransform, 0, 0, 6, h);
@@ -457,13 +488,13 @@ public class RunScreen
         t.enableWordWrapping = false;
         if (!string.IsNullOrEmpty(sub))
         {
-            var st = Ui.Text(card.transform, sub, big ? 18 : 14, Look.AsphaltLine, false, TextAlignmentOptions.Center);
+            var st = Ui.Text(card.transform, sub, big ? 20 : 16, Look.AsphaltLine, false, TextAlignmentOptions.Center);
             Ui.Place(st.rectTransform, 20, h - (big ? 52 : 32), w - 40, 26);
             st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
         }
         var group = Ui.Group(card);
         card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        card.rectTransform.anchoredPosition = new Vector2(510, -404);
+        card.rectTransform.anchoredPosition = new Vector2(WorldW / 2, -420);
         if (big) Sfx.Sting(colour == Theme.Danger ? Sfx.Mood.Alarm : text == "GO" ? Sfx.Mood.Go : text.Length <= 1 ? Sfx.Mood.Beep : Sfx.Mood.Fanfare); else Sfx.Tick();
         yield return Ui.Animate(big ? 0.34f : 0.2f, k =>
         {

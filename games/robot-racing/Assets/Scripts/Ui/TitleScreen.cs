@@ -3,9 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using Maaloomatiia.Games;
 
-// The cover: the track at dusk with the robot driving it on its own, the camera
-// turning slowly; over it the wordmark, the pitch, LUMA, the campaign (three
-// tiers of levels with the stars each earned) and the way in.
+// The cover: the robot car on the grid at dusk under the start gantry, the camera turning
+// slowly round it, framed as the trackside camera's feed; beside it the wordmark, the
+// pitch, LUMA, the campaign (three tiers of levels with the stars each earned) and the
+// way in.
 public class TitleScreen
 {
     public readonly RectTransform root;
@@ -19,8 +20,8 @@ public class TitleScreen
         var frame = Ui.Node("Frame", root);
         Ui.Place(frame, 1020, 40, 900, 960);
         app.world.Build(Track.Get("grand"), true);
-        app.world.ShowOrbit(frame);
-        app.world.Demo(true);
+        if (Circuit.HasKit) app.world.ShowCarOrbit(frame, 1.32f, 8f);
+        else { app.world.ShowOrbit(frame); app.world.Demo(true); }
 
         var shade = Ui.Box(root, "Shade", Theme.Ink, false);
         Ui.Place(shade.rectTransform, -800, -300, 1720, 1700);
@@ -28,19 +29,25 @@ public class TitleScreen
         var fade = Ui.Node("Fade", root).gameObject.AddComponent<Image>();
         fade.sprite = Ui.FadeStrip; fade.color = Theme.Ink; fade.raycastTarget = false;
         Ui.Place(fade.rectTransform, 920, -300, 440, 1700);
+        if (Circuit.HasKit)
+        {
+            var feedArea = Ui.Node("Feed", root);
+            Ui.Place(feedArea, 1000, 0, 920, 1080);
+            CameraFeed.Build(feedArea, "CAM 3  /  THE GRID", "MAALOOMATIIA RACEWAY  /  EVENING PRACTICE");
+        }
 
         Ui.Wordmark(root, 120, 64, 250);
         if (Platform.IsWeb)
         {
             var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 18);
-            Ui.Place(menu.GetComponent<RectTransform>(), 1600, 58, 200, 52);
+            Ui.Place(menu.GetComponent<RectTransform>(), 400, 58, 200, 52);
         }
         Button sound = null;
         sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(sound.GetComponent<RectTransform>(), 1440, 58, 140, 52);
+        Ui.Place(sound.GetComponent<RectTransform>(), 766, 58, 140, 52);
         Button voice = null;
         voice = Ui.Button(root, Luma.Voice ? "Voice on" : "Voice off", () => { Luma.Voice = !Luma.Voice; if (!Luma.Voice) app.luma.Hush(); Ui.SetLabel(voice, Luma.Voice ? "Voice on" : "Voice off"); }, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(voice.GetComponent<RectTransform>(), 1290, 58, 134, 52);
+        Ui.Place(voice.GetComponent<RectTransform>(), 616, 58, 134, 52);
 
         var eyebrow = Ui.Eyebrow(root, "ROBOT RACING  ·  GAME 03", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
@@ -81,7 +88,7 @@ public class TitleScreen
                 Ui.Place(rim.rectTransform, x - 19, ty - 19, 38, 38);
                 var stop = Ui.Box(root, "Stop", isDone || isNext ? Theme.Teal : Theme.Ink);
                 Ui.Place(stop.rectTransform, x - 17, ty - 17, 34, 34);
-                var num = Ui.Text(stop.transform, l.id, 12, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
+                var num = Ui.Text(stop.transform, l.id, 16, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
                 Ui.Stretch(num.rectTransform);
                 int stars = app.StarsOf(l.number);
                 for (int s = 0; s < 3; s++)

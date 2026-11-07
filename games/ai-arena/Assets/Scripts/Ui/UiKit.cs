@@ -100,7 +100,7 @@ public static class Ui
     // Dark glass: the HUD's material over the world, ink at 78 % with a keyline on the left.
     public static Image Glass(Transform parent, string name, float x, float y, float w, float h, bool keyline = true, Color? keylineColour = null)
     {
-        var box = Box(parent, name, new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.78f));
+        var box = Box(parent, name, new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.86f));
         Place(box.rectTransform, x, y, w, h);
         box.raycastTarget = false;
         if (keyline)
@@ -131,19 +131,23 @@ public static class Ui
         var shadow = Node("Shadow", parent).gameObject.AddComponent<Image>();
         shadow.sprite = Theme.SoftShadow; shadow.type = Image.Type.Sliced; shadow.color = Theme.Shadow; shadow.raycastTarget = false;
         Place(shadow.rectTransform, x - 22, y - 18, w + 44, h + 44);
-        var card = Box(parent, name, Theme.Panel);
+        var card = Box(parent, name, new Color(Theme.Panel.r, Theme.Panel.g, Theme.Panel.b, 0.985f)); // a sheet: nothing shows through
         Place(card.rectTransform, x, y, w, h);
         return card;
     }
 
+    // On the glass: the light theme's ink becomes chalk, its deep teal the bright one, its red a lighter red.
+    public static Color OnGlass(Color c) => c == Theme.Ink ? Theme.Chalk : c == Theme.TealDeep ? Theme.Teal : c == Theme.Danger ? Theme.DangerText : c;
+
+    // Text, never under 16 px on the 1080 canvas: the realism pass's floor for anything the player reads.
     public static TextMeshProUGUI Text(Transform parent, string text, float size, Color color, bool bold = false,
                                        TextAlignmentOptions align = TextAlignmentOptions.TopLeft)
     {
         var rt = Node("Text", parent);
         var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
         t.font = bold ? Theme.Bold : Theme.Body;
-        t.fontSize = size;
-        t.color = color;
+        t.fontSize = Mathf.Max(16f, size);
+        t.color = OnGlass(color);
         t.text = text;
         t.alignment = align;
         t.enableWordWrapping = true;
@@ -155,8 +159,8 @@ public static class Ui
     // The small caps label above a block: the one place the brand tracks its type.
     public static TextMeshProUGUI Eyebrow(Transform parent, string text, Color color)
     {
-        var t = Text(parent, text, 13, color);
-        t.characterSpacing = 5;
+        var t = Text(parent, text, 16, color);
+        t.characterSpacing = 4;
         return t;
     }
 
@@ -184,9 +188,10 @@ public static class Ui
         Color ink = style switch
         {
             ButtonStyle.Primary => Color.white,
-            ButtonStyle.Danger => Theme.Danger,
+            ButtonStyle.Danger => Theme.DangerText,
             ButtonStyle.GhostOnDark => Color.white,
-            _ => Theme.Ink,
+            ButtonStyle.Accent => Theme.Ink, // dark on the bright teal
+            _ => Theme.Chalk,
         };
         var outer = Card(parent, "Button " + label, fill, border);
         outer.sprite = Corner;
@@ -199,6 +204,7 @@ public static class Ui
         colors.disabledColor = new Color(1, 1, 1, 0.45f);
         btn.colors = colors;
         var t = Text(outer.transform, label, fontSize, ink, true, TextAlignmentOptions.Center);
+        t.color = ink;
         Stretch(t.rectTransform, 12, 0, 12, 0);
         btn.onClick.AddListener(() => { Sfx.Tick(); onClick?.Invoke(); });
         return btn;
@@ -274,7 +280,7 @@ public static class Ui
                 bool on = i == Selected;
                 buttons[i].GetComponent<Image>().color = on ? Theme.BorderTeal : Theme.Border;
                 fills[i].color = on ? Theme.Surface2 : Theme.Panel;
-                labels[i].color = on ? Theme.TealDeep : Theme.Ink;
+                labels[i].color = on ? Theme.Teal : Theme.Chalk;
             }
             if (notify) OnSelect?.Invoke(Selected);
         }
@@ -310,10 +316,10 @@ public static class Ui
         return img;
     }
 
-    // The OO emblem, bottom right, on every light screen.
+    // The OO emblem, bottom right, on every screen.
     public static Image Emblem(Transform parent)
     {
-        var img = Picture(parent, "Brand/emblem-light", 0, 0, 64, 44);
+        var img = Picture(parent, "Brand/emblem-dark", 0, 0, 64, 44); // on the glass
         var rt = img.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(1, 0);
         rt.pivot = new Vector2(1, 0);

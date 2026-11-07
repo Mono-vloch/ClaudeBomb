@@ -155,8 +155,8 @@ public static class Ui
     // The small caps label above a block: the one place the brand tracks its type.
     public static TextMeshProUGUI Eyebrow(Transform parent, string text, Color color)
     {
-        var t = Text(parent, text, 13, color);
-        t.characterSpacing = 5;
+        var t = Text(parent, text, 16, color);
+        t.characterSpacing = 4;
         return t;
     }
 
@@ -249,15 +249,18 @@ public static class Ui
         public int Selected { get; private set; }
         public Action<int> OnSelect;
 
-        public Segmented(Transform parent, string[] options, int selected, float width, float height, float fontSize = 19)
+        readonly bool dark;
+
+        public Segmented(Transform parent, string[] options, int selected, float width, float height, float fontSize = 19, bool dark = false)
         {
+            this.dark = dark;
             root = Node("Segmented", parent);
             root.sizeDelta = new Vector2(width, height);
             float gap = 8f, w = (width - gap * (options.Length - 1)) / options.Length;
             for (int i = 0; i < options.Length; i++)
             {
                 int index = i;
-                var b = Button(root, options[i], () => Set(index), ButtonStyle.Secondary, fontSize);
+                var b = Button(root, options[i], () => Set(index), dark ? ButtonStyle.GhostOnDark : ButtonStyle.Secondary, fontSize);
                 Place(b.GetComponent<RectTransform>(), i * (w + gap), 0, w, height);
                 buttons.Add(b);
                 fills.Add(b.transform.Find("Fill").GetComponent<Image>());
@@ -272,12 +275,47 @@ public static class Ui
             for (int i = 0; i < buttons.Count; i++)
             {
                 bool on = i == Selected;
+                if (dark) { Chip(buttons[i], on); continue; }
                 buttons[i].GetComponent<Image>().color = on ? Theme.BorderTeal : Theme.Border;
                 fills[i].color = on ? Theme.Surface2 : Theme.Panel;
                 labels[i].color = on ? Theme.TealDeep : Theme.Ink;
             }
             if (notify) OnSelect?.Invoke(Selected);
         }
+    }
+
+    // ---- the dark glass of the play screens (the realism pass: no light panel over the world) ----
+
+    public static readonly Color DarkFill = new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.94f);
+    public static readonly Color RowFill = new Color(0.08f, 0.14f, 0.27f, 0.92f);
+    public static readonly Color Hairline = new Color(1f, 1f, 1f, 0.14f);
+
+    // A choice on the dark: lit teal when on, a faint keyline when off.
+    public static void Chip(Button b, bool on)
+    {
+        b.GetComponent<Image>().color = on ? Theme.Teal : new Color(1f, 1f, 1f, 0.22f);
+        var fill = b.transform.Find("Fill").GetComponent<Image>();
+        fill.color = on ? new Color(0.07f, 0.32f, 0.36f, 1f) : RowFill;
+        var label = b.GetComponentInChildren<TextMeshProUGUI>();
+        label.color = on ? Theme.Teal : Color.white;
+    }
+
+    // A panel of dark glass with a hairline: the play screens' card.
+    public static Image DarkCard(Transform parent, string name) => Card(parent, name, RowFill, Hairline, 1f);
+
+    // A text field on the dark.
+    public static TMP_InputField DarkInput(Transform parent, string placeholder, bool multiline, float fontSize = 18)
+    {
+        var field = Input(parent, placeholder, multiline, fontSize);
+        var outer = field.GetComponent<Image>();
+        outer.color = new Color(1f, 1f, 1f, 0.3f);
+        outer.transform.Find("Fill").GetComponent<Image>().color = RowFill;
+        field.textComponent.color = Color.white;
+        ((TextMeshProUGUI)field.placeholder).color = Theme.Faint;
+        field.onSelect.RemoveAllListeners(); field.onDeselect.RemoveAllListeners();
+        field.onSelect.AddListener(_ => outer.color = Theme.Teal);
+        field.onDeselect.AddListener(_ => outer.color = new Color(1f, 1f, 1f, 0.3f));
+        return field;
     }
 
     public static Image Dot(Transform parent, Color color, float size)

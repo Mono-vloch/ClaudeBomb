@@ -72,6 +72,7 @@ public class Luma : MonoBehaviour
         }
         voice.clip = clip;
         voice.Play();
+        Debug.Log($"[Luma] speaking {clip.name} ({clip.length:0.0} s)");
         speaking = null;
     }
 

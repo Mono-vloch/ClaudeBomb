@@ -5,11 +5,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The errand, live: the market in three dimensions on the left, the mission and
-// one card per agent on the right with its basket, its pocket money draining and
-// the last thing it texted home, and LUMA underneath. A countdown sends the
-// agents out; banners mark the big moments (sent home, out of tokens, home). The
-// market can be watched from above or through the chosen agent's eyes. On the
+// The errand, live: the market in three dimensions, at street level behind the chosen
+// agent (the realism pass: the agent is the hero of the frame, the overview only when the
+// player asks for it); a dark glass drawer on the right, 600 of the 1920 units (31 %), that
+// folds away, with the mission and one card per agent (its basket, its pocket money
+// draining, the last thing it texted home) and LUMA underneath. A countdown sends the
+// agents out; banners mark the big moments (sent home, out of tokens, home). The market
+// can be watched from the street, through the chosen agent's eyes or from above. On the
 // first errand the loop runs one turn at a time.
 public class ArenaScreen
 {
@@ -23,8 +25,18 @@ public class ArenaScreen
     readonly TextMeshProUGUI[] loopWords = new TextMeshProUGUI[3];
     bool showing;
     readonly Button pause, results;
-    readonly RectTransform cards, labelsLayer, bannerLayer;
+    readonly RectTransform cards, labelsLayer, bannerLayer, drawer, frame;
     readonly float cardsHeight;
+    bool folded;
+    const float DrawerW = 600f, CardW = 552f;
+    public static ArenaScreen Current { get; private set; }
+    readonly Ui.Segmented viewToggle;
+    // The view, as the player would pick it (0 street, 1 agent's eye, 2 the market from above): for the screenshot walk.
+    public void SelectView(int i) => viewToggle.Set(i);
+    RectTransform feed;            // the agent's eye as a camera feed: corner brackets, a REC dot, the agent's name
+    TextMeshProUGUI feedLabel, feedSight;
+    Image recDot;
+    float WorldW => folded ? Ui.W - 56f : Ui.W - DrawerW; // the world's share of the stage
     readonly Dictionary<AgentState, Card> cardOf = new Dictionary<AgentState, Card>();
     readonly Dictionary<AgentState, RectTransform> labelOf = new Dictionary<AgentState, RectTransform>();
     readonly HashSet<AgentState> announced = new HashSet<AgentState>();
@@ -46,81 +58,88 @@ public class ArenaScreen
     public ArenaScreen(Transform parent, App app, Arena arena, Simulation sim)
     {
         this.app = app; this.arena = arena; this.sim = sim;
+        Current = this;
         root = Ui.Node("Arena", parent);
         Ui.Stretch(root);
         app.Paper(Color.clear); // the market shows through
 
-        // The market, behind everything, in the left part of the stage.
+        // The market, behind everything, in the part of the stage the drawer leaves.
         world = app.world;
-        var frame = Ui.Node("Frame", root);
-        Ui.Place(frame, 40, 104, 940, 920);
+        frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 0, 0, WorldW, Ui.H);
         world.Build(arena, false);
-        world.ShowMarket(frame);
-
-        // The cards sit on frosted glass over the park.
-        var column = Ui.Box(root, "Column", new Color(1, 1, 1, 0.84f), false);
-        Ui.Place(column.rectTransform, 1000, -300, 1600, 1700);
-        column.raycastTarget = false;
+        if (Market.Real) { world.Highlight(arena.agents[0]); world.ShowStreet(frame); } else world.ShowMarket(frame);
+        sim.Holding = () => world.Animating; // a real walk takes real time
 
         // The mission HUD, dark glass over the market: the errand and the step, the turn,
         // the loop's three words lighting one after the other, and the score.
-        var hud1 = Ui.Glass(root, "Hud", 40, 16, 520, 96);
+        var hud1 = Ui.Glass(root, "Hud", 40, 16, 520, 100);
         string where = app.decide != null ? $"TASK {app.decide.RunNumber} OF {Decide.ShoppingTasks}" : app.lesson != null ? $"ERRAND {app.lesson.id}" : "FREE PLAY";
         var levelTag = Ui.Eyebrow(hud1.transform, where, Theme.Teal);
         levelTag.font = Theme.Bold;
-        Ui.Place(levelTag.rectTransform, 20, 10, 480, 18);
+        Ui.Place(levelTag.rectTransform, 20, 10, 480, 20);
         turnText = Ui.Text(hud1.transform, "", 28, Color.white, true);
-        Ui.Place(turnText.rectTransform, 20, 28, 480, 40);
+        Ui.Place(turnText.rectTransform, 20, 30, 480, 40);
         turnText.enableWordWrapping = false;
-        phaseText = Ui.Text(hud1.transform, "", 12, Look.Chalk);
-        Ui.Place(phaseText.rectTransform, 20, 68, 480, 22);
+        phaseText = Ui.Text(hud1.transform, "", 16, Look.Chalk);
+        Ui.Place(phaseText.rectTransform, 20, 70, 490, 24);
         phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
-        var hud2 = Ui.Glass(root, "Loop", 570, 16, 420, 96);
+        var hud2 = Ui.Glass(root, "Loop", 570, 16, 420, 100);
         var loopTag = Ui.Eyebrow(hud2.transform, "THE LOOP  ·  EVERY TURN", Theme.Teal);
-        Ui.Place(loopTag.rectTransform, 20, 10, 380, 16);
+        Ui.Place(loopTag.rectTransform, 20, 10, 380, 20);
         string[] words = { "LOOK", "DECIDE", "MOVE" };
         for (int i = 0; i < 3; i++)
         {
             loopChips[i] = Ui.Box(hud2.transform, "Chip", new Color(1f, 1f, 1f, 0.1f));
-            Ui.Place(loopChips[i].rectTransform, 20 + i * 126, 36, 116, 42);
+            Ui.Place(loopChips[i].rectTransform, 20 + i * 126, 40, 116, 44);
             loopChips[i].raycastTarget = false;
-            loopWords[i] = Ui.Text(loopChips[i].transform, words[i], 15, Look.Chalk, true, TextAlignmentOptions.Center);
+            loopWords[i] = Ui.Text(loopChips[i].transform, words[i], 16, Look.Chalk, true, TextAlignmentOptions.Center);
             loopWords[i].characterSpacing = 3;
             Ui.Stretch(loopWords[i].rectTransform);
         }
-        var hud3 = Ui.Glass(root, "Score", 40, 120, 520, 70);
+        var hud3 = Ui.Glass(root, "Score", 40, 124, 520, 76);
         TextMeshProUGUI Stat(string name, float x, float w)
         {
             var e = Ui.Eyebrow(hud3.transform, name, Theme.Teal);
-            Ui.Place(e.rectTransform, x, 10, w, 16);
+            Ui.Place(e.rectTransform, x, 10, w, 20);
             var v = Ui.Text(hud3.transform, "", 22, Color.white, true);
-            Ui.Place(v.rectTransform, x, 28, w, 34);
+            Ui.Place(v.rectTransform, x, 32, w, 34);
             v.enableWordWrapping = false; v.overflowMode = TextOverflowModes.Ellipsis;
             return v;
         }
-        homeText = Stat("HOME", 20, 150);
-        basketText = Stat("IN THE BASKETS", 180, 170);
-        tokensText = Stat("TOKENS LEFT", 360, 150);
+        homeText = Stat("HOME", 20, 140);
+        basketText = Stat("IN THE BASKETS", 170, 190);
+        tokensText = Stat("TOKENS LEFT", 370, 140);
 
-        // The view: the whole market, or what the chosen agent sees; the speed; the pause.
-        var viewToggle = new Ui.Segmented(root, new[] { "The market", "Agent's eye" }, 0, 300, 40, 14);
-        Ui.Place(viewToggle.root, 40, 1032, 300, 40);
-        viewToggle.OnSelect = i => world.SetView(i == 0 ? Market.View.Market : Market.View.RobotsEye);
-        pause = Ui.Button(root, "Pause", () => { sim.paused = !sim.paused; Ui.SetLabel(pause, sim.paused ? "Resume" : "Pause"); }, Ui.ButtonStyle.Secondary, 14);
-        Ui.Place(pause.GetComponent<RectTransform>(), 352, 1032, 90, 40);
-        var stop = Ui.Button(root, "Call them home", () => { if (!sim.finished) sim.Abort(); }, Ui.ButtonStyle.Quiet, 14);
-        Ui.Place(stop.GetComponent<RectTransform>(), 450, 1032, 160, 40);
-        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, null), Ui.ButtonStyle.Quiet, 14); // the speed, among others
-        Ui.Place(settings.GetComponent<RectTransform>(), 620, 1032, 100, 40);
+        // The view: the street behind the chosen agent, what it sees, or the whole market from
+        // above (only when asked for); the pause; calling them home; the settings.
+        var views = Market.Real ? new[] { "Street", "Agent's eye", "The market" } : new[] { "The market", "Agent's eye" };
+        viewToggle = new Ui.Segmented(root, views, 0, Market.Real ? 450 : 300, 44, 16);
+        Ui.Place(viewToggle.root, 40, 1020, Market.Real ? 450 : 300, 44);
+        viewToggle.OnSelect = i =>
+        {
+            var v = Market.Real ? (i == 0 ? Market.View.Street : i == 1 ? Market.View.RobotsEye : Market.View.Market) : (i == 0 ? Market.View.Market : Market.View.RobotsEye);
+            world.SetView(v);
+            if (feed != null) feed.gameObject.SetActive(v == Market.View.RobotsEye);
+            RefreshFeed();
+        };
+        BuildFeed();
+        float bx = Market.Real ? 502 : 352;
+        pause = Ui.Button(root, "Pause", () => { sim.paused = !sim.paused; Ui.SetLabel(pause, sim.paused ? "Resume" : "Pause"); }, Ui.ButtonStyle.Secondary, 16);
+        Ui.Place(pause.GetComponent<RectTransform>(), bx, 1020, 104, 44);
+        var stop = Ui.Button(root, "Call them home", () => { if (!sim.finished) sim.Abort(); }, Ui.ButtonStyle.Quiet, 16);
+        Ui.Place(stop.GetComponent<RectTransform>(), bx + 114, 1020, 180, 44);
+        var settings = Ui.Button(root, "Settings", () => SettingsSheet.Toggle(app, root, null), Ui.ButtonStyle.Quiet, 16); // the speed, among others
+        Ui.Place(settings.GetComponent<RectTransform>(), bx + 304, 1020, 116, 44);
 
         // The agents' names, under their feet; the bubble over the chosen one.
         labelsLayer = Ui.Node("Labels", root);
         Ui.Stretch(labelsLayer);
         foreach (var a in arena.agents)
         {
-            var label = Ui.Box(labelsLayer, "Label " + a.Name, new Color(1, 1, 1, 0.88f));
+            var label = Ui.Box(labelsLayer, "Label " + a.Name, new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.82f));
             label.raycastTarget = false;
-            var t = Ui.Text(label.transform, a.Name, 14, Theme.Ink, true, TextAlignmentOptions.Center);
+            var t = Ui.Text(label.transform, a.Name, 16, Theme.Chalk, true, TextAlignmentOptions.Center);
             Ui.Stretch(t.rectTransform, 6, 0, 6, 0);
             t.enableWordWrapping = false;
             labelOf[a] = label.rectTransform;
@@ -128,21 +147,34 @@ public class ArenaScreen
         bannerLayer = Ui.Node("Banners", root);
         Ui.Stretch(bannerLayer);
 
-        // The mission, at the top of the column.
-        var mission = Ui.Soft(root, "Mission");
-        Ui.Place(mission.rectTransform, 1020, 28, 840, 58);
+        // The drawer: dark glass down the right side, folding to a tab.
+        drawer = Ui.Node("Drawer", root);
+        Ui.Place(drawer, Ui.W - DrawerW, 0, DrawerW, Ui.H);
+        var glass = Ui.Box(drawer, "Glass", Theme.Panel, false);
+        Ui.Stretch(glass.rectTransform);
+        glass.raycastTarget = true;
+        var edge = Ui.Box(drawer, "Edge", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.5f), false);
+        Ui.Place(edge.rectTransform, 0, 0, 2, Ui.H);
+        edge.raycastTarget = false;
+        Button tab = null;
+        tab = Ui.Button(drawer, "›", () => { Fold(!folded); Ui.SetLabel(tab, folded ? "‹" : "›"); }, Ui.ButtonStyle.Secondary, 30);
+        Ui.Place(tab.GetComponent<RectTransform>(), -52, 470, 48, 120);
+
+        // The mission, at the top of the drawer.
+        var mission = Ui.Soft(drawer, "Mission");
+        Ui.Place(mission.rectTransform, 24, 24, CardW, 108);
         var missionTag = Ui.Eyebrow(mission.transform, $"MISSION  ·  {arena.brief.from.ToUpperInvariant()}  ·  {where}", Theme.TealDeep);
-        Ui.Place(missionTag.rectTransform, 16, 8, 800, 18);
-        var missionText = Ui.Text(mission.transform, arena.brief.rule, 15, Theme.Ink);
-        Ui.Place(missionText.rectTransform, 16, 28, 808, 24);
-        missionText.enableWordWrapping = false;
+        Ui.Place(missionTag.rectTransform, 16, 12, CardW - 32, 22);
+        missionTag.enableWordWrapping = false; missionTag.overflowMode = TextOverflowModes.Ellipsis;
+        var missionText = Ui.Text(mission.transform, arena.brief.rule, 18, Theme.Ink);
+        Ui.Place(missionText.rectTransform, 16, 40, CardW - 32, 60);
         missionText.overflowMode = TextOverflowModes.Ellipsis;
 
         // LUMA gets the bottom of the column when the cards leave room for her.
         bool withCoach = arena.agents.Count <= 6;
-        cardsHeight = withCoach ? 830 : 930;
-        cards = Ui.Node("Cards", root);
-        Ui.Place(cards, 1020, 98, 840, cardsHeight);
+        cardsHeight = withCoach ? 640 : 830;
+        cards = Ui.Node("Cards", drawer);
+        Ui.Place(cards, 24, 148, CardW, cardsHeight);
         BuildCards();
         if (withCoach)
         {
@@ -156,8 +188,8 @@ public class ArenaScreen
         }
 
         bool lastTask = app.decide == null || app.decide.RunNumber >= Decide.ShoppingTasks;
-        results = Ui.Button(root, lastTask ? "See the debrief" : "Next task", () => app.ShowResults(arena, sim), Ui.ButtonStyle.Primary, 19);
-        Ui.Place(results.GetComponent<RectTransform>(), 1620, 1026, 240, 46);
+        results = Ui.Button(drawer, lastTask ? "See the debrief" : "Next task", () => app.ShowResults(arena, sim), Ui.ButtonStyle.Accent, 20);
+        Ui.Place(results.GetComponent<RectTransform>(), 24, 1000, CardW, 56);
         results.gameObject.SetActive(false);
 
         follower = root.gameObject.AddComponent<Follower>();
@@ -181,11 +213,47 @@ public class ArenaScreen
         world.Picked += Choose;
         world.Highlight(arena.agents[0]);
         Refresh();
-        Ui.Emblem(root);
 
         // The agents wait at their houses until the countdown has run.
         sim.paused = true;
         follower.StartCoroutine(Countdown());
+    }
+
+    // ---- the agent's eye, framed as Claude Bomb frames its camera feed -------------------
+
+    void BuildFeed()
+    {
+        feed = Ui.Node("Feed", frame);
+        Ui.Stretch(feed, 40, 214, 40, 90);
+        var line = new Color(1f, 1f, 1f, 0.55f);
+        foreach (var (ax, ay) in new[] { (0f, 1f), (1f, 1f), (0f, 0f), (1f, 0f) })
+            foreach (bool horizontal in new[] { true, false })
+            {
+                var stroke = Ui.Box(feed, "Corner", line, false);
+                stroke.raycastTarget = false;
+                var rt = stroke.rectTransform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(ax, ay);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta = horizontal ? new Vector2(48, 3) : new Vector2(3, 48);
+            }
+        recDot = Ui.Box(feed, "Rec", Theme.Danger);
+        recDot.raycastTarget = false;
+        var rr = recDot.rectTransform; rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0, 1); rr.anchoredPosition = new Vector2(22, -22); rr.sizeDelta = new Vector2(14, 14);
+        feedLabel = Ui.Text(feed, "", 16, Color.white, true);
+        var fl = feedLabel.rectTransform; fl.anchorMin = fl.anchorMax = fl.pivot = new Vector2(0, 1); fl.anchoredPosition = new Vector2(46, -18); fl.sizeDelta = new Vector2(600, 24);
+        feedLabel.characterSpacing = 4; feedLabel.enableWordWrapping = false;
+        feedSight = Ui.Text(feed, "", 16, new Color(1f, 1f, 1f, 0.75f), false);
+        var fs = feedSight.rectTransform; fs.anchorMin = fs.anchorMax = fs.pivot = new Vector2(0, 0); fs.anchoredPosition = new Vector2(22, 16); fs.sizeDelta = new Vector2(600, 24);
+        feedSight.characterSpacing = 4; feedSight.enableWordWrapping = false;
+        feed.gameObject.SetActive(false);
+    }
+
+    void RefreshFeed()
+    {
+        if (feed == null || !feed.gameObject.activeSelf) return;
+        var a = world.Highlighted;
+        feedLabel.text = a != null ? $"REC   AGENT CAM  /  {a.Name.ToUpperInvariant()}" : "REC   AGENT CAM";
+        feedSight.text = a != null ? $"SIGHT  /  {a.config.vision} CELL{(a.config.vision > 1 ? "S" : "")}" : "";
     }
 
     // ---- moments -----------------------------------------------------------------------
@@ -224,13 +292,13 @@ public class ArenaScreen
         if (big)
         {
             flash = Ui.Box(bannerLayer, "Flash", new Color(colour.r, colour.g, colour.b, 0f), false);
-            Ui.Place(flash.rectTransform, 40, 104, 940, 920);
+            Ui.Place(flash.rectTransform, 0, 0, WorldW, Ui.H);
             flash.raycastTarget = false;
         }
         var card = Ui.Box(bannerLayer, "Moment", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f));
         float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : 92;
         float w = big ? 780 : 620;
-        Ui.Place(card.rectTransform, 40 + (940 - w) / 2, 530 - h / 2, w, h);
+        Ui.Place(card.rectTransform, (WorldW - w) / 2, 330 - h / 2, w, h); // the upper third: the agent stays in view
         card.raycastTarget = false;
         var keyline = Ui.Box(card.transform, "Keyline", colour, false);
         Ui.Place(keyline.rectTransform, 0, 0, 6, h);
@@ -240,13 +308,13 @@ public class ArenaScreen
         t.enableWordWrapping = false;
         if (!string.IsNullOrEmpty(sub))
         {
-            var st = Ui.Text(card.transform, sub, big ? 18 : 14, Look.Chalk, false, TextAlignmentOptions.Center);
+            var st = Ui.Text(card.transform, sub, big ? 19 : 16, Look.Chalk, false, TextAlignmentOptions.Center);
             Ui.Place(st.rectTransform, 20, h - (big ? 52 : 32), w - 40, 26);
             st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
         }
         var group = Ui.Group(card);
         card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        card.rectTransform.anchoredPosition = new Vector2(510, -530);
+        card.rectTransform.anchoredPosition = new Vector2(WorldW / 2, -330);
         if (big) Sfx.Sting(colour == Theme.Danger ? Sfx.Mood.Alarm : text == "AGENTS OUT" ? Sfx.Mood.Go : text.Length <= 1 ? Sfx.Mood.Beep : colour == Theme.Amber ? Sfx.Mood.Alarm : Sfx.Mood.Fanfare); else Sfx.Tick();
         yield return Ui.Animate(big ? 0.34f : 0.2f, k =>
         {
@@ -268,6 +336,7 @@ public class ArenaScreen
     {
         Light(0);
         world.Beat(world.Highlighted);
+        world.LookAround(world.Highlighted);
         yield return new WaitForSecondsRealtime(0.45f);
         if (sim.phase == "thinking") Light(1);
         while (sim.phase == "thinking" && !sim.finished) yield return null;
@@ -302,13 +371,14 @@ public class ArenaScreen
     void Choose(AgentState a)
     {
         world.Highlight(a);
+        RefreshFeed();
         ShowBubble(a, a.lastThought);
         Refresh();
     }
 
     IEnumerator Turn()
     {
-        yield return world.Animate(sim.lastMoves.ToList(), 0.45f / Mathf.Max(0.5f, sim.speed));
+        yield return world.Animate(sim.lastMoves.ToList(), Market.StepSeconds(sim.speed));
         if (world.Highlighted != null && world.Highlighted.alive) ShowBubble(world.Highlighted, world.Highlighted.lastThought);
     }
 
@@ -319,7 +389,7 @@ public class ArenaScreen
         bubble = null;
         bubbleFor = null;
         if (a == null || !a.alive || string.IsNullOrEmpty(text)) return;
-        Ui.Bubble(labelsLayer, text, 15, 320, out bubble);
+        Ui.Bubble(labelsLayer, text, 16, 340, out bubble);
         bubbleFor = a;
         var g = Ui.Group(bubble); g.alpha = 0;
         follower.StartCoroutine(Ui.Fade(g, 1f, 0.2f));
@@ -335,16 +405,17 @@ public class ArenaScreen
             kv.Value.gameObject.SetActive(on);
             if (!on) continue;
             var p = app.StagePoint(feet);
-            Ui.Place(kv.Value, p.x - 60, p.y + 4, 120, 22);
+            Ui.Place(kv.Value, p.x - 70, p.y + 4, 140, 26);
         }
         if (bubble == null) return;
         if (bubbleFor == null || !world.OnScreen(bubbleFor, out _, out var head)) { bubble.gameObject.SetActive(false); return; }
         bubble.gameObject.SetActive(true);
         var h = app.StagePoint(head);
         float width = bubble.sizeDelta.x, height = bubble.sizeDelta.y;
-        float x = Mathf.Clamp(h.x - 30, 24, 1000 - width - 12);
-        bool above = h.y - height - 8 >= 104;
-        float y = above ? h.y - height - 8 : h.y + 60;
+        float x = Mathf.Clamp(h.x - 30, 24, WorldW - width - 12);
+        bool above = h.y - height - 8 >= 210;
+        float y = above ? h.y - height - 8 : Mathf.Clamp(h.y + 10, 210, Ui.H - height - 80);
+        if (!above) x = Mathf.Clamp(h.x + 90, 24, WorldW - width - 12); // beside the head, not over the agent
         bubble.Find("Tail").gameObject.SetActive(above);
         bubble.Find("Card").GetComponent<RectTransform>().offsetMin = above ? new Vector2(0, 10) : Vector2.zero;
         Ui.Place(bubble, x, y, width, height);
@@ -364,14 +435,14 @@ public class ArenaScreen
     void BuildCards()
     {
         int n = arena.agents.Count;
-        float gap = 10, h = Mathf.Min(150, (cardsHeight - gap * (n - 1)) / n);
-        bool compact = h < 110;
+        float gap = 10, h = Mathf.Min(190, (cardsHeight - gap * (n - 1)) / n);
+        bool compact = h < 150;
         for (int i = 0; i < n; i++)
         {
             var a = arena.agents[i];
             var card = new Card();
             card.outer = Ui.Card(cards, "Card", Theme.Panel, Theme.Border1);
-            Ui.Place(card.outer.rectTransform, 0, i * (h + gap), 840, h);
+            Ui.Place(card.outer.rectTransform, 0, i * (h + gap), CardW, h);
             card.fill = card.outer.transform.Find("Fill").GetComponent<Image>();
             var t = card.outer.transform;
             var btn = card.outer.gameObject.AddComponent<Button>();
@@ -381,57 +452,67 @@ public class ArenaScreen
 
             var dot = Ui.Dot(t, Theme.Team[a.config.colour], 18);
             Ui.Place(dot.rectTransform, 18, 18, 18, 18);
-            var name = Ui.Text(t, a.Name + (a.config.IsRule ? "  ·  a fixed rule, no AI" : ""), compact ? 19 : 22, Theme.Ink, true);
-            Ui.Place(name.rectTransform, 46, 10, 460, 30);
-            name.enableWordWrapping = false;
+            var name = Ui.Text(t, a.Name + (a.config.IsRule ? "  ·  a fixed rule, no AI" : ""), compact ? 20 : 22, Theme.Ink, true);
+            Ui.Place(name.rectTransform, 46, 10, 370, 30);
+            name.enableWordWrapping = false; name.overflowMode = TextOverflowModes.Ellipsis;
             card.score = Ui.Text(t, "0", compact ? 30 : 40, Theme.Ink, true, TextAlignmentOptions.TopRight);
-            Ui.Place(card.score.rectTransform, 700, 6, 120, 50);
-            var basket = Ui.Icon(t, "basket", compact ? 26 : 32);
-            Ui.Place(basket.rectTransform, compact ? 672 : 662, 12, compact ? 26 : 32, compact ? 26 : 32);
-            card.status = Ui.Text(t, "", 14, Theme.Muted);
-            Ui.Place(card.status.rectTransform, 46, compact ? 34 : 40, 560, 22);
-            card.status.enableWordWrapping = false;
-            card.bar = Ui.Bar(t, Theme.Border, Theme.Aqua, 240, 8);
-            Ui.Place(card.bar.track.rectTransform, 580, compact ? h - 22 : h - 26, 240, 8);
-            card.tokens = Ui.Text(t, "", 13, Theme.Muted, false, TextAlignmentOptions.TopRight);
-            Ui.Place(card.tokens.rectTransform, 560, compact ? h - 44 : h - 50, 260, 20);
+            Ui.Place(card.score.rectTransform, CardW - 110, 4, 92, 50);
+            var basket = Ui.Icon(t, "basket", compact ? 26 : 30);
+            Ui.Place(basket.rectTransform, CardW - 150, 12, compact ? 26 : 30, compact ? 26 : 30);
+            card.status = Ui.Text(t, "", 16, Theme.Muted);
+            Ui.Place(card.status.rectTransform, 46, compact ? 38 : 44, CardW - 170, 24);
+            card.status.enableWordWrapping = false; card.status.overflowMode = TextOverflowModes.Ellipsis;
+            card.bar = Ui.Bar(t, Theme.Border, Theme.Aqua, 180, 8);
+            Ui.Place(card.bar.track.rectTransform, CardW - 198, h - 24, 180, 8);
+            card.tokens = Ui.Text(t, "", 16, Theme.Muted, false, TextAlignmentOptions.TopRight);
+            Ui.Place(card.tokens.rectTransform, CardW - 290, h - 50, 272, 22);
             card.tokens.enableWordWrapping = false;
-            if (!compact || h > 80)
-            {
-                card.thought = Ui.Text(t, "", compact ? 14 : 16, Theme.Text2);
-                Ui.Place(card.thought.rectTransform, 46, compact ? 56 : 66, 500, h - (compact ? 60 : 110));
-                card.thought.overflowMode = TextOverflowModes.Ellipsis;
-            }
-            if (!compact)
-            {
-                var know = Ui.Button(t, "What it knows", () => ShowKnows(agent), Ui.ButtonStyle.Quiet, 14);
-                Ui.Place(know.GetComponent<RectTransform>(), 40, h - 42, 130, 32);
-            }
+            card.thought = Ui.Text(t, "", 16, Theme.Text2);
+            Ui.Place(card.thought.rectTransform, 46, compact ? 64 : 74, CardW - 64, compact ? h - 116 : h - 128);
+            card.thought.overflowMode = TextOverflowModes.Ellipsis;
+            var know = Ui.Button(t, "What it knows", () => ShowKnows(agent), Ui.ButtonStyle.Secondary, 16);
+            Ui.Place(know.GetComponent<RectTransform>(), 40, h - 48, 170, 36);
             cardOf[a] = card;
         }
     }
 
-    // The whole text handed to Claude for this agent's last turn, over the
-    // market: the list and the rules, what it remembers, and this turn's view.
+    // The drawer folds to a tab and the world takes the whole stage; open again for the cards.
+    void Fold(bool fold)
+    {
+        folded = fold;
+        float from = drawer.anchoredPosition.x, to = fold ? Ui.W - 56f : Ui.W - DrawerW;
+        follower.StartCoroutine(Ui.Animate(0.3f, k =>
+        {
+            if (drawer == null) return;
+            drawer.anchoredPosition = new Vector2(Mathf.Lerp(from, to, k), drawer.anchoredPosition.y);
+            Ui.Place(frame, 0, 0, Mathf.Lerp(Ui.W - (fold ? DrawerW : 56f), WorldW, k), Ui.H);
+        }, Ui.EaseOut));
+    }
+
+    // The whole text handed to Claude for this agent's last turn, in the drawer over the
+    // cards: the list and the rules, what it remembers, and this turn's view.
     void ShowKnows(AgentState a)
     {
         if (knows != null) Object.Destroy(knows.gameObject);
-        knows = Ui.Node("Knows", root);
-        Ui.Place(knows, 60, 110, 920, 910);
-        var card = Ui.Float(knows, "Card", 0, 0, 920, 910);
+        if (folded) Fold(false);
+        knows = Ui.Node("Knows", drawer);
+        Ui.Place(knows, 0, 0, DrawerW, Ui.H);
+        var card = Ui.Box(knows, "Card", new Color(0.03f, 0.055f, 0.13f, 0.98f), false);
+        Ui.Stretch(card.rectTransform);
+        card.raycastTarget = true;
         var t = card.transform;
         var title = Ui.Text(t, $"What {a.Name} knows right now", 24, Theme.Ink, true);
-        Ui.Place(title.rectTransform, 28, 22, 700, 32);
-        var sub = Ui.Text(t, a.config.IsRule ? "A fixed rule reads nothing. It takes exactly the things it names." : "This is the whole text handed to Claude for the last turn. Nothing else reaches the agent.", 15, Theme.Text2);
-        Ui.Place(sub.rectTransform, 28, 58, 760, 24);
-        var close = Ui.Button(t, "Close", () => { Object.Destroy(knows.gameObject); knows = null; }, Ui.ButtonStyle.Secondary, 15);
-        Ui.Place(close.GetComponent<RectTransform>(), 920 - 28 - 100, 22, 100, 40);
+        Ui.Place(title.rectTransform, 24, 24, 420, 64);
+        var close = Ui.Button(t, "Close", () => { Object.Destroy(knows.gameObject); knows = null; }, Ui.ButtonStyle.Secondary, 16);
+        Ui.Place(close.GetComponent<RectTransform>(), DrawerW - 24 - 100, 24, 100, 40);
+        var sub = Ui.Text(t, a.config.IsRule ? "A fixed rule reads nothing. It takes exactly the things it names." : "This is the whole text handed to Claude for the last turn. Nothing else reaches the agent.", 16, Theme.Text2);
+        Ui.Place(sub.rectTransform, 24, 92, CardW, 48);
         var scroll = Ui.Scroll(t, "Scroll", out var content);
-        Ui.Place(scroll.GetComponent<RectTransform>(), 28, 96, 864, 790);
+        Ui.Place(scroll.GetComponent<RectTransform>(), 24, 150, CardW, Ui.H - 174);
         string text = a.config.IsRule ? a.config.instructions : KnowsText(a);
         var body = Ui.Text(content, text, 16, Theme.Ink);
-        float h = body.GetPreferredValues(text, 840, 0).y + 20;
-        Ui.Place(body.rectTransform, 0, 0, 840, h);
+        float h = body.GetPreferredValues(text, CardW - 16, 0).y + 20;
+        Ui.Place(body.rectTransform, 0, 0, CardW - 16, h);
         body.rectTransform.anchorMin = new Vector2(0, 1); body.rectTransform.anchorMax = new Vector2(1, 1);
         content.sizeDelta = new Vector2(0, h);
     }
@@ -466,6 +547,7 @@ public class ArenaScreen
         int dots = 0;
         while (true)
         {
+            if (recDot != null) recDot.color = new Color(Theme.Danger.r, Theme.Danger.g, Theme.Danger.b, Time.unscaledTime % 1.2f < 0.7f ? 1f : 0.15f);
             if (sim.phase == "thinking" && !sim.finished && phaseText != null)
             {
                 dots = (dots + 1) % 4;
@@ -480,7 +562,7 @@ public class ArenaScreen
     void SayLine(string text, bool stay = false)
     {
         if (coachLine != null) Object.Destroy(coachLine.gameObject);
-        coachLine = app.luma.Line(root, 1020, 938, 840, Labels.Lead(text), false, stay, 15);
+        coachLine = app.luma.Line(drawer, 24, 800, CardW, Labels.Lead(text), false, stay, 16);
     }
 
     // The first time each kind of thing happens, LUMA names it in the words of
@@ -531,13 +613,14 @@ public class ArenaScreen
             c.outer.color = hi ? Theme.Team[a.config.colour] : Theme.Border1;
             c.fill.color = !a.alive ? Theme.DangerSoft : a.outOfTokens ? Theme.AmberSoft : Theme.Panel;
             c.score.text = a.score.ToString();
-            c.score.color = a.alive ? Theme.Ink : Theme.Muted;
+            c.score.color = a.alive ? Theme.Chalk : Theme.Muted;
             c.status.text = a.Status + (a.Active && !a.config.IsRule ? $"  ·  {Models.All[a.config.model].label}, sees {a.config.vision}, {MemoryModes.Labels[a.config.memory].ToLowerInvariant()} memory" : "");
-            c.status.color = !a.alive ? Theme.Danger : a.outOfTokens ? Theme.Amber : Theme.Muted;
+            c.status.color = !a.alive ? Theme.DangerText : a.outOfTokens ? Theme.Amber : Theme.Muted;
             Ui.SetBar(c.bar, a.budget > 0 ? (float)a.TokensLeft / a.budget : 0);
             c.bar.fill.color = a.TokensLeft < a.budget * 0.2f ? Theme.Amber : Theme.Aqua;
             c.tokens.text = a.config.IsRule ? "0 tokens: no AI" : $"{a.TokensLeft:N0} tokens left";
             if (c.thought != null) c.thought.text = a.lastThought == "" ? "" : "“" + a.lastThought + "”";
         }
+        RefreshFeed();
     }
 }

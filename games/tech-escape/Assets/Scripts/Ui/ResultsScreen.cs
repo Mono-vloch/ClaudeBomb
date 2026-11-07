@@ -17,6 +17,8 @@ public class ResultsScreen
     RectTransform plans;
     static readonly Color Gold = Theme.Hex("#E0B23A"), Silver = Theme.Hex("#AAB4BE"), Bronze = Theme.Hex("#C48A5A");
     static readonly string[] MedalNames = { "", "BRONZE", "SILVER", "GOLD" };
+    // Dark glass like the rest of the game (the realism pass took the white cards off the screens).
+    static readonly Color Dark = new Color(0.043f, 0.082f, 0.212f, 0.9f), Edge = new Color(1f, 1f, 1f, 0.12f);
 
     public ResultsScreen(Transform parent, App app)
     {
@@ -43,19 +45,19 @@ public class ResultsScreen
         app.world.ShowOrbit(window);
         app.atmosphere.MenuBlur(true, 36f, 80f); // the facility (24 units off) sharp, the far end soft
         Sfx.Ambient(true);
-        var scrim = Ui.Box(root, "Scrim", new Color(1f, 1f, 1f, 0.14f), false);
+        var scrim = Ui.Box(root, "Scrim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.42f), false);
         Ui.Stretch(scrim.rectTransform);
         scrim.raycastTarget = false;
 
-        var title = Ui.Text(root, $"Debrief · Level {l.id}", 44, Theme.Ink, true);
+        var title = Ui.Text(root, $"Debrief · Level {l.id}", 44, Color.white, true);
         Ui.Place(title.rectTransform, 80, 36, 900, 56);
-        var sub = Ui.Text(root, $"{l.room}: {l.title}", 18, Theme.Text2);
+        var sub = Ui.Text(root, $"{l.room}: {l.title}", 18, Look.Chalk);
         Ui.Place(sub.rectTransform, 80, 100, 880, 28);
 
         // What the attack found
-        var found = Ui.Card(root, "Attack", Theme.Panel, Theme.Border1);
+        var found = Ui.Card(root, "Attack", Dark, Edge);
         Ui.Place(found.rectTransform, 80, 140, 860, 290);
-        var fh = Ui.Eyebrow(found.transform, "THE ATTACK", Theme.TealDeep); Ui.Place(fh.rectTransform, 16, 10, 800, 16);
+        var fh = Ui.Eyebrow(found.transform, "THE ATTACK", Theme.Teal); Ui.Place(fh.rectTransform, 16, 10, 800, 22);
         var extras = new List<(string head, string body)>(); // the attack's full lines and the checks, for the file
         float fy = 32;
         if (a != null)
@@ -65,31 +67,31 @@ public class ResultsScreen
                 var lamp = Ui.Box(found.transform, "Lamp", line.held ? Theme.Aqua : Theme.Danger, false);
                 Ui.Place(lamp.rectTransform, 18, fy + 5, 12, 12);
                 lamp.raycastTarget = false;
-                var tx = Ui.Text(found.transform, line.held ? $"<b>Held</b>  ·  {line.room}" : $"<b>Through</b>  ·  {line.room}  ·  {line.gap}", 14, line.held ? Theme.Ink : Theme.Danger);
+                var tx = Ui.Text(found.transform, line.held ? $"<b>Held</b>  ·  {line.room}" : $"<b>Through</b>  ·  {line.room}  ·  {line.gap}", 16, line.held ? Color.white : Look.Breached);
                 Ui.Place(tx.rectTransform, 42, fy, 800, 24);
                 tx.enableWordWrapping = false; tx.overflowMode = TextOverflowModes.Ellipsis;
                 fy += 34;
             }
             extras.Add(("THE ATTACK  ·  WHAT GOT THROUGH, WHAT HELD", string.Join("\n", a.lines.Select(x => (x.held ? "Held: " : "Through: ") + x.room + ", " + (x.held ? x.reached : x.gap + ": " + x.reached))) + "\n\n" + a.summary));
         }
-        var sm = Ui.Text(found.transform, a?.summary ?? "", 15, Theme.Ink, true);
+        var sm = Ui.Text(found.transform, a?.summary ?? "", 16, Color.white, true);
         Ui.Place(sm.rectTransform, 16, 258, 820, 26);
 
         // The checks
         var checks = l.check(app.state, app.session, a);
         int ticked = checks.Count(c => c.result == Practised.Yes), needed = checks.Count(c => c.result != Practised.NotNeeded);
         int medal = needed > 0 && ticked == needed ? 3 : ticked * 2 >= needed && needed > 0 ? 2 : a != null && !a.AnyThrough ? 1 : 0;
-        var card = Ui.Card(root, "Checks", Theme.Panel, Theme.Border1);
+        var card = Ui.Card(root, "Checks", Dark, Edge);
         Ui.Place(card.rectTransform, 1000, 420, 860, 300);
-        var ch = Ui.Eyebrow(card.transform, "THE CHECKS", Theme.TealDeep); Ui.Place(ch.rectTransform, 16, 10, 400, 16);
+        var ch = Ui.Eyebrow(card.transform, "THE CHECKS", Theme.Teal); Ui.Place(ch.rectTransform, 16, 10, 400, 22);
         float cy = 34;
         foreach (var (result, label) in checks)
         {
             // A lamp and a short label; the full label is in the file.
-            var lamp = Ui.Box(card.transform, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : Theme.Border, false);
+            var lamp = Ui.Box(card.transform, "Lamp", result == Practised.Yes ? Theme.Aqua : result == Practised.Missed ? Theme.Danger : new Color(1f, 1f, 1f, 0.25f), false);
             Ui.Place(lamp.rectTransform, 18, cy + 6, 12, 12);
             lamp.raycastTarget = false;
-            var lab = Ui.Text(card.transform, Labels.Of(label), 16, result == Practised.NotNeeded ? Theme.Muted : Theme.Ink);
+            var lab = Ui.Text(card.transform, Labels.Of(label), 16, result == Practised.NotNeeded ? Theme.Faint : Color.white);
             Ui.Place(lab.rectTransform, 42, cy, 800, 26);
             lab.enableWordWrapping = false; lab.overflowMode = TextOverflowModes.Ellipsis;
             cy += checks.Count > 5 ? 38 : 46;
@@ -105,7 +107,7 @@ public class ResultsScreen
 
         app.luma.Say("recap");
         bool unlock = counts && l.number < Rooms.Count;
-        app.luma.Line(root, 80, 446, 860, l.takeaway, false, true, 17);
+        app.luma.Line(root, 80, 446, 860, l.takeaway, true, true, 17);
         Medal(medal, a, l);
         if (unlock) Unlock(736, Rooms.Get(l.number + 1), medal);
 
@@ -120,12 +122,12 @@ public class ResultsScreen
         {
             bool last = l.number >= Rooms.Count;
             Add(last ? "The exit: title screen" : $"Next: {Rooms.Get(l.number + 1).id} {Rooms.Get(l.number + 1).title.Replace("Capstone: ", "")}", last ? app.ShowTitle : (System.Action)app.NextLevel, Ui.ButtonStyle.Primary, last ? 260 : 520);
-            Add("This room again", app.ShowRoom, Ui.ButtonStyle.Secondary, 200);
-            if (l.Capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.Secondary, 180);
+            Add("This room again", app.ShowRoom, Ui.ButtonStyle.GhostOnDark, 200);
+            if (l.Capstone) Add("If-then plans", ShowPlans, Ui.ButtonStyle.GhostOnDark, 180);
         }
-        Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.Secondary, 130);
-        Add("Title screen", app.ShowTitle, Ui.ButtonStyle.Quiet, 160);
-        if (Platform.IsWeb) Add("Games menu", Platform.GoToMenu, Ui.ButtonStyle.Quiet, 160);
+        Add("The file", () => app.ShowFile(extras.ToArray()), Ui.ButtonStyle.GhostOnDark, 130);
+        Add("Title screen", app.ShowTitle, Ui.ButtonStyle.GhostOnDark, 160);
+        if (Platform.IsWeb) Add("Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 160);
         Ui.Emblem(root);
     }
 
@@ -152,7 +154,7 @@ public class ResultsScreen
             Ui.Place(stars[s].rectTransform, 155 + s * 32, 98, 26, 26);
             stars[s].raycastTarget = false;
         }
-        var rank = Ui.Text(b, $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Look.Chalk, false, TextAlignmentOptions.Center);
+        var rank = Ui.Text(b, $"{medal} of 3 stars  ·  {app.TotalStars} in all  ·  {app.Rank}", 16, Look.Chalk, false, TextAlignmentOptions.Center);
         Ui.Place(rank.rectTransform, 0, 122, 400, 20);
         app.StartCoroutine(Reveal(badge, stars, medal, colour));
     }
@@ -194,7 +196,7 @@ public class ResultsScreen
         var body = Ui.Text(t, $"{next.room}: {next.title}", 18, Color.white, true);
         Ui.Place(body.rectTransform, 20, 36, 820, 30);
         body.enableWordWrapping = false; body.overflowMode = TextOverflowModes.Ellipsis;
-        var starsLine = Ui.Text(t, $"{stars} of 3 stars banked  ·  {app.TotalStars} in all  ·  {app.Rank}", 13, Theme.Teal);
+        var starsLine = Ui.Text(t, $"{stars} of 3 stars banked  ·  {app.TotalStars} in all  ·  {app.Rank}", 16, Theme.Teal);
         Ui.Place(starsLine.rectTransform, 20, 68, 820, 24);
     }
 
@@ -205,20 +207,21 @@ public class ResultsScreen
         Ui.Stretch(plans);
         var dim = Ui.Box(plans, "Dim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.45f), false);
         Ui.Stretch(dim.rectTransform);
-        var card = Ui.Float(plans, "Card", 360, 200, 1200, 680);
+        var card = Ui.Box(plans, "Card", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.96f));
+        Ui.Place(card.rectTransform, 360, 200, 1200, 680);
         var t = card.transform;
-        var title = Ui.Text(t, "Your two if-then plans", 26, Theme.Ink, true);
+        var title = Ui.Text(t, "Your two if-then plans", 26, Color.white, true);
         Ui.Place(title.rectTransform, 32, 26, 800, 36);
-        var sub = Ui.Text(t, "Two plans about your own work, to look at again at the follow-up session. Write, save.", 15, Theme.Text2);
+        var sub = Ui.Text(t, "Two plans about your own work, to look at again at the follow-up session. Write, save.", 16, Look.Chalk);
         Ui.Place(sub.rectTransform, 32, 62, 1000, 24);
-        var close = Ui.Button(t, "Close", () => { Object.Destroy(plans.gameObject); plans = null; }, Ui.ButtonStyle.Secondary, 15);
+        var close = Ui.Button(t, "Close", () => { Object.Destroy(plans.gameObject); plans = null; }, Ui.ButtonStyle.GhostOnDark, 16);
         Ui.Place(close.GetComponent<RectTransform>(), 1200 - 32 - 100, 26, 100, 40);
         string key = $"tech_escape_plans_{app.room.id}";
         var saved = PlayerPrefs.GetString(key, "\n").Split('\n');
         var inputs = new TMP_InputField[2];
         for (int i = 0; i < 2; i++)
         {
-            var label = Ui.Eyebrow(t, i == 0 ? "PLAN 1  ·  IF ..., THEN I ..." : "PLAN 2  ·  IF ..., THEN I ...", Theme.TealDeep);
+            var label = Ui.Eyebrow(t, i == 0 ? "PLAN 1  ·  IF ..., THEN I ..." : "PLAN 2  ·  IF ..., THEN I ...", Theme.Teal);
             Ui.Place(label.rectTransform, 32, 110 + i * 220, 600, 20);
             inputs[i] = Ui.Input(t, "If a message at work asks me to sign in somewhere, then I ...", true, 18);
             Ui.Place(inputs[i].GetComponent<RectTransform>(), 32, 136 + i * 220, 1136, 160);

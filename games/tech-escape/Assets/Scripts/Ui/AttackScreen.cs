@@ -20,6 +20,7 @@ public class AttackScreen
     readonly TextMeshProUGUI summary, counts;
     readonly Image[] lamps = new Image[12];
     readonly Button results;
+    readonly Image column, sumBox;
     float y;
     int through, held;
 
@@ -45,12 +46,13 @@ public class AttackScreen
         // The HUD: the level and the room, the twelve doors as lamps, the counts.
         var hud = Ui.Glass(root, "Hud", 40, 16, 1180, 84, true, Theme.Danger);
         var eyebrow = Ui.Eyebrow(hud.transform, "THE FACILITY RUNS THE ATTACK", Theme.Danger);
-        eyebrow.font = Theme.Bold;
+        eyebrow.font = Theme.Bold; eyebrow.fontSize = 16;
         Ui.Place(eyebrow.rectTransform, 24, 12, 600, 18);
         var phaseText = Ui.Text(hud.transform, $"Level {room.id}  ·  {room.room}", 24, Color.white, true);
         Ui.Place(phaseText.rectTransform, 24, 34, 720, 40);
         phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
         var doorsLabel = Ui.Eyebrow(hud.transform, "THE DOORS", Theme.Teal);
+        doorsLabel.fontSize = 16;
         Ui.Place(doorsLabel.rectTransform, 800, 12, 200, 18);
         for (int i = 0; i < 12; i++)
         {
@@ -58,22 +60,23 @@ public class AttackScreen
             Ui.Place(lamps[i].rectTransform, 800 + i * 26, 34, 18, 18);
             lamps[i].raycastTarget = false;
         }
-        counts = Ui.Text(hud.transform, "THROUGH 0  ·  HELD 0", 13, Look.Chalk, true);
+        counts = Ui.Text(hud.transform, "THROUGH 0  ·  HELD 0", 16, Look.Chalk, true);
         counts.characterSpacing = 3;
         Ui.Place(counts.rectTransform, 800, 58, 360, 20);
         Lamps();
 
         // The lines, in glass on the right.
-        var column = Ui.Glass(root, "Lines", 1240, 110, 640, 700);
+        column = Ui.Glass(root, "Lines", 1240, 110, 640, 60);
         var head = Ui.Eyebrow(column.transform, "WHAT IT TRIED", Theme.Teal);
-        head.font = Theme.Bold;
+        head.font = Theme.Bold; head.fontSize = 16;
         Ui.Place(head.rectTransform, 20, 14, 600, 18);
         linesLayer = Ui.Node("Lines", column.transform);
         Ui.Place(linesLayer, 20, 44, 600, 640);
-        var sumBox = Ui.Glass(root, "Summary", 1240, 820, 640, 60);
+        sumBox = Ui.Glass(root, "Summary", 1240, 820, 640, 60);
+        sumBox.gameObject.SetActive(false);
         summary = Ui.Text(sumBox.transform, "", 16, Look.Chalk, true, TextAlignmentOptions.MidlineLeft);
         Ui.Place(summary.rectTransform, 20, 0, 600, 60);
-        app.luma.Line(root, 1240, 890, 640, app.luma.Say("live-" + room.number), true, true, 14);
+        app.luma.Line(root, 1240, 890, 640, app.luma.Say("live-" + room.number), true, true, 16);
         results = Ui.Button(root, "See the debrief", app.ShowResults, Ui.ButtonStyle.Primary, 18);
         Ui.Place(results.GetComponent<RectTransform>(), 1640, 1012, 240, 52);
         results.gameObject.SetActive(false);
@@ -140,26 +143,29 @@ public class AttackScreen
         while (!finished && waited < 4f) { waited += Time.unscaledDeltaTime; yield return null; }
         app.world.BackToOverview();
         summary.text = attack.summary;
+        sumBox.gameObject.SetActive(true);
         results.gameObject.SetActive(true);
         Running = false;
     }
 
     void Line(string room, string verdict, string text, bool held)
     {
-        if (y > 600) return; // the column is full; the debrief lists every line
-        var card = Ui.Card(linesLayer, "Line", new Color(1f, 1f, 1f, held ? 0.06f : 0.1f), held ? new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.6f) : Look.Breached);
-        Ui.Place(card.rectTransform, 0, y, 600, 64);
-        var v = Ui.Text(card.transform, verdict, 11, held ? Theme.Teal : Look.Breached, true);
+        if (y > 560) return; // the column is full; the debrief lists every line
+        // Dark like the rest of the play screen, the verdict's colour in the keyline and the word.
+        var card = Ui.Card(linesLayer, "Line", new Color(0.07f, 0.13f, 0.26f, 1f), held ? new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.6f) : Look.Breached);
+        Ui.Place(card.rectTransform, 0, y, 600, string.IsNullOrEmpty(text) ? 52 : 84);
+        var v = Ui.Text(card.transform, verdict, 16, held ? Theme.Teal : Look.Breached, true);
         v.characterSpacing = 3;
-        Ui.Place(v.rectTransform, 14, 8, 100, 16);
-        var r = Ui.Text(card.transform, room, 11, Look.Chalk, true);
-        Ui.Place(r.rectTransform, 100, 8, 400, 16);
-        var t = Ui.Text(card.transform, text, 12, Look.Chalk);
-        Ui.Place(t.rectTransform, 14, 26, 572, 36);
-        t.overflowMode = TextOverflowModes.Ellipsis;
+        Ui.Place(v.rectTransform, 16, 12, 130, 22);
+        var r = Ui.Text(card.transform, room, 16, Color.white, true);
+        Ui.Place(r.rectTransform, 150, 12, 430, 22);
+        var t = Ui.Text(card.transform, text, 16, Look.Chalk);
+        Ui.Place(t.rectTransform, 16, 42, 568, 36);
+        t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Ellipsis;
         var g = Ui.Group(card); g.alpha = 0;
         root.GetComponent<Runner>().StartCoroutine(Ui.Fade(g, 1f, 0.3f));
-        y += 70;
+        y += string.IsNullOrEmpty(text) ? 60 : 92;
+        Ui.Place(column.rectTransform, 1240, 110, 640, Mathf.Min(700f, 60f + y));
     }
 
     // A moment over the corridor, low in the frame so the attacker stays in view, in dark glass
@@ -187,7 +193,7 @@ public class AttackScreen
         t.enableWordWrapping = false;
         if (!string.IsNullOrEmpty(sub))
         {
-            var st = Ui.Text(card.transform, sub, big ? 18 : 14, Look.Chalk, false, TextAlignmentOptions.Center);
+            var st = Ui.Text(card.transform, sub, big ? 20 : 16, Look.Chalk, false, TextAlignmentOptions.Center);
             Ui.Place(st.rectTransform, 20, h - (big ? 52 : 32), w - 40, 26);
             st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
         }

@@ -14,9 +14,15 @@ using UnityEngine.EventSystems;
 // one robot sees (RobotsEye), from behind it, where every stall beyond its sight
 // is a grey box, because for the robot it does not exist. On the cover the same
 // square is shown at dusk, with the robots wandering.
+//
+// The realism pass (Docs/realism-report.md): when the market kit is in Resources/Market
+// (AI Arena > Build market kit), the square is real: cobbles and sandstone, a ring of houses,
+// a fountain, lamps, the Higgsfield stalls heaped with Kenney's and Poly Haven's produce, the
+// rigged agent; a cell is 2.4 m and the main view is the street, behind the chosen agent.
+// Without the kit everything below falls back to the boxes it was made of before.
 public class Market : MonoBehaviour
 {
-    public enum View { Market, RobotsEye }
+    public enum View { Market, RobotsEye, Street }
 
     public MarketCamera cam;                 // on the scene's camera; set by App
     public CameraRig rig;                    // the walk behind an agent, the countdown, the shake; set by App
@@ -39,12 +45,21 @@ public class Market : MonoBehaviour
     Renderer visionFill;
     readonly Renderer[] visionEdges = new Renderer[4];
     Coroutine wandering;
+    Light[] lamps;
     readonly System.Random dice = new System.Random(3); // for the look only; the arena's own is the game's
 
-    class Stall { public Vector2Int cell; public ItemKind kind; public Transform root, known, unknown; }
+    class Stall { public Vector2Int cell; public ItemKind kind; public Transform root, known, unknown, counter; }
 
-    public static Vector3 Cell(Vector2Int p) => new Vector3(p.x - (Size - 1) / 2f, 0, (Size - 1) / 2f - p.y);
-    public static Bounds Square => new Bounds(new Vector3(0, 0.5f, 0), new Vector3(Size + 0.5f, 1.2f, Size + 0.5f));
+    public const float KitPitch = 2.4f;      // one cell, in metres, in the kit's square (MarketKit.Pitch)
+    static GameObject kitSquare;
+    static bool kitChecked;
+    public static GameObject Kit(string name) => Resources.Load<GameObject>("Market/" + name);
+    public static bool Real { get { if (!kitChecked) { kitChecked = true; kitSquare = Kit("Square"); } return kitSquare != null; } }
+    public static float Pitch => Real ? KitPitch : 1f;
+
+    public static Vector3 Cell(Vector2Int p) => new Vector3(p.x - (Size - 1) / 2f, 0, (Size - 1) / 2f - p.y) * Pitch;
+    public static Bounds Square => Real ? new Bounds(new Vector3(0, 1.0f, 0), new Vector3(Size * KitPitch + 1f, 2.2f, Size * KitPitch + 1f))
+                                        : new Bounds(new Vector3(0, 0.5f, 0), new Vector3(Size + 0.5f, 1.2f, Size + 0.5f));
 
     // Shadows and lights for the whole game; the quality levels in the project
     // settings were made for the flat version.
@@ -81,6 +96,35 @@ public class Market : MonoBehaviour
         ApplyFog();
     }
 
+    // The main view of a round in the real square: at street level behind the chosen agent.
+    public void ShowStreet(RectTransform frame)
+    {
+        this.frame = frame;
+        view = View.Street;
+        UpdateVision();
+        Canvas.ForceUpdateCanvases();
+        var a = Highlighted ?? (arena != null && arena.agents.Count > 0 ? arena.agents[0] : null);
+        if (a != null && bots.TryGetValue(a, out var r)) cam.Follow(r.root, frame); else cam.Overview(frame, Square);
+        cam.Snap();
+        ApplyFog();
+    }
+
+    // The agent's body (its skinned meshes), for the realism pass's coverage measure.
+    public Transform BodyOf(AgentState a) => a != null && bots.TryGetValue(a, out var r) ? r.body : null;
+
+    // Is a point inside a stall? The street camera keeps out of them.
+    public bool InsideStall(Vector3 p)
+    {
+        if (!Real) return false;
+        foreach (var s in stalls.Values)
+        {
+            if (s.root == null) continue;
+            var d = p - s.root.position;
+            if (Mathf.Abs(d.x) < 1.2f && Mathf.Abs(d.z) < 0.9f && p.y < 2.4f) return true;
+        }
+        return false;
+    }
+
     // The lists screen: one robot up close, for its dials to show on it.
     public void ShowPortrait(RectTransform frame, AgentState a)
     {
@@ -99,6 +143,7 @@ public class Market : MonoBehaviour
         var r = bots[a] = new RobotModel(botsRoot, a, dusk);
         r.Position = Cell(a.pos);
         r.root.rotation = RobotModel.Facing(a.facing);
+        r.Wear(a.config);
         if (Highlighted == a && cam.mode == MarketCamera.Mode.Portrait) cam.Portrait(r.root, frame);
         else if (Highlighted == a && cam.mode == MarketCamera.Mode.Follow) cam.Follow(r.root, frame);
         UpdateVision();
@@ -137,16 +182,41 @@ public class Market : MonoBehaviour
         if (t != null) t.localScale = Vector3.one;
     }
 
-    // The cover: four robots at dusk, wandering, the camera turning slowly.
-    public void ShowCover(RectTransform frame)
+    // The cover: four robots at dusk, wandering, the camera turning slowly. With hero (the
+    // title, in the real square) the first of them stands close, among the lit stalls, the way
+    // Claude Bomb's title shows its device, the others strolling behind it.
+    AgentState coverHero;
+    public void ShowCover(RectTransform frame, bool hero = false)
     {
         var rng = new System.Random(5);
         var configs = new List<AgentConfig>();
         for (int i = 0; i < 4; i++) configs.Add(new AgentConfig { name = Theme.TeamNames[i], colour = i });
-        Build(new Arena(Brief.Make(0, rng), configs, 30_000, 21), true);
+        var cover = new Arena(Brief.Make(0, rng), configs, 30_000, 21);
+        coverHero = null;
+        if (Real && hero)
+        {
+            coverHero = cover.agents[0];
+            coverHero.pos = new Vector2Int(4, 2); coverHero.facing = 2;
+            for (int x = 3; x <= 5; x++)
+                for (int y = 2; y <= 4; y++)
+                    if (x == 4 || y > 2) cover.RemoveItem(new Vector2Int(x, y)); // the camera's way in; a stall either side of it
+        }
+        Build(cover, true);
         this.frame = frame;
         Canvas.ForceUpdateCanvases();
-        cam.Orbit(frame, Square.center);
+        if (coverHero != null && bots.TryGetValue(coverHero, out var r))
+        {
+            view = View.Street;
+            Highlight(coverHero);
+            foreach (var s in stalls.Values)
+                if (Distance(s.cell, coverHero.pos) <= 2)
+                {
+                    var lantern = s.known.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Lantern");
+                    if (lantern != null) { lantern.gameObject.SetActive(true); var l = lantern.GetComponentInChildren<Light>(true); if (l != null) l.enabled = true; }
+                }
+            cam.Portrait(r.root, frame);
+        }
+        else cam.Orbit(frame, Square.center);
         cam.Snap();
         wandering = StartCoroutine(Wander());
     }
@@ -180,13 +250,21 @@ public class Market : MonoBehaviour
         Sfx.Ambient(false);
         if (rig != null) rig.Release();
         gameObject.SetActive(false);
-        if (cam != null) cam.Sleep();
+        if (cam != null) { cam.Sleep(); var c = cam.GetComponent<Camera>(); c.clearFlags = CameraClearFlags.SolidColor; }
     }
 
     void BuildGround()
     {
         ground = new GameObject("Ground").transform;
         ground.SetParent(transform, false);
+        if (Real)
+        {
+            var square = Instantiate(kitSquare, ground, false);
+            square.name = "Square";
+            lamps = square.GetComponentsInChildren<Light>(true);
+            foreach (var l in lamps) l.enabled = dusk;
+            return;
+        }
         // The park: grass to the horizon, the square a step above it with a kerb.
         NoShadow(MeshKit.Part(ground, "grass", MeshKit.Box, Look.Mat(Look.Grass), new Vector3(0, -0.3f, 0), new Vector3(120, 0.2f, 120)));
         NoShadow(MeshKit.Part(ground, "verge", MeshKit.Box, Look.Mat(Look.GrassDark), new Vector3(0, -0.29f, 0), new Vector3(Size + 5f, 0.2f, Size + 5f)));
@@ -233,6 +311,7 @@ public class Market : MonoBehaviour
         sun.type = LightType.Directional;
         sun.shadows = LightShadows.Soft;
         sun.shadowStrength = dusk ? 0.75f : 0.85f;
+        if (Real) { KitLight(sun); return; }
 
         var dome = MeshKit.Part(transform, "sky", MeshKit.Sphere, null, Vector3.zero, Vector3.one * 300f);
         NoShadow(dome);
@@ -265,11 +344,55 @@ public class Market : MonoBehaviour
         RenderSettings.fogEndDistance = 120f;
     }
 
+    // The real square's light, Claude Bomb's recipe outdoors: one warm key with soft shadows,
+    // a cool sky ambient, a procedural sky, exponential-squared haze that thickens for the
+    // street and thins for the overview (Update), the lamps and lanterns lit at dusk.
+    void KitLight(Light sun)
+    {
+        var camera = cam.GetComponent<Camera>();
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+        RenderSettings.sun = sun;
+        if (dusk)
+        {
+            // Evening: a cool moon key, warm lamps and lanterns, the houses sinking into ink haze
+            // (Claude Bomb's night colour, a little warmer).
+            sun.transform.rotation = Quaternion.Euler(38, 150, 0); sun.color = new Color(0.62f, 0.7f, 1f); sun.intensity = 0.45f;
+            RenderSettings.ambientSkyColor = new Color(0.16f, 0.2f, 0.36f); RenderSettings.ambientEquatorColor = new Color(0.2f, 0.17f, 0.24f); RenderSettings.ambientGroundColor = new Color(0.07f, 0.08f, 0.12f);
+            RenderSettings.fogColor = new Color(0.06f, 0.08f, 0.16f);
+            RenderSettings.skybox = null;
+        }
+        else
+        {
+            sun.transform.rotation = Quaternion.Euler(42, -55, 0); sun.color = new Color(1f, 0.89f, 0.75f); sun.intensity = 1.6f;
+            RenderSettings.ambientSkyColor = new Color(0.62f, 0.72f, 0.86f); RenderSettings.ambientEquatorColor = new Color(0.66f, 0.62f, 0.56f); RenderSettings.ambientGroundColor = new Color(0.3f, 0.33f, 0.38f);
+            RenderSettings.fogColor = new Color(0.8f, 0.84f, 0.88f);
+            RenderSettings.skybox = Resources.Load<Material>("Market/SkyDay");
+        }
+        camera.clearFlags = RenderSettings.skybox != null ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+        camera.backgroundColor = RenderSettings.fogColor;
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.ExponentialSquared;
+        RenderSettings.fogDensity = FogFor(cam.mode);
+        DynamicGI.UpdateEnvironment();
+    }
+
+    float FogFor(MarketCamera.Mode m) => dusk ? (m == MarketCamera.Mode.Overview ? 0.012f : 0.034f)
+                                              : (m == MarketCamera.Mode.Overview || m == MarketCamera.Mode.Orbit ? 0.0055f : 0.013f);
+
     // A robot's house: just off the square, behind its home cell, facing in.
     void BuildHouse(AgentState a)
     {
         var c = Theme.Team[a.config.colour];
         var h = a.home;
+        if (Real)
+        {
+            // The real square's houses ring it already: the agent's home is a stone in its colour.
+            var stone = Instantiate(Kit("HomeStone"), ground, false);
+            stone.name = "Home " + a.Name;
+            stone.transform.localPosition = Cell(h);
+            foreach (var r in stone.GetComponentsInChildren<Renderer>()) r.material.SetColor("_BaseColor", Color.Lerp(Color.white, c, 0.6f));
+            return;
+        }
         var outward = h.y == 0 ? new Vector2Int(0, -1) : h.x == Size - 1 ? new Vector2Int(1, 0) : h.y == Size - 1 ? new Vector2Int(0, 1) : new Vector2Int(-1, 0);
         var root = new GameObject("House " + a.Name).transform;
         root.SetParent(ground, false);
@@ -313,6 +436,7 @@ public class Market : MonoBehaviour
         s.root.localPosition = Cell(cell) + Vector3.up * 0.06f;
         s.known = new GameObject("Known").transform; s.known.SetParent(s.root, false);
         s.unknown = new GameObject("Unknown").transform; s.unknown.SetParent(s.root, false);
+        if (Real) { KitStall(s); stalls[cell] = s; return s; }
 
         var k = s.known;
         MeshKit.Part(k, "cloth", MeshKit.Box, Look.Mat(Look.Cloth), new Vector3(0, 0.18f, 0.02f), new Vector3(0.84f, 0.36f, 0.56f));
@@ -367,6 +491,42 @@ public class Market : MonoBehaviour
         return s;
     }
 
+    // A real stall: one of the two Higgsfield stalls, its goods on the counter, facing the
+    // middle of the square; at dusk its lantern glows (a third of them light the cobbles).
+    // Under it, hidden, the covered crates it becomes when the agent cannot see it.
+    void KitStall(Stall s)
+    {
+        s.root.localPosition = Cell(s.cell);
+        int hash = (s.cell.x * 7 + s.cell.y * 13) % 5;
+        var stall = Instantiate(Kit(hash == 1 || hash == 3 ? "StallB" : "StallA"), s.known, false);
+        float yaw = s.cell.y < Size / 2 ? 180f : 0f;
+        stall.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+        s.counter = stall.transform.Find("Counter");
+        var goods = Kit("Goods/" + s.kind.id);
+        if (goods != null && s.counter != null) Instantiate(goods, s.counter, false);
+        var lantern = stall.transform.Find("Lantern");
+        if (lantern != null && dusk)
+        {
+            lantern.gameObject.SetActive(true);
+            var l = lantern.GetComponentInChildren<Light>(true);
+            if (l != null) l.enabled = dice.Next(3) == 0;
+        }
+        var crates = Instantiate(Kit("Unknown"), s.unknown, false);
+        crates.transform.localRotation = Quaternion.Euler(0f, yaw + 8f, 0f);
+        var mark = new GameObject("?");
+        mark.transform.SetParent(s.unknown, false);
+        mark.transform.localPosition = new Vector3(0, 1.75f, 0);
+        var text = mark.AddComponent<TextMeshPro>();
+        text.font = Theme.Bold;
+        text.text = "?";
+        text.fontSize = 10;
+        text.color = Look.GreyDark;
+        text.alignment = TextAlignmentOptions.Center;
+        text.rectTransform.sizeDelta = new Vector2(2, 2);
+        mark.AddComponent<Billboard>().target = cam.transform;
+        s.unknown.gameObject.SetActive(false);
+    }
+
     // ---- keeping up with the arena -------------------------------------------
 
     // Stalls appear where items have been put down and are packed up where they
@@ -407,26 +567,38 @@ public class Market : MonoBehaviour
         Highlighted = a;
         UpdateVision();
         ApplyFog();
-        if (view == View.RobotsEye && a != null && bots.TryGetValue(a, out var r)) rig.Chase(r.root, frame);
+        if (a == null || !bots.TryGetValue(a, out var r)) return;
+        if (view == View.RobotsEye) rig.Chase(r.root, frame);
+        else if (view == View.Street && !rig.Live) cam.Follow(r.root, frame);
     }
 
+    // Street: behind the chosen agent at its height (the main view of the real square).
+    // Agent's eye: over its shoulder, what it cannot see is not there. Market: from above.
     public void SetView(View v)
     {
         view = v;
-        if (v == View.RobotsEye && Highlighted != null && bots.TryGetValue(Highlighted, out var r)) rig.Chase(r.root, frame);
+        UpdateVision();
+        RobotModel r = null;
+        if (Highlighted != null) bots.TryGetValue(Highlighted, out r);
+        if (v == View.RobotsEye && r != null) rig.Chase(r.root, frame);
+        else if (v == View.Street && r != null) { rig.Release(); cam.Follow(r.root, frame); }
         else { view = View.Market; rig.Release(); cam.Overview(frame, Square); }
         ApplyFog();
     }
 
     // The countdown: the camera flies in from high and wide, down behind the first agent,
-    // then back to the overview as they set out.
+    // then back to the round's view as they set out.
     public void ShowCountdown(RectTransform frame, float seconds)
     {
         this.frame = frame;
         var first = arena.agents.Count > 0 && bots.TryGetValue(arena.agents[0], out var r) ? r.root : null;
         if (first != null) rig.Countdown(first, frame, seconds);
     }
-    public void BackToOverview() { if (view == View.Market) { rig.Release(); cam.Overview(frame, Square); } }
+    public void BackToOverview()
+    {
+        if (view == View.Market) { rig.Release(); cam.Overview(frame, Square); }
+        else if (view == View.Street && Highlighted != null && bots.TryGetValue(Highlighted, out var r)) { rig.Release(); cam.Follow(r.root, frame); }
+    }
 
     // All home: a slow turn around the square in slow motion, confetti over every house.
     public void Celebrate(System.Action done)
@@ -447,7 +619,7 @@ public class Market : MonoBehaviour
         if (a == null || !bots.TryGetValue(a, out var r)) return;
         if (beatRing == null)
         {
-            var go = NoShadow(MeshKit.Part(transform, "beat", MeshKit.Cylinder, Look.Glass(Color.clear), Vector3.zero, new Vector3(1f, 0.01f, 1f)));
+            var go = NoShadow(MeshKit.Part(transform, "beat", MeshKit.Cylinder, Look.Glass(Color.clear), Vector3.zero, new Vector3(1f, 0.01f, 1f))); // an effect, not the world
             beatRing = go.transform; beatRenderer = go.GetComponent<Renderer>();
         }
         StartCoroutine(Ring(r, Theme.Team[a.config.colour]));
@@ -462,7 +634,7 @@ public class Market : MonoBehaviour
             t += Time.deltaTime;
             float k = t / d;
             beatRing.position = r.Position + Vector3.up * 0.09f;
-            beatRing.localScale = new Vector3(0.5f + 1.3f * k, 0.01f, 0.5f + 1.3f * k);
+            beatRing.localScale = new Vector3((0.5f + 1.3f * k) * Pitch, 0.01f, (0.5f + 1.3f * k) * Pitch);
             beatRenderer.sharedMaterial = Look.Glass(new Color(c.r, c.g, c.b, 0.55f * (1 - k)));
             yield return null;
         }
@@ -473,9 +645,9 @@ public class Market : MonoBehaviour
     void UpdateVision()
     {
         var a = Highlighted;
-        if (a == null || !a.alive || vision == null) { if (vision != null) vision.gameObject.SetActive(false); return; }
+        if (a == null || !a.alive || vision == null || (Real && view == View.Street)) { if (vision != null) vision.gameObject.SetActive(false); return; }
         var c = Theme.Team[a.config.colour];
-        float w = 2 * a.config.vision + 1 - 0.06f;
+        float w = (2 * a.config.vision + 1) * Pitch - 0.06f;
         vision.gameObject.SetActive(true);
         vision.position = Cell(a.pos);
         visionFill.transform.localScale = new Vector3(w, 0.01f, w);
@@ -487,7 +659,7 @@ public class Market : MonoBehaviour
             float side = i % 2 == 0 ? -1 : 1;
             var t = visionEdges[i].transform;
             t.localPosition = alongX ? new Vector3(0, 0.085f, side * w / 2) : new Vector3(side * w / 2, 0.085f, 0);
-            t.localScale = alongX ? new Vector3(w, 0.012f, 0.05f) : new Vector3(0.05f, 0.012f, w);
+            t.localScale = alongX ? new Vector3(w, 0.012f, 0.05f * Pitch) : new Vector3(0.05f * Pitch, 0.012f, w);
             visionEdges[i].sharedMaterial = edge;
         }
     }
@@ -515,6 +687,7 @@ public class Market : MonoBehaviour
     // or it keels over and is sent home.
     public IEnumerator Animate(List<Simulation.Move> moves, float duration)
     {
+        if (Real) { yield return AnimateKit(moves, duration); yield break; }
         var from = moves.ToDictionary(m => m.agent, m => Cell(m.from));
         var to = moves.ToDictionary(m => m.agent, m => Cell(m.to));
         var fromRot = moves.ToDictionary(m => m.agent, m => bots[m.agent].root.rotation);
@@ -544,6 +717,110 @@ public class Market : MonoBehaviour
         RefreshBots(false);
     }
 
+
+    // ---- a turn's moves in the real square ------------------------------------------
+
+    // The simulation waits for this before the next turn: a real walk takes real time.
+    public bool Animating { get; private set; }
+    public static float StepSeconds(float speed) => Real ? 5.6f / Mathf.Max(0.5f, speed) : 0.45f / Mathf.Max(0.5f, speed);
+
+    // Every agent walks its step at once: the walk clip, then, for a buy, it stops at the
+    // stall, reaches for the goods (the pick-up clip), the piece flies into its basket and the
+    // stall packs up; a buy that ruins dinner ends in the sent-home clip.
+    IEnumerator AnimateKit(List<Simulation.Move> moves, float duration)
+    {
+        Animating = true;
+        int running = 0;
+        foreach (var m in moves) { running++; StartCoroutine(Step(m, duration, () => running--)); }
+        float waited = 0f;
+        while (running > 0 && waited < 20f) { waited += Time.deltaTime; yield return null; }
+        RefreshItems();
+        RefreshBots(false);
+        Animating = false;
+    }
+
+    IEnumerator Step(Simulation.Move m, float duration, System.Action done)
+    {
+        var r = bots[m.agent];
+        var from = Cell(m.from); var to = Cell(m.to);
+        var rot0 = r.root.rotation;
+        var rot1 = m.to != m.from ? Quaternion.LookRotation(to - from) : RobotModel.Facing(m.agent.facing);
+        bool buys = m.ate != null;
+        float reach = buys ? 0.36f : 1f; // a buyer stops in front of the stall
+        if (m.to != m.from)
+        {
+            r.Walk(Pitch / duration / 1.15f);
+            float t = 0, d = duration * reach;
+            while (t < d)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / d);
+                float e = buys ? Ui.EaseOut(k) : k;
+                r.Position = Vector3.Lerp(from, to, reach * e);
+                r.root.rotation = Quaternion.Slerp(rot0, rot1, Mathf.Clamp01(k * 4f));
+                if (effects != null && Time.frameCount % 9 == 0) effects.Dust(r.Position + Vector3.up * 0.05f, 1);
+                yield return null;
+            }
+        }
+        else r.root.rotation = rot1;
+        if (buys)
+        {
+            r.PickUp();
+            yield return new WaitForSeconds(0.55f);
+            stalls.TryGetValue(m.to, out var stall);
+            var start = stall != null && stall.counter != null ? stall.counter.position + Vector3.up * 0.12f : to + Vector3.up * 0.9f;
+            var piece = Piece(m.ate.id, start);
+            float t = 0, d = 0.5f;
+            while (t < d && piece != null)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / d);
+                var p = Vector3.Lerp(start, r.BasketPoint, k);
+                p.y += Mathf.Sin(k * Mathf.PI) * 0.45f;
+                piece.position = p;
+                piece.Rotate(0f, 400f * Time.deltaTime, 0f, Space.World);
+                yield return null;
+            }
+            if (piece != null) Destroy(piece.gameObject);
+            if (stall != null && arena.ItemAt(m.to) == null) { stalls.Remove(m.to); StartCoroutine(PackUp(stall.root)); }
+            if (m.agent.alive)
+            {
+                Sfx.Chime();
+                r.AddGoods(m.ate.id, ItemModels.Colour(m.ate.id));
+                if (effects != null) effects.Confetti(r.Position + Vector3.up * 1.3f, 12);
+                yield return new WaitForSeconds(0.35f);
+            }
+            // Then onto the stall's cell, where the stall was.
+            r.Walk(1f);
+            float t2 = 0, d2 = duration * (1f - reach) * 0.8f;
+            var at = r.Position;
+            while (t2 < d2)
+            {
+                t2 += Time.deltaTime;
+                r.Position = Vector3.Lerp(at, to, Mathf.SmoothStep(0, 1, t2 / d2));
+                yield return null;
+            }
+            r.Position = to;
+            if (!m.agent.alive) { Sfx.Crash(); yield return Out(m.agent); done(); yield break; }
+        }
+        r.Position = to;
+        r.Rest();
+        done();
+    }
+
+    // One piece of an item, for the throw into the basket (a sphere of its colour without the kit's pieces).
+    Transform Piece(string id, Vector3 at)
+    {
+        var prefab = Kit("Pieces/" + id);
+        Transform t = prefab != null ? Instantiate(prefab, transform, false).transform
+                                     : MeshKit.Part(transform, "bought", MeshKit.Sphere, Look.Mat(ItemModels.Colour(id)), Vector3.zero, 0.12f).transform;
+        t.position = at;
+        return t;
+    }
+
+    // The LOOK of the loop on the chosen agent: it looks around while the stalls are read.
+    public void LookAround(AgentState a) { if (a != null && bots.TryGetValue(a, out var r)) r.LookAround(); }
+
     IEnumerator Buy(Simulation.Move m)
     {
         var colour = ItemModels.Colour(m.ate.id);
@@ -572,6 +849,16 @@ public class Market : MonoBehaviour
         rig.Shake(1f);
         Atmosphere.Current?.Pulse(Theme.Danger, 0.35f, 0.5f);
         Atmosphere.Current?.HitStop(0.07f);
+        if (Real)
+        {
+            // The real agent holds its head: dinner is ruined. Then it is called home.
+            r.SentHome();
+            yield return new WaitForSeconds(2.1f);
+            float s = 0;
+            while (s < 0.5f) { s += Time.deltaTime; r.root.localScale = Vector3.one * Mathf.Max(0, 1 - s / 0.5f); yield return null; }
+            r.root.gameObject.SetActive(false);
+            yield break;
+        }
         var rot = r.root.rotation;
         var pos = r.Position;
         float t = 0;
@@ -612,6 +899,7 @@ public class Market : MonoBehaviour
         {
             yield return new WaitForSeconds(0.7f + (float)r.NextDouble() * 0.9f);
             var a = arena.agents[r.Next(arena.agents.Count)];
+            if (a == coverHero) continue; // the title's agent stays for its picture
             var options = new List<Vector2Int>();
             foreach (var step in new[] { new Vector2Int(0, -1), new Vector2Int(1, 0), new Vector2Int(0, 1), new Vector2Int(-1, 0) })
             {
@@ -625,11 +913,12 @@ public class Market : MonoBehaviour
             var rot0 = bot.root.rotation;
             var rot1 = Quaternion.LookRotation(Cell(to) - from);
             a.pos = to;
-            float t = 0, d = 0.8f;
+            float t = 0, d = Real ? 2.2f : 0.8f;
+            bot.Walk(Real ? 2.4f / d / 1.15f : 1f);
             while (t < d)
             {
                 t += Time.deltaTime;
-                float k = Mathf.SmoothStep(0, 1, t / d);
+                float k = Real ? t / d : Mathf.SmoothStep(0, 1, t / d);
                 bot.Position = Vector3.Lerp(from, Cell(to), k);
                 bot.root.rotation = Quaternion.Slerp(rot0, rot1, Mathf.Clamp01(k * 3));
                 bot.Bob(k);
@@ -646,6 +935,8 @@ public class Market : MonoBehaviour
     {
         float pulse = thinking ? (Mathf.Sin(Time.time * 7f) + 1) / 2 : 0;
         foreach (var kv in bots) kv.Value.Think(kv.Key.Active ? pulse : 0);
+        // The haze: thick enough at street level for the houses to recede, thin from above.
+        if (Real && cam != null) RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, FogFor(cam.mode), 1f - Mathf.Exp(-3f * Time.unscaledDeltaTime));
 
         // A click on a robot chooses it, unless a card or a button took the click.
         if (Input.GetMouseButtonDown(0) && Picked != null && !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
@@ -656,7 +947,7 @@ public class Market : MonoBehaviour
             foreach (var kv in bots)
             {
                 if (!kv.Key.alive || !kv.Value.root.gameObject.activeSelf) continue;
-                var s = cam.ToScreen(kv.Value.root.position + Vector3.up * 0.55f);
+                var s = cam.ToScreen(kv.Value.root.position + Vector3.up * (Real ? 0.7f : 0.55f));
                 if (s.z < 0) continue;
                 float d = Vector2.Distance(mouse, new Vector2(s.x, s.y));
                 if (d < bestDist) { bestDist = d; best = kv.Value; }

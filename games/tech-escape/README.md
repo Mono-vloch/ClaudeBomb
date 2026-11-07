@@ -24,8 +24,7 @@ No Claude, no key, no network: the attacks are written into the rooms.
 
 ## The ladder
 
-Every level is a question, opens with a warm-up question from an earlier level (no score),
-and gives two training runs before the student's own: **Watch the pro** (the room as it
+Every level is a question and gives two training runs before the student's own: **Watch the pro** (the room as it
 should be, read only; run the attack and watch it hold), **Fix the broken room** (the room
 with the level's planned mistake in it; the attack finds it) and **Your run**, the one that
 counts and goes on the record.
@@ -59,7 +58,7 @@ from the ladder on a briefing, so a tester or a class can go straight to one roo
 
 ## How a run goes
 
-1. **Briefing.** The warm-up question, then LUMA opens the level: the idea in plain words,
+1. **Briefing.** LUMA opens the level: the idea in plain words,
    what the student fixes, and the planned mistake if the level has one. The facility is
    listed room by room on the right with what the record says about each: held, a gap, or
    not yet.
@@ -85,7 +84,7 @@ from the ladder on a briefing, so a tester or a class can go straight to one roo
 | The nineteen levels as data: items, decisions, the ready and broken rooms, warm-ups, the attack each room runs, the checks, the lines | `Scripts/Core/Rooms.cs` |
 | LUMA: the coach, her lines, portrait and voice | `Scripts/Ui/Luma.cs`, `Resources/Luma`, `Resources/LumaVoice`, `Editor/LumaVoiceTools.cs` |
 | The campaign, the session on disk, the step (watch, fix, your run), the record | `Scripts/Ui/App.cs` |
-| Screens | `Scripts/Ui/TitleScreen.cs`, `LessonScreen.cs` (the briefing and its warm-up), `RoomScreen.cs` (the room's decisions), `AttackScreen.cs` (the attack), `ResultsScreen.cs` (the debrief) |
+| Screens | `Scripts/Ui/TitleScreen.cs`, `LessonScreen.cs` (the briefing; its warm-up question is turned off), `RoomScreen.cs` (the room's decisions), `AttackScreen.cs` (the attack), `ResultsScreen.cs` (the debrief) |
 | The facility in three dimensions: the corridor, twelve rooms, the door lights, the attacker, the exit | `Scripts/World/Building.cs` |
 | The camera: overview, orbit, the room from the corridor side | `Scripts/World/SceneCamera.cs` |
 | Shapes and materials, made in code; the three shaders | `Scripts/World/MeshKit.cs`, `Look.cs`, `Resources/Shaders` |
@@ -118,7 +117,7 @@ $UNITY -batchmode -nographics -projectPath . -executeMethod Builder.BuildMac -lo
 ```
 
 The built app, started with `-screenshots <folder>`, walks through every screen (title,
-briefing, warm-up, a room, the attack, the debrief, a room with rows to order) and saves a
+briefing, a room, the attack, the debrief, a room with rows to order) and saves a
 picture of each, then quits; `-cover` takes the platform's cover picture. The current set is in
 `Docs/screenshots`. Grep the build log for `error CS` and `Build:`.
 

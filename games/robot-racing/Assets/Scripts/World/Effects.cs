@@ -23,9 +23,16 @@ public class Effects : MonoBehaviour
     {
         additive = additive != null ? additive : Mat(true);
         soft = soft != null ? soft : Mat(false);
-        sparks = Make("sparks", additive, 0.25f, 0.6f, 2.5f, 4.5f, 0.05f, 0.11f, 1.4f, 160);
-        confetti = Make("confetti", additive, 0.9f, 1.3f, 2.2f, 4f, 0.07f, 0.13f, 0.55f, 200);
-        dust = Make("dust", soft, 0.35f, 0.6f, 0.2f, 0.5f, 0.12f, 0.22f, -0.05f, 120);
+        // The kit's camera rides a metre behind the car: smaller bits, and sparks drawn as streaks.
+        float k = Circuit.HasKit ? 0.35f : 1f;
+        sparks = Make("sparks", additive, 0.25f, 0.6f, 2.5f * k, 4.5f * k, 0.05f * k * 0.6f, 0.11f * k * 0.6f, 1.4f, 160);
+        confetti = Make("confetti", additive, 0.9f, 1.3f, 2.2f * k, 4f * k, 0.07f * k, 0.13f * k, 0.55f, 200);
+        dust = Make("dust", soft, 0.35f, 0.6f, 0.2f * k, 0.5f * k, 0.12f * k, 0.22f * k, -0.05f, 120);
+        if (Circuit.HasKit)
+        {
+            var sr = sparks.GetComponent<ParticleSystemRenderer>(); sr.renderMode = ParticleSystemRenderMode.Stretch; sr.velocityScale = 0.02f; sr.lengthScale = 4f;
+            var ss = sparks.shape; ss.radius = 0.05f;
+        }
         var ds = dust.shape; ds.shapeType = ParticleSystemShapeType.Sphere; ds.radius = 0.12f;
         var dm = dust.main; dm.startColor = new ParticleSystem.MinMaxGradient(Theme.Hex("#C9C2B4") * new Color(1, 1, 1, 0.45f), Theme.Hex("#8FBF6E") * new Color(1, 1, 1, 0.3f));
         var cs = confetti.shape; cs.shapeType = ParticleSystemShapeType.Cone; cs.angle = 28f; cs.radius = 0.08f; cs.rotation = new Vector3(-90f, 0f, 0f);

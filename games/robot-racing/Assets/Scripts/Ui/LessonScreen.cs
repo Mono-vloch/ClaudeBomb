@@ -2,12 +2,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The briefing before a level: the level's circuit on the right, sharp, the car on
-// its grid; on the left, in dark glass, the level's question, its headline, LUMA's
+// The briefing before a level: the car on its grid on the right, sharp, seen low from
+// behind down the first straight; on the left, in dark glass, the level's question, its headline, LUMA's
 // opening line spoken and typed, the track with its map, and the robot's seven
 // parts with this level's lit. Everything the course says beyond that is in the
-// file. A warm-up question from an earlier level comes first (no score; a wrong
-// answer shows the right one).
+// file.
 public class LessonScreen
 {
     public readonly RectTransform root;
@@ -25,7 +24,7 @@ public class LessonScreen
         Ui.Place(window, 900, 150, 980, 880);
         var track = Track.Get(l.training[0]);
         app.world.Build(track, false);
-        app.world.ShowOverview(window);
+        if (Circuit.HasKit) app.world.ShowGrid(window); else app.world.ShowOverview(window);
         app.atmosphere.MenuBlur(false);
 
         // The briefing, left, in dark glass over the park.
@@ -66,7 +65,7 @@ public class LessonScreen
             var chip = Ui.Box(b, Parts[i], lit[i] ? Theme.Teal : open[i] ? new Color(1f, 1f, 1f, 0.14f) : new Color(1f, 1f, 1f, 0.05f));
             Ui.Place(chip.rectTransform, x, y, 240, 44);
             chip.raycastTarget = false;
-            var name = Ui.Text(chip.transform, Parts[i], 15, lit[i] ? Theme.Ink : open[i] ? Color.white : Theme.Faint, true, TextAlignmentOptions.Center);
+            var name = Ui.Text(chip.transform, Parts[i], 16, lit[i] ? Theme.Ink : open[i] ? Color.white : Theme.Faint, true, TextAlignmentOptions.Center);
             Ui.Stretch(name.rectTransform);
         }
 
@@ -87,7 +86,7 @@ public class LessonScreen
             bool current = step.number == l.number, done = step.number <= app.LevelsDone;
             var card = Ui.Card(strip.transform, "Step", current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.08f), current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.3f));
             Ui.Place(card.rectTransform, 20 + n * 70, 34, 62, 38);
-            var num = Ui.Text(card.transform, step.id, 13, current ? Theme.Ink : Color.white, true, TextAlignmentOptions.Center);
+            var num = Ui.Text(card.transform, step.id, 16, current ? Theme.Ink : Color.white, true, TextAlignmentOptions.Center);
             Ui.Stretch(num.rectTransform);
             if (!current)
             {
@@ -100,7 +99,8 @@ public class LessonScreen
             n++;
         }
         Ui.Emblem(root);
-        if (l.recall != null) Recall(app, l.recall);
+        // The warm-up question (Recall) is off: the briefing opens straight onto the level.
+        // To bring it back: if (l.recall != null) Recall(app, l.recall);
     }
 
     // The track as a small map: road light, walls dark, start and finish marked.
@@ -128,14 +128,15 @@ public class LessonScreen
         var dim = Ui.Box(overlay, "Dim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.72f), false);
         Ui.Stretch(dim.rectTransform);
         dim.raycastTarget = true;
-        var card = Ui.Float(overlay, "Card", 560, 300, 800, 440);
+        var card = Ui.Box(overlay, "Card", Ui.DarkFill);
+        Ui.Place(card.rectTransform, 560, 300, 800, 440);
         var t = card.transform;
-        var tag = Ui.Eyebrow(t, $"WARM-UP  ·  FROM LEVEL {r.from}  ·  NO SCORE", Theme.TealDeep);
+        var tag = Ui.Eyebrow(t, $"WARM-UP  ·  FROM LEVEL {r.from}  ·  NO SCORE", Theme.Teal);
         tag.font = Theme.Bold;
         Ui.Place(tag.rectTransform, 32, 28, 600, 22);
-        var q = Ui.Text(t, r.question, 26, Theme.Ink, true);
+        var q = Ui.Text(t, r.question, 26, Color.white, true);
         Ui.Place(q.rectTransform, 32, 60, 736, 80);
-        var verdict = Ui.Text(t, "", 20, Theme.Ink, true);
+        var verdict = Ui.Text(t, "", 20, Color.white, true);
         Ui.Place(verdict.rectTransform, 32, 330, 560, 56);
         var go = Ui.Button(t, "Continue", () => Object.Destroy(overlay.gameObject), Ui.ButtonStyle.Accent, 17);
         Ui.Place(go.GetComponent<RectTransform>(), 800 - 32 - 160, 380, 160, 46);
@@ -148,16 +149,16 @@ public class LessonScreen
             {
                 bool right = index == r.answer;
                 verdict.text = right ? "Right." : "Not quite.";
-                verdict.color = right ? Theme.TealDeep : Theme.Danger;
+                verdict.color = right ? Theme.Teal : Theme.Danger;
                 if (right) Sfx.Chime(); else Sfx.Ruin();
                 for (int j = 0; j < buttons.Length; j++)
                 {
                     buttons[j].interactable = false;
-                    buttons[j].transform.Find("Fill").GetComponent<Image>().color = j == r.answer ? Theme.Surface2 : j == index ? Theme.DangerSoft : Theme.Panel;
-                    buttons[j].GetComponent<Image>().color = j == r.answer ? Theme.Aqua : j == index ? Theme.Danger : Theme.Border;
+                    Ui.Chip(buttons[j], j == r.answer);
+                    if (j == index && j != r.answer) { buttons[j].GetComponent<Image>().color = Theme.Danger; buttons[j].GetComponentInChildren<TextMeshProUGUI>().color = Theme.Danger; }
                 }
                 go.gameObject.SetActive(true);
-            }, Ui.ButtonStyle.Secondary, 17);
+            }, Ui.ButtonStyle.GhostOnDark, 18);
             Ui.Place(buttons[i].GetComponent<RectTransform>(), 32, 150 + i * 56, 736, 48);
             var label = buttons[i].GetComponentInChildren<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.MidlineLeft;

@@ -7,7 +7,7 @@ using UnityEngine;
 // real track has it, grass and trees around, a stand along the far side. And the
 // car: the robot, with its sensors drawn as rays that reach as far as they read.
 // Build() for a track, Pose() every frame from the simulation's car.
-public class Circuit : MonoBehaviour
+public partial class Circuit : MonoBehaviour
 {
     public SceneCamera cam;      // on the scene's camera; set by App
     public CameraRig rig;        // the chase, the countdown, the finish; set by App
@@ -45,11 +45,13 @@ public class Circuit : MonoBehaviour
         this.dusk = dusk;
         ground = new GameObject("Ground").transform;
         ground.SetParent(transform, false);
-        BuildLight();
-        BuildTrack();
-        BuildCar();
+        // The realism pass's kit (Robot Racing > Build track kit) when it is there; the old
+        // blocks when it is not.
+        if (HasKit) { BuildLightKit(); BuildTrackKit(); BuildCarKit(); }
+        else { BuildLight(); BuildTrack(); BuildCar(); }
         if (effects == null) { effects = new GameObject("Effects").AddComponent<Effects>(); effects.transform.SetParent(transform.parent, false); }
         ghosts.Clear();
+        carRoot.rotation = Facing(t.startHeading); // on the grid, facing down the first straight
         Pose(t.start, t.start, t.startHeading, 0, 0f, null, null);
     }
 
@@ -81,7 +83,7 @@ public class Circuit : MonoBehaviour
     public void ShowPortrait(RectTransform frame)
     {
         this.frame = frame; Canvas.ForceUpdateCanvases();
-        cam.portraitAhead = 3.3f; cam.portraitSide = 1.4f; cam.portraitUp = 1.25f; cam.portraitAnchor = 0.3f;
+        if (HasKit) PortraitKit(); else { cam.portraitAhead = 3.3f; cam.portraitSide = 1.4f; cam.portraitUp = 1.25f; cam.portraitAnchor = 0.3f; cam.portraitLook = 0f; cam.portraitFov = 30f; }
         cam.Portrait(carRoot, frame); cam.Snap();
     }
 
@@ -109,7 +111,7 @@ public class Circuit : MonoBehaviour
         }
         if (t != null) t.localScale = Vector3.one;
     }
-    public void ShowOrbit(RectTransform frame) { this.frame = frame; Canvas.ForceUpdateCanvases(); cam.Orbit(frame, Bounds.center); cam.Snap(); }
+    public void ShowOrbit(RectTransform frame) { this.frame = frame; Canvas.ForceUpdateCanvases(); cam.orbitArc = 0f; cam.orbitDistance = 15f; cam.orbitPitch = 26f; cam.orbitSpeed = 3.5f; cam.orbitFov = 36f; cam.Orbit(frame, Bounds.center); cam.Snap(); }
 
     // The light story, from Docs/art-bible.md. Day: a warm late-afternoon key from the
     // camera's right, full soft shadows, a gradient ambient that keeps the shadow sides
@@ -290,14 +292,15 @@ public class Circuit : MonoBehaviour
         if (carRoot == null) return;
         carRoot.position = Vector3.Lerp(Cell(from), Cell(to), k);
         carRoot.rotation = Quaternion.Slerp(carRoot.rotation, Facing(heading), k >= 1 ? 1 : 0.5f);
-        carBody.localRotation = Quaternion.Euler(speed * 2f, 0, 0);
+        if (carRig != null) carRig.pitch = -speed * 0.7f; else carBody.localRotation = Quaternion.Euler(speed * 2f, 0, 0);
         rig.Speed(speed / 3f);
         Sfx.Engine(speed / 3f);
         bool jumped = (carRoot.position - lastCarPos).sqrMagnitude > 2.25f;
+        if (jumped) rig.Warped(carRoot, carRoot.position - lastCarPos);
         float moved = jumped ? 0f : (carRoot.position - lastCarPos).magnitude;
         lastCarPos = carRoot.position;
         foreach (var trail in trails) { if (trail == null) continue; if (jumped) trail.Clear(); trail.emitting = speed >= 2 && !jumped; }
-        if (speed >= 1 && effects != null)
+        if (speed >= 1 && effects != null && !HasKit) // the kit's camera rides just behind: dust would bloom in its lens
         {
             dustDistance += moved;
             if (dustDistance > 0.25f) { dustDistance = 0f; effects.Dust(carRoot.position + Vector3.up * 0.05f - carRoot.forward * 0.3f, speed >= 2 ? 3 : 1); }
@@ -308,9 +311,20 @@ public class Circuit : MonoBehaviour
             int reading = readings != null ? readings[i] : Sensors.Far;
             float length = isOn ? reading + 0.35f : 0.6f;
             var beam = rays[i].GetChild(0);
-            beam.localPosition = new Vector3(0, 0.2f, 0.45f + length / 2);
-            beam.localScale = new Vector3(isOn ? 0.07f : 0.04f, 0.02f, length);
-            rayRenderers[i].sharedMaterial = Look.Glass(!isOn ? Look.RayOff : reading >= Sensors.Far ? Look.RayClear : reading == 0 ? Look.RayWall : Look.RayNear);
+            if (HasKit)
+            {
+                // The kit's car: the beams run low over the asphalt from the pod, thin, like a scanner's lines.
+                beam.localPosition = new Vector3(0, 0.03f, 0.05f + length / 2);
+                beam.localScale = new Vector3(isOn ? 0.035f : 0.02f, 0.006f, length);
+            }
+            else
+            {
+                beam.localPosition = new Vector3(0, 0.2f, 0.45f + length / 2);
+                beam.localScale = new Vector3(isOn ? 0.07f : 0.04f, 0.02f, length);
+            }
+            var rayColour = !isOn ? Look.RayOff : reading >= Sensors.Far ? Look.RayClear : reading == 0 ? Look.RayWall : Look.RayNear;
+            if (HasKit) rayColour.a *= 0.6f; // a scanner's line on the asphalt, not a bar over it
+            rayRenderers[i].sharedMaterial = Look.Glass(rayColour);
         }
     }
 

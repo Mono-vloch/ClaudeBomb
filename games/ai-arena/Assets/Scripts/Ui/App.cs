@@ -90,6 +90,7 @@ public class App : MonoBehaviour
         world = new GameObject("World").AddComponent<Market>();
         world.cam = view;
         world.rig = rig;
+        view.Blocked = world.InsideStall; // the street camera keeps out of the stalls
         world.gameObject.SetActive(false);
         LoadConfigs();
         luma = gameObject.AddComponent<Luma>();

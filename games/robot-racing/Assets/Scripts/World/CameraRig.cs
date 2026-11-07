@@ -12,7 +12,7 @@ using UnityEngine;
 [RequireComponent(typeof(Camera), typeof(SceneCamera))]
 public class CameraRig : MonoBehaviour
 {
-    public float chaseFov = 46f, speedFovKick = 14f;
+    public float chaseFov = 46f, speedFovKick = 10f;
 
     SceneCamera scene;
     CinemachineBrain brain;
@@ -37,26 +37,30 @@ public class CameraRig : MonoBehaviour
         brain.m_IgnoreTimeScale = true; // the camera keeps gliding through the slow-motion finish
         brain.m_ShowDebugText = false;
 
+        if (Circuit.HasKit) { chaseFov = 42f; speedFovKick = 5f; }
         chase = Make("Chase", 10, chaseFov, out chaseBody, out chaseAim);
         chaseBody.m_BindingMode = CinemachineTransposer.BindingMode.LockToTargetWithWorldUp;
-        chaseBody.m_FollowOffset = new Vector3(0f, 2.0f, -3.4f);
+        // Low and close behind the car (the realism pass): it fills a third of the picture.
+        bool kit = Circuit.HasKit;
+        chaseBody.m_FollowOffset = kit ? new Vector3(0.2f, 0.38f, -0.8f) : new Vector3(0f, 2.0f, -3.4f);
         chaseBody.m_XDamping = 0.5f; chaseBody.m_YDamping = 0.6f; chaseBody.m_ZDamping = 0.8f; chaseBody.m_YawDamping = 0.9f;
-        chaseAim.m_TrackedObjectOffset = new Vector3(0f, 0.4f, 0.9f);
+        if (kit) { chaseBody.m_XDamping = 0.12f; chaseBody.m_YDamping = 0.2f; chaseBody.m_ZDamping = 0.12f; chaseBody.m_YawDamping = 0.35f; } // close behind: it keeps up
+        chaseAim.m_TrackedObjectOffset = kit ? new Vector3(0f, 0.1f, 0.42f) : new Vector3(0f, 0.4f, 0.9f);
         chaseAim.m_LookaheadTime = 0.15f; chaseAim.m_LookaheadSmoothing = 8f;
         var listener = chase.gameObject.AddComponent<CinemachineImpulseListener>();
         listener.m_Gain = 1f; listener.m_UseCameraSpace = true;
 
         start = Make("Start", 0, 34f, out startBody, out startAim);
         startBody.m_BindingMode = CinemachineTransposer.BindingMode.LockToTargetWithWorldUp;
-        startBody.m_FollowOffset = new Vector3(-2.2f, 5.5f, -7.5f); // high and wide behind the grid, looking down the first straight
+        startBody.m_FollowOffset = kit ? new Vector3(-1.4f, 2.4f, -3.6f) : new Vector3(-2.2f, 5.5f, -7.5f); // high and wide behind the grid, looking down the first straight
         startBody.m_XDamping = startBody.m_YDamping = startBody.m_ZDamping = 0f;
-        startAim.m_TrackedObjectOffset = new Vector3(0f, 0.3f, 0f);
+        startAim.m_TrackedObjectOffset = kit ? new Vector3(0f, 0.15f, 0.6f) : new Vector3(0f, 0.3f, 0f);
 
         finish = Make("Finish", 0, 42f, out finishBody, out finishAim);
         finishBody.m_BindingMode = CinemachineTransposer.BindingMode.WorldSpace;
-        finishBody.m_FollowOffset = new Vector3(2.4f, 2.0f, -3.2f);
+        finishBody.m_FollowOffset = kit ? new Vector3(1.2f, 0.6f, -1.4f) : new Vector3(2.4f, 2.0f, -3.2f);
         finishBody.m_XDamping = finishBody.m_YDamping = finishBody.m_ZDamping = 0.3f;
-        finishAim.m_TrackedObjectOffset = new Vector3(0f, 0.3f, 0f);
+        finishAim.m_TrackedObjectOffset = kit ? new Vector3(0f, 0.15f, 0f) : new Vector3(0f, 0.3f, 0f);
         finish.gameObject.AddComponent<CinemachineImpulseListener>().m_Gain = 0.6f;
 
         impulse = gameObject.AddComponent<CinemachineImpulseSource>();
@@ -72,7 +76,7 @@ public class CameraRig : MonoBehaviour
         var vc = go.AddComponent<CinemachineVirtualCamera>();
         vc.Priority = priority;
         vc.m_Lens.FieldOfView = fov;
-        vc.m_Lens.NearClipPlane = 0.2f;
+        vc.m_Lens.NearClipPlane = 0.1f;
         vc.m_Lens.FarClipPlane = 400f;
         body = vc.AddCinemachineComponent<CinemachineTransposer>();
         aim = vc.AddCinemachineComponent<CinemachineComposer>();
@@ -157,7 +161,11 @@ public class CameraRig : MonoBehaviour
         {
             t += Time.unscaledDeltaTime;
             orbitAngle += Time.unscaledDeltaTime * 28f;
-            finishBody.m_FollowOffset = Quaternion.Euler(0f, orbitAngle, 0f) * new Vector3(0f, 2.0f, 4.4f);
+            if (Circuit.HasKit && target != null)
+                // The kit's road is one cell wide between barriers: a slow swing behind the car,
+                // over the way it came, instead of a full turn through the barriers and the flags.
+                finishBody.m_FollowOffset = Quaternion.Euler(0f, Mathf.Sin(t * 1.4f) * 22f, 0f) * (-target.forward * 1.05f) + Vector3.up * 0.42f;
+            else finishBody.m_FollowOffset = Quaternion.Euler(0f, orbitAngle, 0f) * new Vector3(0f, 2.0f, 4.4f);
             yield return null;
         }
         Time.timeScale = 1f;
@@ -171,6 +179,12 @@ public class CameraRig : MonoBehaviour
     {
         if (Live) impulse.GenerateImpulseWithVelocity(new Vector3(0.12f, 0.22f, 0.05f) * strength);
         else scene.Kick(0.18f * strength);
+    }
+
+    // The car jumped (a new attempt, back on the grid): the chase jumps with it instead of flying there.
+    public void Warped(Transform car, Vector3 delta)
+    {
+        if (chase.enabled && chase.Follow == car) chase.OnTargetObjectWarped(car, delta);
     }
 
     // How fast the car goes, 0 to 1: the field of view opens with it.

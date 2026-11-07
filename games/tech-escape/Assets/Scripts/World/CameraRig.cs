@@ -21,7 +21,7 @@ public class CameraRig : MonoBehaviour
     CinemachineComposer chaseAim, startAim, finishAim;
     CinemachineImpulseSource impulse;
     Transform target, aimPoint, followPoint; // the attacker, the point ahead of it the chase looks at, and the point it follows
-    float orbitAngle;
+    float orbitAngle, finishYaw;
     Coroutine moment;
 
     public bool Live => chase.enabled || start.enabled || finish.enabled;
@@ -41,7 +41,7 @@ public class CameraRig : MonoBehaviour
         // and the camera stays in the corridor when the attacker turns to face a door instead of
         // swinging behind it into the opposite room.
         chaseBody.m_BindingMode = CinemachineTransposer.BindingMode.WorldSpace;
-        chaseBody.m_FollowOffset = new Vector3(-4.2f, 2.6f, 0.6f); // behind the attacker down the corridor, a little to one side, over the wall tops
+        chaseBody.m_FollowOffset = new Vector3(-3.6f, 2.05f, 0.5f); // behind the attacker down the corridor, a little to one side, under the ceiling
         chaseBody.m_XDamping = 0.6f; chaseBody.m_YDamping = 0.7f; chaseBody.m_ZDamping = 0.9f;
         chaseAim.m_TrackedObjectOffset = Vector3.zero; // the chase looks at aimPoint: ahead down the corridor, leaning to what the attacker faces
         chaseAim.m_LookaheadTime = 0.15f; chaseAim.m_LookaheadSmoothing = 8f;
@@ -50,7 +50,7 @@ public class CameraRig : MonoBehaviour
 
         start = Make("Start", 0, 36f, out startBody, out startAim);
         startBody.m_BindingMode = CinemachineTransposer.BindingMode.WorldSpace;
-        startBody.m_FollowOffset = new Vector3(-8f, 6.5f, -2.5f); // high and wide over the entrance, looking down the corridor
+        startBody.m_FollowOffset = new Vector3(-7.5f, 1.75f, -1.3f); // outside the entrance at eye height, looking in down the corridor
         startBody.m_XDamping = startBody.m_YDamping = startBody.m_ZDamping = 0f;
         startAim.m_TrackedObjectOffset = Vector3.zero; // the opening looks at aimPoint too
 
@@ -163,7 +163,9 @@ public class CameraRig : MonoBehaviour
         if (moment != null) StopCoroutine(moment);
         finish.Follow = finish.LookAt = subject;
         Take();
-        orbitAngle = 35f;
+        orbitAngle = -38f;
+        var fwd = subject.forward; fwd.y = 0f;
+        finishYaw = fwd.sqrMagnitude > 0.01f ? Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg : 0f;
         finish.Priority = 30;
         finish.enabled = true;
         moment = StartCoroutine(DoFinish(seconds, done, slow));
@@ -176,8 +178,9 @@ public class CameraRig : MonoBehaviour
         while (t < seconds)
         {
             t += Time.unscaledDeltaTime;
-            orbitAngle += Time.unscaledDeltaTime * 26f;
-            finishBody.m_FollowOffset = Quaternion.Euler(0f, orbitAngle, 0f) * new Vector3(0f, 2.2f, 4.6f);
+            // An arc in front of it, on the corridor side: the walls and ceiling are real now.
+            orbitAngle += Time.unscaledDeltaTime * 28f;
+            finishBody.m_FollowOffset = Quaternion.Euler(0f, finishYaw + orbitAngle, 0f) * new Vector3(0f, 1.55f, 3.1f);
             yield return null;
         }
         Time.timeScale = 1f;

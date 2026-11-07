@@ -38,7 +38,7 @@ use it to learn the controls, not to teach.
 Students may arrive not knowing what an agent is, so the game starts with the story
 (six animated beats, told by LUMA), then teaches one idea per errand and opens one more
 dial each time. The errands follow tier 1 of the curriculum (`Docs/curriculum/ai-arena.md`):
-each is a question, opens with a warm-up question from an earlier errand, and gives two
+each is a question and gives two
 training runs before the students' own. LUMA opens every errand, gives a tour of the
 garage on the first one, reads out the first turn of the first errand as one loop, speaks
 up during a run the first time something worth naming happens, and reads the recap on the
@@ -63,8 +63,7 @@ from the ladder on a briefing. Free play keeps every dial open with any message.
 
 ## How a run goes
 
-1. **Briefing.** A warm-up question from an earlier errand (no score; a wrong answer shows
-   the right one and where it came from), then LUMA opens the errand: the idea it teaches,
+1. **Briefing.** LUMA opens the errand: the idea it teaches,
    the family's message, and which dial opens.
 2. **The garage.** The chosen agent stands in the market, big, on the left; its loadout is
    on the right. The list is built by tapping the goods on the shelf (buy, never), picking
@@ -123,7 +122,7 @@ from the ladder on a briefing. Free play keeps every dial open with any message.
 | Claude brain and stand-in brain | `Scripts/Brains/Brains.cs` |
 | Reaching Claude: Claude Code on the desktop, the platform's key keeper in the browser | `Scripts/Claude/*.cs`, the kit in `../../kit` |
 | Look and feel, from the Maaloomatiia brand guidelines | `Scripts/Ui/Theme.cs`, `UiKit.cs`, `Sfx.cs` (sounds drawn at start), `Resources/Brand` |
-| Screens | `Scripts/Ui/TitleScreen.cs`, `StoryScreen.cs`, `LessonScreen.cs` (the briefing and its warm-up), `SetupScreen.cs` (the garage) with `Tour.cs`, `DecideScreen.cs` and `DecideDebrief.cs` (errand 1.6), `ArenaScreen.cs` (the run), `ResultsScreen.cs` (the debrief) |
+| Screens | `Scripts/Ui/TitleScreen.cs`, `StoryScreen.cs`, `LessonScreen.cs` (the briefing; its warm-up question is turned off), `SetupScreen.cs` (the garage) with `Tour.cs`, `DecideScreen.cs` and `DecideDebrief.cs` (errand 1.6), `ArenaScreen.cs` (the run), `ResultsScreen.cs` (the debrief) |
 | The market in three dimensions: the square, the stalls, the houses, the robots, a turn's moves, the robot's-eye view | `Scripts/World/Market.cs`, `RobotModel.cs`, `ItemModels.cs` |
 | The camera on the market: overview, robot's eye, the cover's slow turn | `Scripts/World/MarketCamera.cs` |
 | Shapes and materials, made in code; the three shaders | `Scripts/World/MeshKit.cs`, `Look.cs`, `Resources/Shaders` |
@@ -147,6 +146,16 @@ Notes:
   The camera keeps the market in a given part of the stage (the frame) by shifting
   its projection, so the cards sit next to it; "Robot's eye" follows the chosen
   robot from behind and turns every stall beyond its sight into a grey box.
+- **Since the realism pass the market is a real square** (see `Docs/realism-report.md` and
+  `Docs/credits.md`): **AI Arena > Build market kit** (`Editor/MarketKit*.cs`) makes the
+  prefabs in `Resources/Market` from the CC0 assets in `Assets/Environment` and the
+  Higgsfield models in `Assets/Models/Hero` (the square and its houses, the stalls, every
+  item's goods, the rigged agent), all URP Lit; `Market` places them from the arena and
+  falls back to the code-built boxes above when the kit is missing. Run it again after
+  changing a model or a texture; **AI Arena > Preview market kit / Preview hero models /
+  Preview agent clips** render checks into `Builds/look-audit/realism`, and **Check market
+  kit materials** is the machine check (every material URP Lit with a base and a normal map).
+  The screenshot walk logs `[Coverage]`, `[UiCheck]` and `[WorldCheck]` lines to the player log.
 - **Sprites are generated.** Each item, the robot and the two UI shapes are drawn
   from circles, ellipses and rounded boxes in `SpriteBaker.cs`; they are used on the
   story, the catalogue and the debrief. Change a shape, run AI Arena > Bake Sprites.

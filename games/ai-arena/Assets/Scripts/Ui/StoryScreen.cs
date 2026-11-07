@@ -183,7 +183,8 @@ public class StoryScreen
 
     IEnumerator Say(RectTransform bot, string text, float width = 330)
     {
-        var t = Ui.Bubble(scene, "", 19, width, out var bubble);
+        var t = Ui.Bubble(scene, text, 19, width, out var bubble); // sized for the whole line, then typed
+        t.maxVisibleCharacters = 0;
         var pos = bot.anchoredPosition;
         Ui.Place(bubble, pos.x + 20, -pos.y - bubble.sizeDelta.y - 6, width, bubble.sizeDelta.y);
         var g = Ui.Group(bubble); g.alpha = 0;

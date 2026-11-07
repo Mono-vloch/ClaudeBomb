@@ -59,6 +59,19 @@ public class CameraRig : MonoBehaviour
         finishAim.m_TrackedObjectOffset = new Vector3(0f, 0.3f, 0f);
         finish.gameObject.AddComponent<CinemachineImpulseListener>().m_Gain = 0.6f;
 
+        if (Market.Real)
+        {
+            // The real square is to scale (a cell is 2.4 m, the agent 1.2 m tall): the agent's eye
+            // looks over its shoulder from just behind its head, the fly-in starts high over the
+            // houses, the finish turns round it at arm's length.
+            chaseBody.m_FollowOffset = new Vector3(0.3f, 2.05f, -1.05f);   // over its head: what it sees past the stalls
+            chaseAim.m_TrackedObjectOffset = new Vector3(0f, 0.2f, 4.2f);
+            startBody.m_FollowOffset = new Vector3(-5f, 10f, -15f);
+            startAim.m_TrackedObjectOffset = new Vector3(0f, 0.8f, 0f);
+            finishAim.m_TrackedObjectOffset = new Vector3(0f, 0.75f, 0f);
+            chaseFov = 58f;
+        }
+
         impulse = gameObject.AddComponent<CinemachineImpulseSource>();
         impulse.m_ImpulseDefinition.m_ImpulseType = CinemachineImpulseDefinition.ImpulseTypes.Uniform;
         impulse.m_ImpulseDefinition.m_ImpulseShape = CinemachineImpulseDefinition.ImpulseShapes.Bump;
@@ -158,7 +171,7 @@ public class CameraRig : MonoBehaviour
         {
             t += Time.unscaledDeltaTime;
             orbitAngle += Time.unscaledDeltaTime * 28f;
-            finishBody.m_FollowOffset = Quaternion.Euler(0f, orbitAngle, 0f) * new Vector3(0f, 2.0f, 4.4f);
+            finishBody.m_FollowOffset = Quaternion.Euler(0f, orbitAngle, 0f) * (Market.Real ? new Vector3(0f, 1.2f, 2.6f) : new Vector3(0f, 2.0f, 4.4f));
             yield return null;
         }
         Time.timeScale = 1f;

@@ -92,6 +92,7 @@ public class Luma : MonoBehaviour
         }
         voice.clip = clip;
         voice.Play();
+        Debug.Log($"[Luma] speaking {clip.name} ({clip.length:0.0} s)");
         speaking = null;
     }
 
@@ -105,6 +106,7 @@ public class Luma : MonoBehaviour
         var t = card.transform;
         var body = Ui.Text(t, "", size, dark ? Color.white : Theme.Ink);
         float textH = body.GetPreferredValues(text ?? "", w - 110, 0).y;
+        if (!dark) card.color = Theme.Panel;
         float h = Mathf.Max(64f, textH + 38f);
         Ui.Place(card.rectTransform, x, y, w, h);
         var frame = Ui.Box(t, "Portrait", dark ? Theme.Ink : Theme.Surface2);

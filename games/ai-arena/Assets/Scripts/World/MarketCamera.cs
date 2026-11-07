@@ -20,6 +20,7 @@ public class MarketCamera : MonoBehaviour
     public float pitch = 55f, yaw = 20f, fov = 30f;
     public float orbitPitch = 26f, orbitDistance = 15f, orbitSpeed = 3.5f;
     public event Action Framed;   // after every frame's placing: labels follow
+    public Func<Vector3, bool> Blocked; // the real square: is a camera point inside a stall?
 
     Camera cam;
     Vector3 pos, velocity;
@@ -97,6 +98,35 @@ public class MarketCamera : MonoBehaviour
         Vector3 targetPos; Quaternion targetRot; float targetFov; Vector3 anchor;
         switch (mode)
         {
+            case Mode.Portrait when Market.Real:
+            {
+                // The real agent in the garage: from the front and a little to its side, at its height.
+                var turn = Quaternion.Euler(0, Mathf.Sin(Time.unscaledTime * 0.3f) * 6f, 0);
+                var offset = turn * (follow.forward * 2.2f - follow.right * 0.8f + Vector3.up * 0.98f);
+                targetPos = follow.position + offset;
+                anchor = follow.position + Vector3.up * 0.64f;
+                targetRot = Quaternion.LookRotation(anchor - targetPos);
+                targetFov = 36f;
+                break;
+            }
+            case Mode.Follow when Market.Real:
+            {
+                // The street: behind and to the right of the agent at its shoulder, close enough
+                // that it is the hero of the frame, the market ahead of it; pulled in where a
+                // stall stands behind it.
+                var fwd = Vector3.ProjectOnPlane(follow.forward, Vector3.up).normalized;
+                var right = Vector3.Cross(Vector3.up, fwd);
+                float back = 1.12f;
+                Vector3 At(float b) => follow.position - fwd * b + right * (0.74f * b / 1.12f) + Vector3.up * (1.05f + (1.12f - b) * 0.45f);
+                targetPos = At(back);
+                while (Blocked != null && back > 0.8f && Blocked(targetPos)) { back -= 0.1f; targetPos = At(back); }
+                // Composed by aiming, not by shifting the picture: the agent's chest a little left of
+                // the middle of the screen (inside the part the drawer leaves), the market beyond it.
+                targetRot = Quaternion.LookRotation(follow.position + Vector3.up * 0.62f + fwd * 0.55f + right * 0.32f - targetPos);
+                targetFov = 52f;
+                anchor = Vector3.zero; // no shift
+                break;
+            }
             case Mode.Portrait:
             {
                 var turn = Quaternion.Euler(0, Mathf.Sin(Time.unscaledTime * 0.3f) * 5f, 0); // a slow look around it
@@ -119,8 +149,8 @@ public class MarketCamera : MonoBehaviour
             case Mode.Orbit:
             {
                 orbitYaw += orbitSpeed * dt;
-                var dir = Quaternion.Euler(orbitPitch, orbitYaw, 0) * Vector3.back;
-                targetPos = subject + dir * orbitDistance;
+                var dir = Quaternion.Euler(Market.Real ? 21f : orbitPitch, orbitYaw, 0) * Vector3.back;
+                targetPos = subject + dir * (Market.Real ? 15.5f : orbitDistance);
                 targetRot = Quaternion.LookRotation(subject - targetPos);
                 targetFov = 36f;
                 anchor = subject;
@@ -160,6 +190,7 @@ public class MarketCamera : MonoBehaviour
         // Shift the picture so the subject sits at the frame's centre. In the
         // overview the subject is the middle of the square's picture, not of the
         // square: the far side is drawn smaller.
+        if (mode == Mode.Follow && Market.Real) { Framed?.Invoke(); return; } // the street view is composed by aiming
         Vector2 at = mode == Mode.Overview ? ProjectedCentre() : (Vector2)cam.WorldToViewportPoint(anchor);
         var centre = FrameRect().center;
         float dx = (centre.x - at.x) * 2f, dy = (centre.y - at.y) * 2f;
