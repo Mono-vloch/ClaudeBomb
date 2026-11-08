@@ -20,7 +20,7 @@ using UnityEngine.EventSystems;
 // a fountain, lamps, the Higgsfield stalls heaped with Kenney's and Poly Haven's produce, the
 // rigged agent; a cell is 2.4 m and the main view is the street, behind the chosen agent.
 // Without the kit everything below falls back to the boxes it was made of before.
-public class Market : MonoBehaviour
+public partial class Market : MonoBehaviour
 {
     public enum View { Market, RobotsEye, Street }
 
@@ -186,11 +186,12 @@ public class Market : MonoBehaviour
     // title, in the real square) the first of them stands close, among the lit stalls, the way
     // Claude Bomb's title shows its device, the others strolling behind it.
     AgentState coverHero;
-    public void ShowCover(RectTransform frame, bool hero = false)
+    public void ShowCover(RectTransform frame, bool hero = false, AgentConfig heroConfig = null)
     {
         var rng = new System.Random(5);
         var configs = new List<AgentConfig>();
         for (int i = 0; i < 4; i++) configs.Add(new AgentConfig { name = Theme.TeamNames[i], colour = i });
+        if (heroConfig != null) { configs[0] = heroConfig.Clone(); for (int i = 1; i < 4; i++) if (configs[i].colour == heroConfig.colour) configs[i].colour = (heroConfig.colour + i * 3) % Theme.Team.Length; }
         var cover = new Arena(Brief.Make(0, rng), configs, 30_000, 21);
         coverHero = null;
         if (Real && hero)
@@ -232,9 +233,14 @@ public class Market : MonoBehaviour
         ApplyFog();
     }
 
+    public AgentState CoverHero => coverHero;
+
     public void Clear()
     {
         StopAllCoroutines();
+        ClearGarage();
+        batteries.Clear();
+        podium = null; familySpot = null; familyFor = null;
         wandering = null;
         thinking = false;
         Highlighted = null;
@@ -386,10 +392,13 @@ public class Market : MonoBehaviour
         var h = a.home;
         if (Real)
         {
-            // The real square's houses ring it already: the agent's home is a stone in its colour.
+            // The real square's houses ring it already: the agent's home is a small mat in its
+            // colour, under its feet only; the square round it keeps its own stone.
             var stone = Instantiate(Kit("HomeStone"), ground, false);
             stone.name = "Home " + a.Name;
             stone.transform.localPosition = Cell(h);
+            stone.transform.localRotation = Quaternion.LookRotation(Inward(h));
+            stone.transform.localScale = new Vector3(0.42f, 1f, 0.3f); // 0.8 m by 0.57 m
             foreach (var r in stone.GetComponentsInChildren<Renderer>()) r.material.SetColor("_BaseColor", Color.Lerp(Color.white, c, 0.6f));
             return;
         }
@@ -474,17 +483,6 @@ public class Market : MonoBehaviour
         var u = s.unknown;
         MeshKit.Part(u, "crate", MeshKit.Box, Look.Mat(Look.Unknown), new Vector3(0, 0.26f, 0), new Vector3(0.66f, 0.52f, 0.62f));
         MeshKit.Part(u, "lid", MeshKit.Box, Look.Mat(Look.UnknownDark), new Vector3(0, 0.54f, 0), new Vector3(0.72f, 0.06f, 0.68f));
-        var mark = new GameObject("?");
-        mark.transform.SetParent(u, false);
-        mark.transform.localPosition = new Vector3(0, 0.98f, 0);
-        var text = mark.AddComponent<TextMeshPro>();
-        text.font = Theme.Bold;
-        text.text = "?";
-        text.fontSize = 6;
-        text.color = Look.GreyDark;
-        text.alignment = TextAlignmentOptions.Center;
-        text.rectTransform.sizeDelta = new Vector2(1, 1);
-        mark.AddComponent<Billboard>().target = cam.transform;
         u.gameObject.SetActive(false);
 
         stalls[cell] = s;
@@ -513,17 +511,6 @@ public class Market : MonoBehaviour
         }
         var crates = Instantiate(Kit("Unknown"), s.unknown, false);
         crates.transform.localRotation = Quaternion.Euler(0f, yaw + 8f, 0f);
-        var mark = new GameObject("?");
-        mark.transform.SetParent(s.unknown, false);
-        mark.transform.localPosition = new Vector3(0, 1.75f, 0);
-        var text = mark.AddComponent<TextMeshPro>();
-        text.font = Theme.Bold;
-        text.text = "?";
-        text.fontSize = 10;
-        text.color = Look.GreyDark;
-        text.alignment = TextAlignmentOptions.Center;
-        text.rectTransform.sizeDelta = new Vector2(2, 2);
-        mark.AddComponent<Billboard>().target = cam.transform;
         s.unknown.gameObject.SetActive(false);
     }
 
@@ -645,7 +632,7 @@ public class Market : MonoBehaviour
     void UpdateVision()
     {
         var a = Highlighted;
-        if (a == null || !a.alive || vision == null || (Real && view == View.Street)) { if (vision != null) vision.gameObject.SetActive(false); return; }
+        if (a == null || !a.alive || vision == null || (Real && view == View.Street) || g != null || walkingHome) { if (vision != null) vision.gameObject.SetActive(false); return; }
         var c = Theme.Team[a.config.colour];
         float w = (2 * a.config.vision + 1) * Pitch - 0.06f;
         vision.gameObject.SetActive(true);
@@ -938,8 +925,9 @@ public class Market : MonoBehaviour
         // The haze: thick enough at street level for the houses to recede, thin from above.
         if (Real && cam != null) RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, FogFor(cam.mode), 1f - Mathf.Exp(-3f * Time.unscaledDeltaTime));
 
+        if (g != null) UpdateGarage();
         // A click on a robot chooses it, unless a card or a button took the click.
-        if (Input.GetMouseButtonDown(0) && Picked != null && !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+        if (g == null && Input.GetMouseButtonDown(0) && Picked != null && !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
         {
             RobotModel best = null;
             float bestDist = 48f;

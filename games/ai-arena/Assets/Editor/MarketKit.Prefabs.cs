@@ -262,12 +262,15 @@ public static partial class MarketKit
         int n = 0;
         foreach (var kv in byMat)
         {
-            var mesh = new Mesh { name = name + "_" + n, indexFormat = IndexFormat.UInt32 };
+            // The index format is chosen before combining: switching it afterwards drops the
+            // triangles (found 8 Nov 2026: the goods meshes were saved with no indices).
+            int total = kv.Value.Sum(c => c.mesh.vertexCount);
+            var mesh = new Mesh { name = name + "_" + n, indexFormat = total < 65535 ? IndexFormat.UInt16 : IndexFormat.UInt32 };
             mesh.CombineMeshes(kv.Value.ToArray(), true, true);
             mesh.RecalculateBounds();
-            if (mesh.vertexCount < 65535) mesh.indexFormat = IndexFormat.UInt16;
             MeshUtility.SetMeshCompression(mesh, ModelImporterMeshCompression.Medium); // the web budget
-            MeshUtility.Optimize(mesh);
+            // No MeshUtility.Optimize here: on Unity 6000.3 it empties a combined mesh (found 8 Nov
+            // 2026: every goods mesh was saved with 0 vertices, so the stalls showed bare crates).
             string path = $"{Generated}/Meshes/{name}_{n}.asset";
             AssetDatabase.DeleteAsset(path);
             AssetDatabase.CreateAsset(mesh, path);

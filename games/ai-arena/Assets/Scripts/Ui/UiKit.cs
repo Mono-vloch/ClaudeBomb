@@ -422,6 +422,39 @@ public static class Ui
         return scroll;
     }
 
+    // ---- the dark ---------------------------------------------------------------
+
+    public static readonly Color DarkFill = new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.94f);
+    public static readonly Color RowFill = new Color(0.08f, 0.14f, 0.27f, 0.92f);
+    public static readonly Color Hairline = new Color(1f, 1f, 1f, 0.14f);
+
+    // A choice on the dark: lit teal when on, a faint keyline when off.
+    public static void Chip(Button b, bool on)
+    {
+        b.GetComponent<Image>().color = on ? Theme.Teal : new Color(1f, 1f, 1f, 0.22f);
+        var fill = b.transform.Find("Fill").GetComponent<Image>();
+        fill.color = on ? new Color(0.07f, 0.32f, 0.36f, 1f) : RowFill;
+        var label = b.GetComponentInChildren<TextMeshProUGUI>();
+        label.color = on ? Theme.Teal : Color.white;
+    }
+
+    public static Image DarkCard(Transform parent, string name) => Card(parent, name, RowFill, Hairline, 1f);
+
+    // A text field on the dark.
+    public static TMP_InputField DarkInput(Transform parent, string placeholder, bool multiline, float fontSize = 18)
+    {
+        var field = Input(parent, placeholder, multiline, fontSize);
+        var outer = field.GetComponent<Image>();
+        outer.color = new Color(1f, 1f, 1f, 0.3f);
+        outer.transform.Find("Fill").GetComponent<Image>().color = RowFill;
+        field.textComponent.color = Color.white;
+        ((TextMeshProUGUI)field.placeholder).color = Theme.Faint;
+        field.onSelect.RemoveAllListeners(); field.onDeselect.RemoveAllListeners();
+        field.onSelect.AddListener(_ => outer.color = Theme.Teal);
+        field.onDeselect.AddListener(_ => outer.color = new Color(1f, 1f, 1f, 0.3f));
+        return field;
+    }
+
     // ---- motion ----------------------------------------------------------------
 
     // TryGetComponent, not GetComponent with ??: in the Editor a missing component is a
