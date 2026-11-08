@@ -63,6 +63,7 @@ public class DecideDebrief
         Color colour = ticked == 3 ? Gold : ticked == 2 ? Silver : ticked == 1 ? Bronze : Theme.Faint;
         app.world.Podium(ticked, colour, hero);
         app.world.FamilySpot(hero);
+        app.world.FamilyCloser(3.4f); // off her doorstep, so her wave reads
         app.world.FamilyWave(0.9f);
         app.world.ShowDoorView(frame);
         app.atmosphere.MenuBlur(false);

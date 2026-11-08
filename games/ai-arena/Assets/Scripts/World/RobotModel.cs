@@ -148,6 +148,7 @@ public class RobotModel
             var chip = Market.ChipShape(rig.headMount, Mathf.Clamp(c.model, 0, 2), Market.Parts.plates);
             chip.localPosition = new Vector3(0f, -0.01f, 0.03f);
             chip.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            chip.localScale = Vector3.one * 0.8f; // worn: Opus as wide as the head, Haiku and Sonnet smaller
             carried.Add(chip.gameObject);
         }
         if (Market.Parts.memory && c.memory != MemoryModes.None && rig.handMount != null)

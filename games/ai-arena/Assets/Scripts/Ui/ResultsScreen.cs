@@ -82,12 +82,13 @@ public class ResultsScreen
             foreach (var item in a.eaten.Take(9)) bot.AddGoods(item, ItemModels.Colour(item));
             if (!a.alive) bot.SetOut();
         }
-        app.world.DoorLamp(hero);
+        app.world.DoorLamp(hero, 2.2f); // softer than the briefing's: the apples on the step stay red
         Color colour = bestMedal == 3 ? Gold : bestMedal == 2 ? Silver : bestMedal == 1 ? Bronze : Theme.Faint;
         string onStep = lesson != null && lesson.number == Ladder.ModelLevel && hero.score > 0 ? $"${hero.CostUsd / hero.score:0.0000} an item" : null; // the number that is the lesson
         app.world.Podium(bestMedal, colour, hero, ranked.Skip(1).Take(2).ToList(), onStep);
         app.world.TipOut(hero, id => arena.brief.IsSafe(Items.Get(id)));
         app.world.FamilySpot(hero);
+        app.world.FamilyCloser(3.4f); // off her doorstep, so her wave reads
         app.world.FamilyWave(0.9f); // the agent is home
         app.world.ShowDoorView(frame);
         app.atmosphere.MenuBlur(false);

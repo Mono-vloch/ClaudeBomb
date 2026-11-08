@@ -122,7 +122,7 @@ public class DemoDriver : MonoBehaviour
                 while (DecideDebrief.Current == null && waited < 420f)
                 {
                     waited += Time.deltaTime;
-                    if (ArenaScreen.Current != null && app.Sim != null && app.Sim.finished) { yield return new WaitForSeconds(2.4f); ClickButton("Next task"); ClickButton("Debrief"); yield return new WaitForSeconds(0.5f); }
+                    if (ArenaScreen.Current != null && ArenaScreen.Current.Ended) { yield return new WaitForSeconds(2.4f); ClickButton("Next task"); ClickButton("Debrief"); yield return new WaitForSeconds(0.5f); }
                     yield return null;
                 }
                 yield return new WaitForSeconds(3.6f);
@@ -179,7 +179,9 @@ public class DemoDriver : MonoBehaviour
         if (ArenaScreen.Current != null && (ArenaScreen.Current.CurrentBanner == "SENT HOME" || ArenaScreen.Current.CurrentBanner == "OUT OF TOKENS")) { yield return new WaitForSeconds(0.3f); yield return Shot($"{tag}-6-moment"); }
         t = 0f;
         while (app.Sim != null && !app.Sim.finished && t < 150f) { t += Time.deltaTime; yield return null; }
-        yield return new WaitForSeconds(2.6f);
+        t = 0f; // the agents walk home first; the round says HOME when they are there
+        while (ArenaScreen.Current != null && !ArenaScreen.Current.Ended && t < 30f) { t += Time.deltaTime; yield return null; }
+        yield return new WaitForSeconds(2.0f);
         yield return Shot($"{tag}-7-round-over");
         ClickButton("Debrief");
         t = 0f;

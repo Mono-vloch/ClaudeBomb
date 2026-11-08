@@ -105,6 +105,110 @@ public partial class Market
         ApplyFog();
     }
 
+    // ---- the walk home when the round is over ----
+
+    bool walkingHome;
+
+    // Every agent with charge left walks home, all at once: round the stalls still standing to
+    // its home cell at the square's edge, then on across the street to its house's door (the
+    // one with the family: in front of Mom, who waves). The round says HOME only when this is done.
+    public IEnumerator WalkHome(IList<AgentState> agents)
+    {
+        var walks = new List<(AgentState a, RobotModel r, List<Vector3> path, float[] at)>();
+        foreach (var a in agents)
+        {
+            if (!a.alive || !bots.TryGetValue(a, out var r) || !r.root.gameObject.activeSelf) continue;
+            var path = new List<Vector3> { r.Position };
+            if (a.pos != a.home) foreach (var c in PathHome(a.pos, a.home)) path.Add(Cell(c));
+            path.Add(DoorStep(a));
+            var at = new float[path.Count];
+            for (int i = 1; i < path.Count; i++) at[i] = at[i - 1] + Vector3.Distance(path[i - 1], path[i]);
+            walks.Add((a, r, path, at));
+        }
+        if (walks.Count == 0) yield break;
+        walkingHome = true;
+        float longest = walks.Max(w => w.at[w.at.Length - 1]);
+        float speed = Real ? Mathf.Clamp(longest / 9f, Pitch / 1.3f, Pitch / 0.75f) : Pitch / 0.25f; // metres a second
+        foreach (var w in walks) w.r.Walk(speed / 1.15f);
+        var done = new HashSet<AgentState>();
+        float d = 0f;
+        while (done.Count < walks.Count)
+        {
+            d += speed * Time.deltaTime;
+            foreach (var w in walks)
+            {
+                if (done.Contains(w.a)) continue;
+                int last = w.path.Count - 1;
+                if (d >= w.at[last])
+                {
+                    w.r.Position = w.path[last];
+                    w.r.root.rotation = Quaternion.LookRotation(-Inward(w.a.home)); // facing its door
+                    w.r.Rest();
+                    w.a.pos = w.a.home;
+                    done.Add(w.a);
+                    if (w.a == familyFor) FamilyWave(0.2f);
+                    continue;
+                }
+                int i = 0;
+                while (i < last - 1 && d >= w.at[i + 1]) i++;
+                float seg = Mathf.Max(1e-4f, w.at[i + 1] - w.at[i]);
+                w.r.Position = Vector3.Lerp(w.path[i], w.path[i + 1], (d - w.at[i]) / seg);
+                var dir = Flat(w.path[i + 1] - w.path[i]);
+                if (dir.sqrMagnitude > 1e-4f) w.r.root.rotation = Quaternion.Slerp(w.r.root.rotation, Quaternion.LookRotation(dir), Mathf.Clamp01(Time.deltaTime * 8f));
+                if (effects != null && Time.frameCount % 9 == 0) effects.Dust(w.r.Position + Vector3.up * 0.05f, 1);
+            }
+            yield return null;
+        }
+        walkingHome = false;
+        ApplyFog();
+    }
+
+    // Where an agent stops at its house: in front of the family's doormat for the house with the
+    // family, at its own door's step for the others.
+    Vector3 DoorStep(AgentState a)
+    {
+        var inward = Inward(a.home);
+        var home = Cell(a.home);
+        if (a == familyFor && familySpot != null)
+        {
+            var p = familySpot.position + inward * 0.95f;
+            return new Vector3(p.x, home.y, p.z);
+        }
+        var door = DoorOf(a.home);
+        return new Vector3(door.x, home.y, door.z) + inward * 0.4f;
+    }
+
+    // The shortest way home on the grid, round the stalls still standing (through them only when
+    // there is no other way): the cells after the start, the home last.
+    List<Vector2Int> PathHome(Vector2Int from, Vector2Int home) =>
+        Search(from, home, true) ?? Search(from, home, false) ?? new List<Vector2Int> { home };
+
+    List<Vector2Int> Search(Vector2Int from, Vector2Int home, bool roundStalls)
+    {
+        var prev = new Dictionary<Vector2Int, Vector2Int> { [from] = from };
+        var queue = new Queue<Vector2Int>();
+        queue.Enqueue(from);
+        var steps = new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+        while (queue.Count > 0)
+        {
+            var c = queue.Dequeue();
+            if (c == home) break;
+            foreach (var d in steps)
+            {
+                var n = c + d;
+                if (!Arena.InBounds(n) || prev.ContainsKey(n)) continue;
+                if (roundStalls && n != home && (arena.ItemAt(n) != null || stalls.ContainsKey(n))) continue;
+                prev[n] = c;
+                queue.Enqueue(n);
+            }
+        }
+        if (!prev.ContainsKey(home)) return null;
+        var path = new List<Vector2Int>();
+        for (var c = home; c != from; c = prev[c]) path.Add(c);
+        path.Reverse();
+        return path;
+    }
+
     // ---- the podium beside the door, with the medal and its stars ----
 
     Transform podium; Vector3 podiumFront; Vector3 doorCamAt, doorCamLook;
@@ -125,6 +229,8 @@ public partial class Market
         podium.SetParent(transform, false);
         podium.position = Cell(hero.home) + inward * 0.9f + right * 0.3f;
         podium.rotation = Quaternion.LookRotation(-podiumFront);
+        // The home mats give way to the podium: the agents are home, on it or at their doors.
+        if (ground != null) foreach (Transform t in ground) if (t.name.StartsWith("Home ")) t.gameObject.SetActive(false);
         bool three = runnersUp != null && runnersUp.Count > 0;
         float[] heights = { 0.36f, 0.24f, 0.15f };
         float[] widths = { 1.1f, 0.7f, 0.7f };
@@ -156,7 +262,7 @@ public partial class Market
                 if (bots.TryGetValue(runnersUp[i], out var other)) Stand(other, i + 1);
         if (onStep != null)
         {
-            var plate = PlateOn(podium, onStep, 0.7f, new Vector3(0.3f, heights[0] * 0.5f, -0.556f), Vector3.back);
+            var plate = PlateOn(podium, onStep, 0.58f, new Vector3(0.3f, heights[0] * 0.5f, -0.556f), Vector3.back); // clear of the ribbon, inside the face
             plate.name = "Receipt";
             plate.GetComponentInChildren<TextMeshPro>().color = Theme.Amber;
         }
@@ -167,12 +273,19 @@ public partial class Market
             var m = new GameObject("Medal").transform;
             m.SetParent(podium, false);
             m.localPosition = new Vector3(xs[step] - 0.08f, heights[step] + 0.02f, -0.56f);
-            var ribbon = new Color(0.16f, 0.2f, 0.42f);
+            // Robot Racing's ribbon was navy on the navy step, so only the disc showed: here it is
+            // red with a white stripe, and it comes over the step's edge from where the agent stands.
+            var ribbon = new Color(0.8f, 0.1f, 0.14f);
+            var stripe = new Color(0.92f, 0.92f, 0.9f);
             float drop = heights[step] * 0.55f;
             foreach (float sx in new[] { -1f, 1f })
             {
-                var strip = Box(m, new Vector3(0.05f, drop * 1.08f, 0.012f), new Vector3(sx * 0.06f, -drop / 2f, -0.012f), Stone, ribbon);
+                var strip = Box(m, new Vector3(0.06f, drop * 1.08f, 0.012f), new Vector3(sx * 0.06f, -drop / 2f, -0.012f), Stone, ribbon, "Ribbon");
                 strip.transform.localRotation = Quaternion.Euler(0f, 0f, sx * 12f);
+                var white = Box(m, new Vector3(0.016f, drop * 1.08f, 0.004f), new Vector3(sx * 0.06f, -drop / 2f, -0.0195f), Stone, stripe, "Ribbon stripe");
+                white.transform.localRotation = strip.transform.localRotation;
+                Box(m, new Vector3(0.06f, 0.006f, 0.2f), new Vector3(sx * 0.068f, 0.003f, 0.1f), Stone, ribbon, "Ribbon top");
+                Box(m, new Vector3(0.016f, 0.008f, 0.2f), new Vector3(sx * 0.068f, 0.004f, 0.1f), Stone, stripe, "Ribbon top stripe");
             }
             float discY = -drop - 0.09f;
             Disc(m, 0.115f, new Vector3(0f, discY, -0.02f), LampMat, colour * 0.72f);
@@ -186,8 +299,8 @@ public partial class Market
                 star.name = "Star" + i;
             }
             var lamp = new GameObject("Medal lamp").AddComponent<Light>();
-            lamp.transform.SetParent(m, false); lamp.transform.localPosition = new Vector3(0f, discY, -0.5f);
-            lamp.type = LightType.Point; lamp.color = colour; lamp.intensity = 2f; lamp.range = 1.4f; lamp.shadows = LightShadows.None;
+            lamp.transform.SetParent(m, false); lamp.transform.localPosition = new Vector3(0f, discY + 0.05f, -0.3f);
+            lamp.type = LightType.Point; lamp.color = colour; lamp.intensity = 1.6f; lamp.range = 0.75f; lamp.shadows = LightShadows.None;
             m.localScale = new Vector3(1f, 0f, 1f); // it drops into place
         }
         // The debrief's camera: the door behind, the agent on the podium with its basket, from a little to the left.
@@ -212,6 +325,9 @@ public partial class Market
             piece.localScale = Vector3.one * 1.5f;
             piece.position = front + across * ((i - (items.Count - 1) / 2f) * 0.11f) + Vector3.up * 0.002f;
             piece.rotation = Quaternion.Euler(0f, i * 53f, 0f);
+            // The kit's apple red turns orange under the warm dusk lamps: a deeper red on the step.
+            if (items[i] == "apple")
+                foreach (var pr in piece.GetComponentsInChildren<Renderer>()) Tint(pr, new Color(1f, 0.62f, 0.62f));
             if (!wanted(items[i]))
             {
                 var l = new GameObject("Wrong").AddComponent<Light>();
@@ -258,10 +374,11 @@ public partial class Market
     // Where the family stands at the door of the house behind an agent's home: in front of the
     // nearest house of the square's ring, a doormat on the cobbles. A model at
     // Resources/Market/Family (origin at its feet, facing +Z) is stood there when it exists.
-    Transform familySpot;
+    Transform familySpot; AgentState familyFor;
     public Transform FamilySpot(AgentState a)
     {
         if (familySpot != null) return familySpot;
+        familyFor = a;
         if (!Real || ground == null) return null;
         var inward = Inward(a.home);
         var behind = Cell(a.home) - inward * 7.3f;
@@ -296,6 +413,24 @@ public partial class Market
             porch.type = LightType.Point; porch.color = new Color(1f, 0.82f, 0.56f); porch.intensity = dusk ? 1.8f : 0.6f; porch.range = 3.6f; porch.shadows = LightShadows.None;
         }
         return familySpot;
+    }
+
+    // The debrief: Mom comes off her doorstep toward the camera, so her wave reads, a lamp over
+    // her. Her doormat stays at the door.
+    public void FamilyCloser(float metres)
+    {
+        if (familySpot == null || podium == null) return;
+        var mom = familySpot.Find("Family");
+        if (mom == null) return;
+        var toCam = Flat(doorCamAt - mom.position);
+        float room = toCam.magnitude - 4.6f; // never past the podium
+        var at = mom.position + toCam.normalized * Mathf.Clamp(metres, 0f, Mathf.Max(0f, room));
+        mom.position = at;
+        mom.rotation = Quaternion.LookRotation(Flat(doorCamAt - at));
+        var lamp = new GameObject("Mom lamp").AddComponent<Light>();
+        lamp.transform.SetParent(familySpot, false);
+        lamp.transform.position = at + toCam.normalized * 0.9f + Vector3.up * 2.1f;
+        lamp.type = LightType.Point; lamp.color = new Color(1f, 0.9f, 0.76f); lamp.intensity = 1.5f; lamp.range = 2.8f; lamp.shadows = LightShadows.None;
     }
 
     // The agent is home: Mom waves once, then rests.

@@ -75,6 +75,9 @@ public partial class Market
         bot.root.rotation = Quaternion.LookRotation(g.inward);
         bot.Rest();
         bot.ShowBasket(false);
+        // Its home mat under its feet, where it stands beside the table.
+        var mat = ground != null ? ground.Find("Home " + a.Name) : null;
+        if (mat != null) mat.position = new Vector3(g.P.x, mat.position.y, g.P.z);
         Highlight(a);
         g.root = new GameObject("Garage").transform;
         g.root.SetParent(transform, false);
@@ -238,9 +241,10 @@ public partial class Market
         if (g.brain)
         {
             var block = new GameObject("Chip block").transform; block.SetParent(g.trays, false);
-            block.localPosition = new Vector3(0.43f, g.top + up, z);
-            Box(block, new Vector3(0.72f, 0.035f, 0.08f), new Vector3(0f, 0.0175f, 0f), Metal, new Color(0.22f, 0.24f, 0.28f), "Block");
-            float[] xs = { -0.235f, 0f, 0.235f };
+            block.localPosition = new Vector3(0.44f, g.top + up, z);
+            Box(block, new Vector3(0.76f, 0.035f, 0.08f), new Vector3(0f, 0.0175f, 0f), Metal, new Color(0.22f, 0.24f, 0.28f), "Block");
+            // Spaced for the small, medium and large chips, the small one clear of the notebook.
+            float[] xs = { -0.193f, -0.009f, 0.23f };
             for (int i = 0; i < 3; i++)
             {
                 var chip = ChipShape(g.trays, i, true);
@@ -251,8 +255,8 @@ public partial class Market
         if (g.effort)
         {
             g.dimmer = new GameObject("Effort dial").transform; g.dimmer.SetParent(g.trays, false);
-            g.dimmer.localPosition = new Vector3(0.87f, g.top + up, z);
-            Box(g.dimmer, new Vector3(0.2f, 0.07f, 0.12f), new Vector3(0f, 0.035f, 0f), Metal, new Color(0.18f, 0.2f, 0.24f), "Box");
+            g.dimmer.localPosition = new Vector3(0.9f, g.top + up, z);
+            Box(g.dimmer, new Vector3(0.18f, 0.07f, 0.12f), new Vector3(0f, 0.035f, 0f), Metal, new Color(0.18f, 0.2f, 0.24f), "Box");
             PlateOn(g.dimmer, "Effort", 0.36f, new Vector3(0f, 0.035f, -0.062f), Vector3.back);
             var knob = Cylinder(g.dimmer, 0.04f, 0.03f, new Vector3(0f, 0.085f, 0.01f), Metal, new Color(0.75f, 0.78f, 0.82f), "Knob").transform;
             Box(knob, new Vector3(0.008f, 0.01f, 0.036f), new Vector3(0f, 0.016f, -0.016f), LampMat, Color.white, "Pointer");

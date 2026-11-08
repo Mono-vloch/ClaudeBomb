@@ -240,7 +240,7 @@ public partial class Market : MonoBehaviour
         StopAllCoroutines();
         ClearGarage();
         batteries.Clear();
-        podium = null; familySpot = null;
+        podium = null; familySpot = null; familyFor = null;
         wandering = null;
         thinking = false;
         Highlighted = null;
@@ -392,10 +392,13 @@ public partial class Market : MonoBehaviour
         var h = a.home;
         if (Real)
         {
-            // The real square's houses ring it already: the agent's home is a stone in its colour.
+            // The real square's houses ring it already: the agent's home is a small mat in its
+            // colour, under its feet only; the square round it keeps its own stone.
             var stone = Instantiate(Kit("HomeStone"), ground, false);
             stone.name = "Home " + a.Name;
             stone.transform.localPosition = Cell(h);
+            stone.transform.localRotation = Quaternion.LookRotation(Inward(h));
+            stone.transform.localScale = new Vector3(0.42f, 1f, 0.3f); // 0.8 m by 0.57 m
             foreach (var r in stone.GetComponentsInChildren<Renderer>()) r.material.SetColor("_BaseColor", Color.Lerp(Color.white, c, 0.6f));
             return;
         }
@@ -629,7 +632,7 @@ public partial class Market : MonoBehaviour
     void UpdateVision()
     {
         var a = Highlighted;
-        if (a == null || !a.alive || vision == null || (Real && view == View.Street)) { if (vision != null) vision.gameObject.SetActive(false); return; }
+        if (a == null || !a.alive || vision == null || (Real && view == View.Street) || g != null || walkingHome) { if (vision != null) vision.gameObject.SetActive(false); return; }
         var c = Theme.Team[a.config.colour];
         float w = (2 * a.config.vision + 1) * Pitch - 0.06f;
         vision.gameObject.SetActive(true);

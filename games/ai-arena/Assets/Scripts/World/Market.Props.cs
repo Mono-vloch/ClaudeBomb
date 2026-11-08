@@ -247,6 +247,7 @@ public partial class Market
     }
 
     public static readonly Color[] ChipTints = { new Color(0.45f, 0.95f, 0.85f), new Color(0.95f, 0.92f, 0.85f), new Color(1f, 0.78f, 0.3f) };
+    public static readonly float[] ChipSizes = { 0.7f, 0.9f, 1.2f };
     public static readonly string[] ChipNames = { "Haiku", "Sonnet", "Opus" };
     public static readonly string[] BookNames = { "", "3 turns", "10 turns", "Notebook" };
 
@@ -280,13 +281,18 @@ public partial class Market
     {
         var root = new GameObject("Chip " + ChipNames[model]).transform;
         root.SetParent(parent, false);
+        // Haiku small, Sonnet medium, Opus large: the chip and its name grow together. The size
+        // sits on a child, so the garage's pulse (which sets the root's scale) leaves it alone.
+        var body = new GameObject("Size").transform;
+        body.SetParent(root, false);
+        body.localScale = Vector3.one * ChipSizes[Mathf.Clamp(model, 0, 2)];
         const float w = 0.22f, h = 0.12f, d = 0.014f;
-        Box(root, new Vector3(w, h, d), new Vector3(0f, h / 2f, 0f), Stone, new Color(0.07f, 0.2f, 0.15f), "Board");
-        var stripe = Box(root, new Vector3(w, 0.014f, d + 0.002f), new Vector3(0f, h - 0.012f, 0f), LampMat, ChipTints[model], "Stripe");
+        Box(body, new Vector3(w, h, d), new Vector3(0f, h / 2f, 0f), Stone, new Color(0.07f, 0.2f, 0.15f), "Board");
+        var stripe = Box(body, new Vector3(w, 0.014f, d + 0.002f), new Vector3(0f, h - 0.012f, 0f), LampMat, ChipTints[model], "Stripe");
         Glow(stripe.GetComponent<Renderer>(), ChipTints[model] * 0.7f);
         for (int i = 0; i < 7; i++)
-            Box(root, new Vector3(0.009f, 0.014f, 0.004f), new Vector3(-w / 2f + 0.022f + i * (w - 0.044f) / 6f, -0.006f, 0f), LampMat, new Color(1f, 0.82f, 0.4f), "Pin");
-        if (plate) PlateOn(root, ChipNames[model], 0.4f, new Vector3(0f, h * 0.42f, -d / 2f - 0.003f), Vector3.back);
+            Box(body, new Vector3(0.009f, 0.014f, 0.004f), new Vector3(-w / 2f + 0.022f + i * (w - 0.044f) / 6f, -0.006f, 0f), LampMat, new Color(1f, 0.82f, 0.4f), "Pin");
+        if (plate) PlateOn(body, ChipNames[model], 0.4f, new Vector3(0f, h * 0.42f, -d / 2f - 0.003f), Vector3.back);
         return root;
     }
 

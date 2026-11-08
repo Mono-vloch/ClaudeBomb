@@ -315,21 +315,91 @@ cut mid-list; the lens on the agent's face read as "a flat blue disc"; 1.7's gar
 and after the walk's one change (a coin, which shows only on the battery's ring); "Call home" after
 "no phone"; 17:58 on the feed and 6:00 PM on the message.
 
-Not acted on: the brief asks for one more player test and then a stop. The table above is the state
-the reviewer saw, plus Mom.
+The table above is the state this reviewer saw, plus Mom. The owner took four of its findings into
+the last round (below): the red wash under the garage's table, "HOME" in the market, the orange
+apples, and the model names.
+
+## The last round, 8 November
+
+The owner's five points after Mom, and what changed. Frames: `home-walk/`, on the committed build, and `last/`, the walk the fourth player test saw (below).
+
+| Asked | Done |
+|---|---|
+| The garage's ground is washed pink-red under the whole table: the agent's home stone should be a small mat under the agent only | Two things made the wash: the agent's sight square (twelve metres of glass in its team colour, drawn round the chosen agent) showed in the garage, and the home stone was a whole 1.9 m cell tinted in the team colour. The sight square is off while the garage is open (`Market.UpdateVision`); the home stone is a mat 0.8 by 0.57 m under the agent's feet (`Market.BuildHouse`), moved under it where it stands beside the table (`Market.BuildGarage`). The square round it keeps its own stone. At the debrief the mats give way to the podium |
+| "HOME" shows while the agent is still in the market; it only shows when the agent reaches the house | When the turns run out (or the player calls them home), every agent with charge left walks home, all at once: on the grid round the stalls still standing to its home cell, then across the street to its door, in front of Mom's doormat for the house with the family (she waves as it arrives), and stops facing the door (`Market.WalkHome`, 1.85 to 3.2 m a second, faster on a long way). Only then does the round say HOME, CALLED HOME or "n OF m HOME", the agent's face in the window turns to home and the Debrief button appears (`ArenaScreen.HomeThenSay`). An agent sent home for a wrong buy keeps its "SENT HOME" moment where it happens |
+| Apples look orange at dusk on the podium | Two warm lamps over-lit them: the medal's lamp reached the step's top, and the door lamp shone at full strength. The medal's lamp now lights the medal only (closer, shorter reach), the door lamp is softer at the debrief, and the apples on the step take a deeper red. They read red |
+| Haiku, Sonnet and Opus keep their names, but the chips are small, medium and large, and LUMA names them in one short line the first time they appear | Each chip and its name plate grow together: Haiku at 0.7, Sonnet at 0.9, Opus at 1.2 of the old chip (`Market.ChipSizes`); worn on the agent's head they are 0.8 of that, so Opus is as wide as the head. The block is respaced so the small chip stands clear of the notebook, the effort dial a little narrower. On 1.5's first visit, after "Now you choose the agent's brain and how hard it thinks.", LUMA says "Three brains: Haiku is small, Sonnet medium, Opus large." (nine words, recorded); 1.5's garage is at thirty words with it |
+| On the debrief, bring Mom closer to the camera so her wave reads; make sure the medal's ribbon is visible | Mom comes off her doorstep toward the camera by 3.4 m, turned to it, a lamp over her (`Market.FamilyCloser`); her doormat stays at the door. She stands about 1.4 times as tall in the frame, to the left behind the podium. The ribbon is red with a white stripe (Robot Racing's was navy on the navy step, so only the disc showed), a little wider, and comes over the step's edge from where the agent stands before it drops down the face to the disc; the three stars are on it |
+
+All machine checks still hold on every screen of `last/` and `home-walk/` (no screen over its limit; 1.5's garage at 30
+words, 1.7's at 27 and 28). The Mac build's smoke test passes.
+
+## The player test, round 4
+
+A fresh agent, the same prompt and the same twenty screens as round 3, on the walk of the five
+points (`last/`). What the game is about, in its words: "You are the person who prepares a small
+shopping robot for Mom's dinner errand. You write its list and choose its gear (brain size,
+number of turns, how far it can see, a notebook, effort), then you send it out alone and cannot
+help it; you can only watch or call it home. When it returns you get a medal based on what it
+brought back. Underneath, it is teaching how AI agents work: precise instructions, the agent acts
+on its own, every word and turn costs tokens, use the smallest model that does the job, and don't
+use an agent when a simple automation will do." It said what to do on most screens; on the 1.1
+garage it could not tell which choice was its own (the list is packed already), and on 1.7's
+second garage frame it could not tell what had been set.
+
+Play, by its account: the debrief ("the strongest game moment: the robot on a plinth with the
+apples it brought, a medal, and Mom"), the round's cameras ("it looks like a game; but it is
+spectating"), the 1.1 garage ("could be play, packing a basket from a table of goods"). Form or
+instructions: the briefing ("a text panel with rules and a button"), the story ("a lecture over
+pretty backdrops"), the phone, the later garages ("a configuration form made of 3D plates"), 1.6
+("a classification worksheet"), LUMA's debrief lines and LUMA over almost every frame. Liked most:
+the warm market town, the loop (prepare, send, watch it act alone, judge the haul), the agent cam
+and the overhead. Least: the loadout table (crowded, plates overlapping, unclear what is chosen),
+and LUMA explaining before the player discovers. "In the first level I cannot point to a single
+choice I made myself."
+
+On the five points: the garage's red wash is not mentioned; the apples on the step and the medal
+read (it saw "three apples and a glowing gold medal hanging off the front"); the chips' names were
+read, but not their sizes; Mom's gesture was read ("raises a hand to her head ... could mean pleased
+or 'oh no'"). Two findings were about this round's changes, and both were fixed after the test
+(`home-walk/`):
+
+- "HOME" still read wrong: the agent stood on its mat at the square's edge, among the stalls, not
+  at the house. The walk home now goes on across the street to the door: in front of Mom's doormat
+  for the house with the family (she waves as it arrives), to its own door's step for the others,
+  and it stops facing the door. The round says HOME then: in `home-walk/` the round-over frames of
+  1.1 and 1.5 show the agent at Mom's door, her hand up, HOME over the door (the banner covers her
+  apron; her face and her hand are above it).
+- 1.5's "$0.0003 an item" on the step's face ran into the new ribbon and over the step's edge: it is
+  smaller now (0.58 from 0.7) and sits clear of both.
+
+Its other findings stand as in round 3, or are new and not acted on (the brief asks for a stop):
+the world's edge beyond the houses; the battery pack "dangling" from the arm and the agent
+"wearing four or five signs at once"; the lens read as "a flat pale-blue disc"; translucent circles
+at the agent's feet in the round; the red-tinted sight square in the agent cam read as a bug;
+LUMA's line over the overhead without its panel; "Call them home" with one agent; the note on
+the chest cut ("Anything at the market is fine..."); the "Effort" plate hidden by corn spilling
+from the "No" crate on 1.5 (the crate's goods vary from run to run); 1.6's single note card read as
+"Mom's message rather than a task", and its "Neither" bin as a trash can; nothing on 1.6's step;
+the produce on 1.7 piled up and the teal pear and cabbage in a "yellow and green only" errand; 1.7's
+list plate blank, and its "set" frame the same as before; the three icons under the clock and the
+window's face unexplained; every medal gold in these frames, so no tiers are seen.
 
 ## Web
 
-AI Arena: 37.4 MB transferred (was 32.8 after the realism pass: the recorded cues, the new code,
-the goods meshes that were empty before, and Mom, about 1.6 MB), 4.4 s until the loader hides, no
-console errors; measured with a headless Chrome on software rendering against the platform's local
-server run from this worktree (the same method as the realism pass). Under the 45 MB cap. The build
-is `site/games/ai-arena/` in this worktree (not committed: `site/games/*/` is ignored).
+AI Arena: 37.5 MB transferred (37.4 before this round; 32.8 after the realism pass), 3.9 s until
+the loader hides on a quiet machine (4.8 s while a screenshot walk ran beside it), no console
+errors; measured with a headless Chrome on software rendering against the platform's local server
+run from this worktree (the same method as the realism pass). Under the 45 MB cap. The build is
+`site/games/ai-arena/` in this worktree (not committed: `site/games/*/` is ignored).
 
 ## Where the pictures are
 
 All in `games/ai-arena/Builds/look-audit/game-feel/` of this worktree (ignored by git, like Robot
-Racing's): `answers/` the walk after the owner's answers, 51 frames with `counts.jsonl` (the frames
+Racing's): `home-walk/` the last walk, on the committed build (errands 1.1, 1.5, 1.6 and 1.7, 35
+frames with `counts.jsonl`); `last/` the walk the fourth player test saw (before the walk to the
+door and the smaller price tag); `last-round/` the first walk of the last round (the small chip
+still behind the notebook); `answers/` the walk after the owner's answers, 51 frames (the frames
 of the third player test); `mom-walk/` errands 1.1 and 1.6 with Mom at the door; `mom/` her preview
 renders and `mom-sheet.png`; `final/` the walk before the answers, with `final/side-by-sides/`;
 `run1/` and `run3/` the frames of the two earlier reviewer rounds, with their side-by-sides;
@@ -337,17 +407,15 @@ renders and `mom-sheet.png`; `final/` the walk before the answers, with `final/s
 
 ## Waiting for Charbel
 
-Nothing blocking. Answered on 8 November: the plates, the panels, the light, the clock, the
-family's spot, the medal (above); Mom is in. Open, from the third player test, if you want them in a
-next round: the agent's own home stone reads as a red wash under the garage's table; the round ends
-with "HOME" while the agent stands in the market (it could walk home first); the dusk turns the
-apples orange on the podium; on the later garages the model names (Haiku, Sonnet, Opus) mean nothing
-to a player who does not know Claude.
+Nothing blocking. The five points of the last round are done (above). The fourth player test's
+other findings are listed under it, not acted on, for a next round if you want one; the largest
+are the loadout table read as a settings form, LUMA over almost every frame, and the world's edge
+beyond the houses.
 
 ## Where AI Arena stands
 
 All seven errands run on the new screens and meet the brief's machine checks on every screen of
-the walk after the owner's answers (the table above). The player test, both rounds, says what the game is about and
+the walk after the owner's answers (the table above) and of the last walk (`home-walk/`). The player test, both rounds, says what the game is about and
 what to do on every screen but one story shot; the Claude Bomb test preferred the new screens on
 two or three of eight in round 1 and seven of eight in round 2. What both still hold against it
 is mostly what the brief and Robot Racing's rules keep (the name plates, the errand map on the
@@ -359,7 +427,8 @@ Not checked by the walk, and worth a look by hand: a live run on Claude (the wal
 brain; the smoke test made one real Claude call through Claude Code and read its move); the class
 mode with several agents (the window's faces, picking one); free play; dragging by hand (the walk
 acts through the same calls the drags make); 1.3, 1.4 and 1.7 played through (their briefings and
-garages are walked). The third player test saw every screen but Mom; Mom was checked in her own renders and in the walk
-of 1.1 and 1.6.
+garages are walked). The third player test saw every screen but Mom; the fourth saw Mom and this round's changes,
+except the walk to the door and the smaller price tag, which came from its findings and were checked
+on the last walk's frames.
 
 The look audit's Phase 7 section for AI Arena is not written: this report is it, for you to merge.

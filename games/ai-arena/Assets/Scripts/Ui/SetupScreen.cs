@@ -116,6 +116,8 @@ public class SetupScreen
                 yield return Hud.Arrival(root, arrival);
                 if (root == null) yield break;
                 if (Luma.Lines.ContainsKey("arrive-" + l.number)) { app.luma.Cue(root, "arrive-" + l.number); yield return new WaitForSecondsRealtime(3.2f); }
+                // The chips the first time they are on the table: LUMA names them, small to large.
+                if (root != null && Luma.Lines.ContainsKey("chips-" + l.number)) { app.luma.Cue(root, "chips-" + l.number); yield return new WaitForSecondsRealtime(3.4f); }
             }
             if (root == null) yield break;
             if (l.broken != null && Luma.Lines.ContainsKey("fix-" + l.number)) app.luma.Cue(root, "fix-" + l.number);

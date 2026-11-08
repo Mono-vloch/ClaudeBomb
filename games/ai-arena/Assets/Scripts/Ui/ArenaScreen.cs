@@ -230,14 +230,29 @@ public class ArenaScreen
         if (root != null && text != null) app.luma.Text(root, text);
     }
 
+    // The round is over when the turns run out (or the player calls them home): every agent with
+    // charge left walks home first, and only then does the round say HOME.
+    public bool Ended { get; private set; }
+
     void Finished()
     {
         Refresh();
-        results.gameObject.SetActive(true);
         camera.gameObject.SetActive(false);
         callHome.gameObject.SetActive(false);
         if (thoughtCard != null) { Object.Destroy(thoughtCard.gameObject); thoughtCard = null; }
         if (bubble != null) { Object.Destroy(bubble.gameObject); bubble = null; bubbleFor = null; }
+        app.StartCoroutine(HomeThenSay());
+    }
+
+    IEnumerator HomeThenSay()
+    {
+        float held = 0f;
+        while (world.Animating && held < 20f) { held += Time.deltaTime; yield return null; }
+        yield return world.WalkHome(arena.agents);
+        if (root == null) yield break;
+        Refresh();
+        results.gameObject.SetActive(true);
+        Ended = true;
         int home = arena.agents.Count(a => a.alive), all = arena.agents.Count;
         // The result stays up until the debrief: what the basket holds, and whether it came home.
         int bought = arena.agents.Where(a => a.alive).Sum(a => a.score);
@@ -360,7 +375,7 @@ public class ArenaScreen
         clock.Set(fraction, amber);
         foreach (var a in arena.agents)
         {
-            var state = !a.alive ? Hud.Face.SentHome : sim.finished ? Hud.Face.Home : Hud.Face.Out;
+            var state = !a.alive ? Hud.Face.SentHome : Ended ? Hud.Face.Home : Hud.Face.Out; // home once it is at the house
             window.Set(a, state, world.Highlighted == a);
             world.SetBattery(a, a.config.IsRule ? 1f : a.budget > 0 ? (float)a.TokensLeft / a.budget : 0f);
         }
