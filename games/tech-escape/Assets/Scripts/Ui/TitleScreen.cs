@@ -1,22 +1,28 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Maaloomatiia.Games;
 
-// The cover: the facility at night, the door lights on, the attacker pacing the
-// corridor; over it the wordmark, the pitch, LUMA, the campaign (three tiers of
-// rooms with the stars each earned) and the way in.
+// The cover: the facility at night from the corridor camera, the door lights on, the attacker
+// pacing; beside it the wordmark, the pitch, LUMA's one line, one big Start and a small Levels.
+// Levels opens the facility map: the twelve rooms as cards, each with its levels and the stars
+// they earned. The one ladder in the game.
 public class TitleScreen
 {
     public readonly RectTransform root;
+    RectTransform map, content;
 
     public TitleScreen(Transform parent, App app)
     {
         root = Ui.Node("Title", parent);
         Ui.Stretch(root);
         app.Paper(Color.clear);
+        content = Ui.Node("Content", root);
+        Ui.Stretch(content);
+        Ui.Group(content);
 
-        var frame = Ui.Node("Frame", root);
+        var frame = Ui.Node("Frame", content);
         Ui.Place(frame, 1000, 40, 920, 960);
         app.world.Build();
         app.world.ShowOrbit(frame);
@@ -25,74 +31,92 @@ public class TitleScreen
         Sfx.Ambient(true);
         for (int i = 0; i < 12; i++) app.world.SetDoor(i, i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
 
-        var shade = Ui.Box(root, "Shade", Theme.Ink, false);
+        var shade = Ui.Box(content, "Shade", Theme.Ink, false);
         Ui.Place(shade.rectTransform, -800, -300, 1720, 1700);
         shade.raycastTarget = false;
-        var fade = Ui.Node("Fade", root).gameObject.AddComponent<Image>();
+        var fade = Ui.Node("Fade", content).gameObject.AddComponent<Image>();
         fade.sprite = Ui.FadeStrip; fade.color = Theme.Ink; fade.raycastTarget = false;
         Ui.Place(fade.rectTransform, 920, -300, 440, 1700);
+        var feedArea = Ui.Node("Feed", content);
+        Ui.Place(feedArea, 1000, 0, 920, 1080);
+        CameraFeed.Build(feedArea, "CAM 00  /  THE FACILITY", "LOCKDOWN", 96);
 
-        Ui.Wordmark(root, 120, 64, 250);
-        if (Platform.IsWeb)
-        {
-            var menu = Ui.Button(root, "Games menu", Platform.GoToMenu, Ui.ButtonStyle.GhostOnDark, 18);
-            Ui.Place(menu.GetComponent<RectTransform>(), 1600, 58, 200, 52);
-        }
-        Button sound = null;
-        sound = Ui.Button(root, Sfx.Enabled ? "Sound on" : "Sound off", () => { Sfx.Enabled = !Sfx.Enabled; Ui.SetLabel(sound, Sfx.Enabled ? "Sound on" : "Sound off"); }, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(sound.GetComponent<RectTransform>(), 1460, 58, 124, 52);
-        Button voice = null;
-        voice = Ui.Button(root, Luma.Voice ? "Voice on" : "Voice off", () => { Luma.Voice = !Luma.Voice; if (!Luma.Voice) app.luma.Hush(); Ui.SetLabel(voice, Luma.Voice ? "Voice on" : "Voice off"); }, Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(voice.GetComponent<RectTransform>(), 1316, 58, 128, 52);
+        Ui.Wordmark(content, 120, 64, 250);
+        GameMenu.Icon(content);
 
-        var eyebrow = Ui.Eyebrow(root, "TECH ESCAPE  ·  GAME 04", Theme.Faint);
+        var eyebrow = Ui.Eyebrow(content, "TECH ESCAPE  ·  GAME 04", Theme.Faint);
         Ui.Place(eyebrow.rectTransform, 120, 170, 600, 22);
-        var title = Ui.Text(root, "Nothing Gets Through", 92, Color.white, true);
+        var title = Ui.Text(content, "Nothing Gets Through", 80, Color.white, true);
         Ui.Place(title.rectTransform, 114, 196, 1300, 130);
         title.enableWordWrapping = false;
-        var tag = Ui.Text(root, "Fix what is misconfigured. Then the facility runs the attack.", 36, Theme.Teal, true);
+        var tag = Ui.Text(content, "Fix the room. Then the facility runs the attack.", 36, Theme.Teal, true);
         Ui.Place(tag.rectTransform, 120, 336, 900, 90);
         int done = app.LevelsDone, next = Mathf.Min(done + 1, Rooms.Count);
-        app.luma.Line(root, 120, 436, 820,
-            done == 0 ? "I'm LUMA, your coach. Nineteen levels in twelve rooms. Press Start: the first door is the Risk Room."
-                      : $"Welcome back. {done} of {Rooms.Count} levels done, {app.TotalStars} stars: {app.Rank}. Next: {Rooms.Get(next).title.ToLowerInvariant()}",
-            true, true, 17);
+        if (done == 0) app.luma.Cue(content, "title", 120, 436, 820, stay: true);
+        else app.luma.Text(content, $"Welcome back. Next: {Rooms.Get(next).title.Replace("Capstone: ", "").ToLowerInvariant()}", 120, 436, 820, stay: true);
 
-        float y = 560;
-        for (int tier = 1; tier <= 3; tier++)
+        var start = Ui.Button(content, done == 0 ? "Start" : $"Continue: level {Rooms.Get(next).id}", () => app.StartLevel(next), Ui.ButtonStyle.Accent, 24);
+        Ui.Place(start.GetComponent<RectTransform>(), 120, 580, 360, 72);
+        var levels = Ui.Button(content, "Levels", () => Map(app), Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(levels.GetComponent<RectTransform>(), 500, 592, 120, 48);
+    }
+
+    void CloseMap()
+    {
+        if (map != null) Object.Destroy(map.gameObject);
+        map = null;
+        if (content != null) Ui.Group(content).alpha = 1f;
+    }
+
+    // The facility map: a card per room in the corridor's order, its levels as steps with their
+    // stars; tap a step to go there.
+    void Map(App app)
+    {
+        if (map != null) { CloseMap(); return; }
+        Ui.Group(content).alpha = 0f;
+        map = Ui.Node("Map", root);
+        Ui.Stretch(map);
+        var dim = Ui.Box(map, "Dim", Theme.Ink, false); // opaque: the title must not show through the cards
+        Ui.Stretch(dim.rectTransform);
+        dim.gameObject.AddComponent<Button>().onClick.AddListener(CloseMap);
+        var head = Ui.Eyebrow(map, "THE FACILITY  ·  TWELVE ROOMS", Theme.Teal); head.font = Theme.Bold;
+        Ui.Place(head.rectTransform, 120, 118, 600, 22);
+        var close = Ui.Button(map, "Close", CloseMap, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(close.GetComponent<RectTransform>(), Ui.W - 120 - 100, 108, 100, 40);
+        int done = app.LevelsDone, next = Mathf.Min(done + 1, Rooms.Count);
+        const float cw = 268f, ch = 300f, gap = 16f;
+        for (int r = 0; r < Facility.Rooms.Length; r++)
         {
-            var label = Ui.Eyebrow(root, $"TIER {tier}  ·  {Rooms.TierNames[tier - 1].ToUpperInvariant()}", Theme.Faint);
-            Ui.Place(label.rectTransform, 120, y, 700, 18);
-            var levels = System.Array.FindAll(Rooms.All, l => l.tier == tier);
-            float x0 = 150, step = levels.Length > 6 ? 76 : 112, ty = y + 42;
-            var track = Ui.Box(root, "Track", new Color(1, 1, 1, 0.22f), false);
-            Ui.Place(track.rectTransform, x0, ty - 1, step * (levels.Length - 1), 2);
-            track.raycastTarget = false;
-            for (int i = 0; i < levels.Length; i++)
+            string name = Facility.Rooms[r];
+            var levels = Rooms.All.Where(l => l.room == name).ToList();
+            int col = r % 6, row = r / 6;
+            float x = 120 + col * (cw + gap), y = 160 + row * (ch + gap);
+            bool here = levels.Any(l => l.number == next);
+            var record = app.session.record.FindAll(l => l.room == name);
+            bool held = record.Count > 0 && record.TrueForAll(l => l.gap == "held"), breached = record.Count > 0 && !held;
+            var card = Ui.Card(map, name, new Color(0.08f, 0.14f, 0.27f, 1f), here ? Theme.Teal : breached ? Look.Breached : held ? Theme.TealDeep : Ui.Hairline, here ? 2f : 1f);
+            Ui.Place(card.rectTransform, x, y, cw, ch);
+            var t = card.transform;
+            var lamp = Ui.Dot(t, held ? Theme.Aqua : breached ? Look.Breached : here ? Theme.Amber : new Color(1f, 1f, 1f, 0.2f), 12);
+            Ui.Place(lamp.rectTransform, 18, 22, 12, 12); lamp.raycastTarget = false;
+            var n = Ui.Text(t, name, 18, Color.white, true);
+            Ui.Place(n.rectTransform, 40, 14, cw - 56, 52);
+            float ly = 76;
+            foreach (var l in levels)
             {
-                var l = levels[i];
                 bool isNext = l.number == next, isDone = l.number <= done;
-                float x = x0 + i * step;
-                if (isNext) { var halo = Ui.Box(root, "Halo", new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f)); Ui.Place(halo.rectTransform, x - 23, ty - 23, 46, 46); halo.raycastTarget = false; }
-                var rim = Ui.Box(root, "Rim", isDone || isNext ? Theme.Teal : new Color(1, 1, 1, 0.45f));
-                Ui.Place(rim.rectTransform, x - 17, ty - 17, 34, 34);
-                var stop = Ui.Box(root, "Stop", isDone || isNext ? Theme.Teal : Theme.Ink);
-                Ui.Place(stop.rectTransform, x - 15, ty - 15, 30, 30);
-                var num = Ui.Text(stop.transform, l.id, 10, isDone || isNext ? Theme.Ink : Theme.Faint, true, TextAlignmentOptions.Center);
-                Ui.Stretch(num.rectTransform);
+                var step = Ui.Button(t, l.id, () => app.StartLevel(l.number), Ui.ButtonStyle.GhostOnDark, 16);
+                Ui.Place(step.GetComponent<RectTransform>(), 18, ly, 72, 40);
+                if (isNext || isDone) Ui.Chip(step, true);
                 int stars = app.StarsOf(l.number);
-                for (int s = 0; s < 3; s++) { var star = Ui.Box(root, "Star", s < stars ? Theme.Teal : new Color(1, 1, 1, 0.18f), false); Ui.Place(star.rectTransform, x - 11 + s * 9, ty + 22, 6, 6); star.raycastTarget = false; }
-                var hit = Ui.Box(root, "Level " + l.id, Color.clear, false);
-                Ui.Place(hit.rectTransform, x - step / 2, ty - 26, step, 60);
-                var button = hit.gameObject.AddComponent<Button>();
-                button.targetGraphic = stop;
-                int number = l.number;
-                button.onClick.AddListener(() => { Sfx.Tick(); app.StartLevel(number); });
+                for (int s = 0; s < 3; s++)
+                {
+                    var star = Ui.Dot(t, s < stars ? Theme.Amber : new Color(1, 1, 1, 0.18f), 12);
+                    Ui.Place(star.rectTransform, 104 + s * 18, ly + 14, 12, 12);
+                    star.raycastTarget = false;
+                }
+                ly += 50;
             }
-            y += 90;
         }
-
-        var start = Ui.Button(root, done == 0 ? "Start" : $"Continue: level {Rooms.Get(next).id}", () => app.StartLevel(next), Ui.ButtonStyle.Accent, 22);
-        Ui.Place(start.GetComponent<RectTransform>(), 120, 860, 300, 56);
     }
 }

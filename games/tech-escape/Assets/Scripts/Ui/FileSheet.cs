@@ -13,15 +13,22 @@ using UnityEngine.UI;
 public static class FileSheet
 {
     static RectTransform open;
+    public static bool IsOpen => open != null;
 
     public const string Room =
-        "The system as it was handed over: one row per asset, account, message, rule or step, and for each the decisions to make, as chips that cycle " +
-        "through their options. Rows that must be ordered have arrows. A row's lamp is teal when every decision in it is made and amber while one is still " +
-        "a question mark; the board on the room's wall shows the same. Something not on the list can be added; a record that must be signed has a " +
-        "signature line.\n\n" +
-        "Then the facility runs the attack against whatever you built: the attacker walks the corridor door by door, a door that holds flashes teal, a " +
-        "door that gives way goes scarlet, and what got through goes to the record the exit will ask for. Watch the pro is the room as it should be, read " +
-        "only; Fix the broken room has the planned mistake in it; Your run is the one that counts.";
+        "The room as it was handed over: every asset, account, message, rule or step is a card on the room's prop (on the board, in the rack, " +
+        "in the sorter, at the gate), with its name on a plate, a knob for each decision and a lamp: teal once every decision on it is made, " +
+        "amber while one is still open; whether it was right, only the attack shows. The board on the wall and the lamps at the top of the screen show the same. Tap a card to bring it close: it turns to face you, its " +
+        "full name and line at the top and one row per decision with its value (\"Owner: Omar\"); tap a row to turn it, and the knob on the " +
+        "board shows the value it was turned to. The room's one-off decisions are a card of their own. Rows that must be ordered are a rack: drag " +
+        "a module up or down. A record that must be signed has a pad beside the board. Something not on the list yet waits in a corner of the " +
+        "room: turn the camera (drag across the room, or the arrow keys), and it glints as the camera passes it; tap it and it flies to the board.\n\n" +
+        "Then lift the lockdown: the facility runs the attack against whatever you built. The attacker walks the corridor door by door. A door " +
+        "that gives way goes scarlet, and he comes back out with what he took and runs; a door that holds flashes teal, and he tries the handle, " +
+        "gives up and walks away. What got through goes to the record the exit will ask for. The first attack on a room as it was handed over is " +
+        "a rehearsal: it shows the door break and counts for nothing; the next run counts. The monitor on the room's wall shows the corridor " +
+        "camera: the attacker comes to the door while you work and tries the handle until you are ready.";
+
 
     public static void Toggle(App app, Transform screen, params (string head, string body)[] extra)
     {

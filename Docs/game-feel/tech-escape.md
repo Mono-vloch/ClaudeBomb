@@ -209,13 +209,54 @@ Again, Details.
 | 2.4 Blocks are logged, by the last rule | ANY → ANY down and at the bottom of the rack. |
 | 2.4 The service still works | WEB, STAFF and DATA levers up. |
 
-## Open questions
+## Open questions, answered (8 November 2026)
 
-1. **Short labels on the console.** "PUBLIC 3389 → ADMIN" instead of "Remote administration (3389)
-   from the public side to the admin portal" at rest, the full rule on tap and in the file. Clear
-   enough, or would you rather see the full names and accept more words?
-2. **The attacker on the monitor.** It walks to the room while the player works, and waits at the
-   door. It never punishes. Is that the right amount of pressure for a classroom?
-3. **Teach by trying in Tech Escape.** Running the attack on the room as handed over goes to a debrief
-   with no medal, as today, and "Again" brings the player back. Or should the first attack be a
-   free rehearsal, with no debrief, that only shows the door break?
+1. **Short labels on the console.** Plain words first, the port after: "Internet → Admin ·
+   Remote Desktop (3389)"; the full rule on tap (the card brought close) and in the file.
+2. **The attacker on the monitor.** It walks to the room's door while the player works, and
+   never attacks early.
+3. **Teach by trying.** The first attack on an unfixed room is a free rehearsal: no debrief,
+   not counted in the score or the platform report; the next run counts.
+
+### After the round-2 report (8 November 2026)
+
+4. **The close-up.** A card brought close is shown face-on and flat, one row at a time,
+   everything readable. Every room's close-up is checked.
+5. **Values on the controls.** Every control shows its current value on its face ("Owner:
+   Omar", "Sensitivity: High"), as on Robot Racing's console.
+6. **Models.** Yes to the staff ID badges and the patch panel with cables; Charbel gets them
+   made. The current props stay until the files arrive.
+7. **No countdown.** When the attacker on the monitor reaches the room's door, he stops there
+   and tries the handle, with a sound, until the player is ready.
+8. **The main action** is "Lift the lockdown" (was "Run the attack").
+9. **The briefing** is the alarm and the story only. The motto moves to LUMA's line on the
+   debrief.
+10. **The podium** has a single step. Robot Racing's podium gets the same, after the merge.
+11. **Fixes asked**: the Operations Center monitor behind the console, and 1.5's small console.
+
+### After the round-3 report (8 November 2026)
+
+12. **Knob values** show on the card brought close and on the knob just turned, nowhere else.
+    From the room camera each row on the board shows its lamp, teal when it is right and amber
+    when not, and no values. The card brought close may go over 30 words: it is the reading
+    moment.
+13. **The badges and the patch panel** go where proposed: the badges on 2.1's turnstile
+    accounts and on 3.1's roles, the patch panel as 2.4's firewall rack. Charbel gets the
+    files made.
+14. **Finding what nobody listed.** On levels about something nobody listed, the missing item is
+    in the room (a drive under the desk, a device on a crate). It glints when the camera passes
+    it; tapping it flies it to the board. The room's camera lets the player look around enough
+    to find it.
+15. **The attack pays off both ways.** If the door gives way, the attacker grabs the item and
+    runs off with it; if it holds, he rattles the handle, gives up and walks away. No body or
+    role for the player.
+16. **The knobs on the open card** are light on dark, readable at a glance. LUMA's strip stays
+    as it is: it is shared, and is fixed once after the merge.
+
+### After the round-4 report (8 November 2026)
+
+17. **The board's lamps** are teal once every decision on the row is set, amber while one is
+    still "?". Whether it was right is only shown by the attack.
+18. **2.9's corridor monitor** no longer covers the "C" of the wall's BACKUP.
+
+The builds that follow these answers are reported in [tech-escape-report.md](tech-escape-report.md).

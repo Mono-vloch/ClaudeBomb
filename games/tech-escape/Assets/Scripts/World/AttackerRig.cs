@@ -57,4 +57,16 @@ public class AttackerRig : MonoBehaviour
     }
 
     Animator Get(Pose p) => p == Pose.Idle ? idle : p == Pose.Walk ? walk : force;
+
+    // The walk's pace: above one, the sneak becomes a run.
+    public void Speed(float s) { if (walk != null) walk.speed = s; }
+
+    // A pose's right hand, to carry something in.
+    public Transform Hand(Pose p)
+    {
+        var a = Get(p);
+        if (a == null) return null;
+        foreach (var t in a.GetComponentsInChildren<Transform>(true)) if (t.name == "RightHand") return t;
+        return null;
+    }
 }

@@ -25,7 +25,7 @@ No Claude, no key, no network: the attacks are written into the rooms.
 ## The ladder
 
 Every level is a question and gives two training runs before the student's own: **Watch the pro** (the room as it
-should be, read only; run the attack and watch it hold), **Fix the broken room** (the room
+should be, read only; lift the lockdown and watch it hold), **Fix the broken room** (the room
 with the level's planned mistake in it; the attack finds it) and **Your run**, the one that
 counts and goes on the record.
 
@@ -53,28 +53,32 @@ counts and goes on the record.
 
 The highest level finished is remembered on the machine, with every room as the student
 left it, the record, and the stars each level earned (gold, silver or bronze from the
-checks; for motivation only). Any level can be started from the title screen's track or
-from the ladder on a briefing, so a tester or a class can go straight to one room.
+checks; for motivation only). Any level can be started from the title screen's Levels map,
+so a tester or a class can go straight to one room.
 
 ## How a run goes
 
-1. **Briefing.** LUMA opens the level: the idea in plain words,
-   what the student fixes, and the planned mistake if the level has one. The facility is
-   listed room by room on the right with what the record says about each: held, a gap, or
-   not yet.
-2. **The room.** The room in three dimensions on the left, its door open; on the right the
-   system as it was handed over, row by row (assets, accounts, messages, rules, steps), each
-   with its decisions as chips that cycle through their options. Rows that must be put in
-   order have arrows. A thing nobody listed can be added. A record that must be signed has a
-   signature line, with the date. Then: run the attack.
-3. **The attack.** The corridor from above, with the attacker walking to every door the
-   attack tries; line by line on the right, what it tried and whether the door held or gave.
-   Banners mark each door. On the last level the exit opens when nothing got through.
-4. **Debrief.** What got through and what held, the level's checks, a medal, the facility's
-   record so far (the spine the exit asks for), LUMA's takeaway and the question to take back
-   to work, the next level's unlock, and on a capstone the two if-then plans. The platform is
-   told the result in the curriculum's form (`2.2:complete`, `:partial` or `:incomplete`, with
-   the checks).
+1. **Briefing.** The intruder alarm: the corridor from the ceiling camera, this level's door
+   lit amber, three short lines of what is happening tonight and what the player is there to
+   do, and "Enter the room".
+2. **The room.** The room through its security camera, full screen. Every row is a card on
+   the room's prop with a knob per decision and a lamp, teal once every decision on it is made
+   and amber while one is open; tap a card to bring it close (one row per decision with its value) and tap
+   its rows to turn them. Where something nobody listed is to be found (1.1), it waits in a
+   corner of the room: turn the camera (drag across the room, or the arrow keys), it glints as
+   the camera passes it, and a tap flies it to the board. A record that must be signed has a
+   pad. One objective line at the top, a lamp per row beside it, the attacker on the wall
+   monitor trying the door. Then: lift the lockdown.
+3. **The attack.** The camera flies in over the entrance and chases the attacker door to door.
+   A door that gives way goes scarlet, and the attacker comes back out with the drive and runs
+   off with it; one that holds flashes teal, and he tries the handle, gives up and walks away.
+   The twelve door lamps at the top. The first attack on an untouched room is a rehearsal and
+   goes back to the room.
+4. **Debrief.** The corridor outside the room, its door shut or broken, the medal rising on a
+   step, LUMA saying the level's motto; Next and Again. Behind Details: what got through and what
+   held, the checks, the stars, the question to take back to work, the file, and on a capstone
+   the two if-then plans. The platform is told the result in the curriculum's form
+   (`2.2:complete`, `:partial` or `:incomplete`, with the checks).
 
 ## Where things are
 
@@ -84,7 +88,8 @@ from the ladder on a briefing, so a tester or a class can go straight to one roo
 | The nineteen levels as data: items, decisions, the ready and broken rooms, warm-ups, the attack each room runs, the checks, the lines | `Scripts/Core/Rooms.cs` |
 | LUMA: the coach, her lines, portrait and voice | `Scripts/Ui/Luma.cs`, `Resources/Luma`, `Resources/LumaVoice`, `Editor/LumaVoiceTools.cs` |
 | The campaign, the session on disk, the step (watch, fix, your run), the record | `Scripts/Ui/App.cs` |
-| Screens | `Scripts/Ui/TitleScreen.cs`, `LessonScreen.cs` (the briefing; its warm-up question is turned off), `RoomScreen.cs` (the room's decisions), `AttackScreen.cs` (the attack), `ResultsScreen.cs` (the debrief) |
+| Screens | `Scripts/Ui/TitleScreen.cs` (the cover, Start and the facility map), `LessonScreen.cs` (the briefing as the night shift's transmission), `RoomScreen.cs` (the room: its rows as things on the prop, `World/RoomRig.cs`), `AttackScreen.cs` (the attack, with the rehearsal), `ResultsScreen.cs` (the debrief: the door, the podium, Details), `GameMenu.cs` (Esc), `Hud.cs` |
+| What the game-feel pass says: the objective lines, the transmissions, the short names on the plates | `Scripts/Core/Script.cs` |
 | The facility in three dimensions: the corridor, twelve rooms, the door lights, the attacker, the exit | `Scripts/World/Building.cs` |
 | The camera: overview, orbit, the room from the corridor side | `Scripts/World/SceneCamera.cs` |
 | Shapes and materials, made in code; the three shaders | `Scripts/World/MeshKit.cs`, `Look.cs`, `Resources/Shaders` |
@@ -103,9 +108,28 @@ Notes:
   is: shapes from `MeshKit.cs`, colours and three small shaders in `Look.cs`, a camera
   that keeps the facility in a given part of the stage so the cards sit next to it.
 - **LUMA's voice.** After changing any line she says, run **Tech Escape > Generate LUMA
-  Voice** (macOS `say`; a published trailer needs a licensed voice). The walk below is
-  silent.
-- **Rooms and progress persist** in PlayerPrefs on the machine.
+  Voice** (macOS `say`; a published trailer needs a licensed voice): the build stops when a
+  line has no recording. Since the game-feel pass she says one short cue when something
+  happens (`Luma.Lines`: her first sentence on entering a room, the attack's line, the
+  takeaway); her full lines and the curriculum are in the file. The walk below is silent.
+- **The game-feel pass (8 November 2026).** Every row of a room is a card on the room's prop
+  (`World/RoomRig.cs`), its short name on a dark plate, a knob per decision and a lamp: teal
+  once every decision on the row is made, amber while one is still a question mark; whether it
+  was right, only the attack shows. The knobs show no values at rest, only the one just turned. Tap a card to bring it close: a flat card faces the
+  camera, the full name and line at the top, one row per decision ("Owner: Omar") with a light
+  knob; tap a row to turn it. Drag a module up or down a rack. On 1.1 the unlisted drive waits
+  on a crate out of the opening view: the camera turns (`SceneCamera.lookYaw`/`lookPitch`), the
+  drive glints as it passes, a tap flies it to the board. The corridor monitor on the wall
+  shows the attacker coming to the door, where it tries the handle until the player lifts the
+  lockdown (in the Operations Center the feed is on one of the room's own screens). The attack
+  ends at the door: through it, the attacker runs off with the drive (`Building.Grab`); held,
+  he gives up and walks away (`Building.GiveUp`). The first attack on an untouched room is a
+  rehearsal and counts for nothing. 2.1's accounts and 3.1's roles carry the staff badges
+  (`Resources/Badges/`, cropped from Higgsfield's printed sheet); 2.4's rack of rules stands on
+  the patch panel (`Models/Hero/PatchPanel/`, split by `Tools/glb_maps.py`, built by
+  `Tech Escape > Build patch panel`). The objective lines, the alarms before each room and the
+  short names are in `Core/Script.cs`; the data in `Rooms.cs`, the checks and the report are
+  as they were.
 
 ## Checking it without opening the Editor
 
@@ -116,10 +140,12 @@ $UNITY -batchmode -nographics -projectPath . -executeMethod Builder.BuildMac -lo
 "Builds/mac/Tech Escape.app/Contents/MacOS/Tech Escape" -cover /tmp/cover.png -screen-width 1600 -screen-height 1000 -screen-fullscreen 0
 ```
 
-The built app, started with `-screenshots <folder>`, walks through every screen (title,
-briefing, a room, the attack, the debrief, a room with rows to order) and saves a
-picture of each, then quits; `-cover` takes the platform's cover picture. The current set is in
-`Docs/screenshots`. Grep the build log for `error CS` and `Build:`.
+The built app, started with `-screenshots <folder>`, walks through every level (the briefing,
+the room as handed over, the room set right; 1.1, 1.3 and 2.4 played through the rehearsal,
+the attack and the debrief), saves a picture of each screen with the game-feel pass's counts
+in `counts.jsonl` (words, controls, LUMA's lines), then quits; `-levels 1,9` limits it to
+those levels; `-cover` takes the platform's cover picture. Grep the build log for `error CS`
+and `Build:`. The latest frames are in `Builds/look-audit/game-feel/`.
 
 ## Web version
 

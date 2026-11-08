@@ -1,31 +1,87 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// LUMA, the coach: the same character as in Claude Bomb and AI Arena. She opens
-// each level, speaks while the robot trains, and reads the recap on the debrief.
-// Her fixed lines are recorded, one file per line id in Resources/LumaVoice
-// (Tech Escape > Generate LUMA Voice); lines built on the fly are text only.
+// LUMA, the coach: the same character as in Claude Bomb and the other games. She says one short
+// thing when something happens (the room as handed over, the attack's first door, the debrief)
+// and nothing to explain a screen; her full lines and the curriculum are in the file. Her fixed
+// lines are recorded, one file per line id in Resources/LumaVoice (Tech Escape > Generate LUMA
+// Voice); lines built on the fly (the attack's summary) are text only.
 public class Luma : MonoBehaviour
 {
+    public const int CueWords = 15; // a cue on screen is never longer than this
+
     public static Dictionary<string, string> Lines
     {
         get
         {
             var lines = new Dictionary<string, string>
             {
-                ["recap"] = "The attack is over. Here is what got through, what held, what you did against the checks, and the one idea to take from this room.",
-                ["welcome"] = "I'm LUMA, your coach. Every room in this facility is a system someone misconfigured. You fix it; then the facility runs the attack.",
+                ["title"] = "Press Start: the first door is the Risk Room.",
+                ["back"] = "Welcome back.",
             };
             foreach (var l in Rooms.All)
             {
-                lines["intro-" + l.number] = l.luma;
-                lines["live-" + l.number] = l.live;
+                // Entering the room: the planned mistake's name, or her first sentence on a level without one.
+                string enter = !string.IsNullOrEmpty(l.mistake) ? l.mistake.TrimEnd('.') + "." : ShortestSentence(l.luma);
+                if (enter != null && Words(enter) <= CueWords) lines["enter-" + l.number] = enter;
+                var live = FirstSentence(l.live);
+                if (live != null) lines["live-" + l.number] = live;
+                var watch = LastSentence(l.live);
+                if (watch != null && watch != live) lines["watch-" + l.number] = watch;
+                var take = Motto(l.takeaway);
+                if (take != null) lines["take-" + l.number] = take;
             }
             return lines;
         }
+    }
+
+    public static int Words(string text) => string.IsNullOrWhiteSpace(text) ? 0 : text.Split(' ').Count(w => w.Any(char.IsLetterOrDigit));
+
+    // The first sentence of a line that is short enough to say as a cue, or the next when the
+    // first is not; null when none is.
+    public static string FirstSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
+        foreach (var p in parts) if (Words(p) <= CueWords && Words(p) > 0) return p.Trim();
+        return null;
+    }
+
+    // The level's motto for the debrief: as many of the takeaway's whole sentences as fit fifteen
+    // words; a single longer sentence stops at its first ", and".
+    public static string Motto(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+").Where(p => Words(p) > 0).ToList();
+        string acc = null;
+        foreach (var p in parts)
+        {
+            string next = acc == null ? p : acc + " " + p;
+            if (Words(next) > CueWords) break;
+            acc = next;
+        }
+        if (acc != null) return acc.Trim();
+        int cut = parts[0].IndexOf(", and ");
+        return cut > 0 && Words(parts[0].Substring(0, cut)) <= CueWords ? parts[0].Substring(0, cut).Trim() + "." : null;
+    }
+
+    // The shortest whole sentence of a line: the room's cue on a level with no planned mistake.
+    public static string ShortestSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        return Regex.Split(text.Trim(), @"(?<=[.!?])\s+").Where(p => Words(p) > 0).OrderBy(Words).FirstOrDefault()?.Trim();
+    }
+
+    public static string LastSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
+        for (int i = parts.Length - 1; i >= 0; i--) if (Words(parts[i]) <= CueWords && Words(parts[i]) > 0) return parts[i].Trim();
+        return null;
     }
 
     public static string Spoken(string id) => Regex.Replace(Lines[id], "<[^>]+>", "");
@@ -41,7 +97,13 @@ public class Luma : MonoBehaviour
     public static Sprite Portrait => Resources.Load<Sprite>("Luma/luma");
 
     AudioSource voice;
+    public bool Speaking => speaking != null || (voice != null && voice.isPlaying);
+    // True while a line is still being shown or spoken: a moment that must not cover her
+    // mid-sentence (the attack's first banner) waits on it.
+    public bool Busy => typing || Speaking;
+    bool typing;
     Coroutine speaking;
+    RectTransform current; // the cue on screen, so the next replaces it
 
     void Awake()
     {
@@ -76,13 +138,25 @@ public class Luma : MonoBehaviour
         speaking = null;
     }
 
-    public bool Speaking => speaking != null || (voice != null && voice.isPlaying);
-
-    // One line of coaching over a screen: her small portrait and the line typed out as she
-    // says it (or at reading speed when there is no recording). The strip fades once she is
-    // done unless it is to stay. Returns the strip, so a screen can replace the line.
-    public RectTransform Line(Transform parent, float x, float y, float w, string text, bool dark, bool stay = false, float size = 17)
+    // A cue: one of her short lines, said and shown whole (it fades in, never typed out
+    // mid-sentence), gone once she is done unless it is to stay. The id must be in Lines; a
+    // missing id says nothing and returns null.
+    public RectTransform Cue(Transform parent, string id, float x = 40, float y = 944, float w = 820, bool stay = false)
     {
+        if (!Lines.ContainsKey(id)) return null;
+        return Line(parent, x, y, w, Say(id), true, stay, 18, type: false);
+    }
+
+    // A line made on the fly (the attack's summary), shown whole, text only.
+    public RectTransform Text(Transform parent, string text, float x = 40, float y = 944, float w = 820, bool stay = false)
+        => Line(parent, x, y, w, text, true, stay, 18, type: false);
+
+    // One line of coaching over a screen: her small portrait and the line, typed out as she
+    // says it or shown whole. The strip fades once she is done unless it is to stay. Returns
+    // the strip, so a screen can replace the line.
+    public RectTransform Line(Transform parent, float x, float y, float w, string text, bool dark, bool stay = false, float size = 17, bool type = true)
+    {
+        if (current != null) { Destroy(current.gameObject); current = null; }
         var card = Ui.Box(parent, "Luma line", dark ? new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f) : Theme.Panel);
         card.raycastTarget = false;
         var t = card.transform;
@@ -104,24 +178,21 @@ public class Luma : MonoBehaviour
         Ui.Place(name.rectTransform, h + 2, 9, 100, 18);
         Ui.Place(body.rectTransform, h + 2, 28, w - h - 16, h - 32);
         var group = Ui.Group(card);
-        StartCoroutine(RunLine(card, group, body, text ?? "", stay));
+        current = card.rectTransform;
+        StartCoroutine(RunLine(card, group, body, text ?? "", stay, type));
         return card.rectTransform;
     }
 
-    // True while a line is still being typed or spoken: a moment that must not cover her
-    // mid-sentence (the attack's first banner) waits on it.
-    public bool Busy => typing || Speaking;
-    bool typing;
-
-    System.Collections.IEnumerator RunLine(Image card, CanvasGroup group, TMP_Text body, string text, bool stay)
+    System.Collections.IEnumerator RunLine(Image card, CanvasGroup group, TMP_Text body, string text, bool stay, bool type)
     {
         typing = true;
-        yield return Ui.Type(body, text, 45f);
+        if (type) yield return Ui.Type(body, text, 45f);
+        else { body.text = text; group.alpha = 0f; yield return Ui.Fade(group, 1f, 0.25f); }
         typing = false;
         float waited = 0f;
         while (card != null && Speaking && waited < 30f) { waited += Time.unscaledDeltaTime; yield return null; }
         if (stay || card == null) yield break;
-        yield return new WaitForSecondsRealtime(2.5f);
+        yield return new WaitForSecondsRealtime(type ? 2.5f : 1.5f + 0.3f * Words(text));
         if (card == null) yield break;
         yield return Ui.Fade(group, 0f, 0.6f);
         if (card != null) card.gameObject.SetActive(false);
@@ -131,50 +202,6 @@ public class Luma : MonoBehaviour
     {
         if (speaking != null) { StopCoroutine(speaking); speaking = null; }
         if (voice != null) voice.Stop();
-    }
-
-    public static TextMeshProUGUI Card(Transform parent, float x, float y, float w, float h, string text, float fontSize = 18,
-                                       string second = null, Luma voiceToggle = null, bool dark = false, float portrait = 120)
-        => Make(parent, x, y, w, h, text, fontSize, second, voiceToggle, dark, portrait).text;
-
-    public static (Image card, TextMeshProUGUI text) Make(Transform parent, float x, float y, float w, float h, string text, float fontSize = 18,
-                                                           string second = null, Luma voiceToggle = null, bool dark = false, float portrait = 120)
-    {
-        var card = Ui.Card(parent, "Luma", dark ? Theme.Ink2 : Theme.Panel, dark ? Theme.TealDeep : Theme.Border1);
-        Ui.Place(card.rectTransform, x, y, w, h);
-        var t = card.transform;
-        float p = Mathf.Min(h - 24, portrait);
-        var frame = Ui.Box(t, "Portrait", dark ? Theme.Ink : Theme.Surface2);
-        Ui.Place(frame.rectTransform, 12, 12, p, h - 24);
-        var sprite = Portrait;
-        if (sprite != null)
-        {
-            var img = Ui.Node("Picture", frame.transform).gameObject.AddComponent<Image>();
-            img.sprite = sprite; img.preserveAspect = true; img.raycastTarget = false;
-            Ui.Stretch(img.rectTransform, 6, 6, 6, 6);
-        }
-        var name = Ui.Eyebrow(t, "LUMA", dark ? Theme.Teal : Theme.TealDeep);
-        name.font = Theme.Bold;
-        Ui.Place(name.rectTransform, p + 28, 14, 200, 22);
-        float textH = second == null ? h - 50 : (h - 50) * 0.5f;
-        var body = Ui.Text(t, text, fontSize, dark ? Color.white : Theme.Ink);
-        Ui.Place(body.rectTransform, p + 28, 38, w - p - 44, textH);
-        if (second != null)
-        {
-            var more = Ui.Text(t, second, fontSize - 2, dark ? Theme.Faint : Theme.Text2);
-            Ui.Place(more.rectTransform, p + 28, 38 + textH + 4, w - p - 44, h - 50 - textH - 4);
-        }
-        if (voiceToggle != null)
-        {
-            Button toggle = null;
-            toggle = Ui.Button(t, Voice ? "Voice on" : "Voice off", () =>
-            {
-                Voice = !Voice;
-                if (!Voice) voiceToggle.Hush();
-                Ui.SetLabel(toggle, Voice ? "Voice on" : "Voice off");
-            }, dark ? Ui.ButtonStyle.GhostOnDark : Ui.ButtonStyle.Quiet, 14);
-            Ui.Place(toggle.GetComponent<RectTransform>(), w - 122, 10, 110, 32);
-        }
-        return (card, body);
+        typing = false;
     }
 }

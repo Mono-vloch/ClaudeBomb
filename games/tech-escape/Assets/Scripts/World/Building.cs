@@ -16,7 +16,7 @@ using UnityEngine.Rendering.Universal;
 // attacker and the Suspicious Inbox are prefabs made by Tech Escape > Build facility kit
 // from CC0 textures and models and the Higgsfield heroes (Resources/Facility), lit by URP
 // Lit. The other rooms' interiors are still the old blocks until the pilot is approved.
-public class Building : MonoBehaviour
+public partial class Building : MonoBehaviour
 {
     public enum DoorState { Locked, Current, Held, Breached, Open }
     public enum View { Overview, Corridor, Room }
@@ -172,7 +172,7 @@ public class Building : MonoBehaviour
     }
 
     static IEnumerator RenderNextFrame(ReflectionProbe probe) { yield return null; if (probe != null) probe.RenderProbe(); }
-    public void MomentAround(Transform subject, float seconds, System.Action done, bool slow = true) => rig.FinishMoment(subject, seconds, done, slow);
+    public void MomentAround(Transform subject, float seconds, System.Action done, bool slow = true, bool hold = false) => rig.FinishMoment(subject, seconds, done, slow, hold);
     public void BackToOverview() { rig.Release(); Mood(View.Overview); cam.Overview(frame, Bounds); cam.pitch = 48; cam.yaw = 28; }
 
     // ---- The light and the air, per view (Claude Bomb's recipe: a key with shadows, fog that
@@ -250,10 +250,10 @@ public class Building : MonoBehaviour
         float len = Length;
         if (Real)
         {
-            Place("Ground", new Vector3(len / 2 - 2, 0, 0), Quaternion.identity);
-            Place("CorridorEntrance", new Vector3(-Back + 1.45f, 0, 0), Quaternion.identity);
-            for (int i = 0; i < 6; i++) Place(i % 3 == 0 ? "CorridorBay" : i % 3 == 1 ? "CorridorBayB" : "CorridorBayC", new Vector3(i * Pitch, 0, 0), Quaternion.identity);
-            var end = Place("CorridorEnd", new Vector3(len - 2, 0, 0), Quaternion.identity);
+            Corridor(Place("Ground", new Vector3(len / 2 - 2, 0, 0), Quaternion.identity));
+            Corridor(Place("CorridorEntrance", new Vector3(-Back + 1.45f, 0, 0), Quaternion.identity));
+            for (int i = 0; i < 6; i++) Corridor(Place(i % 3 == 0 ? "CorridorBay" : i % 3 == 1 ? "CorridorBayB" : "CorridorBayC", new Vector3(i * Pitch, 0, 0), Quaternion.identity));
+            var end = Corridor(Place("CorridorEnd", new Vector3(len - 2, 0, 0), Quaternion.identity));
             exitRoot = end.transform.Find("Exit");
             exitHingeL = exitRoot.Find("HingeL"); exitHingeR = exitRoot.Find("HingeR");
             exitStrip = exitRoot.Find("Strip").GetComponent<Renderer>();
@@ -296,7 +296,7 @@ public class Building : MonoBehaviour
         states[i] = DoorState.Locked;
         if (Real)
         {
-            var door = Instantiate(Kit("Door"), root, false).transform;
+            var door = Corridor(Instantiate(Kit("Door"), root, false)).transform;
             hinges[i] = door.Find("Hinge");
             strips[i] = door.Find("Strip").GetComponent<Renderer>();
             stripLights[i] = strips[i].GetComponentInChildren<Light>();
@@ -506,7 +506,7 @@ public class Building : MonoBehaviour
     {
         if (Real && Kit("Attacker") != null)
         {
-            attacker = Instantiate(Kit("Attacker"), transform, false).transform;
+            attacker = Corridor(Instantiate(Kit("Attacker"), transform, false)).transform;
             attacker.name = "Attacker";
             body = attacker.GetComponent<AttackerRig>();
             attackerLight = attacker.Find("VisorLight").GetComponent<Light>();

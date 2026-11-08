@@ -158,8 +158,9 @@ public class CameraRig : MonoBehaviour
     }
 
     // The end: a slow turn around a point (the breached door, the exit) in slow motion, then back to whoever asks.
-    public void FinishMoment(Transform subject, float seconds, System.Action done, bool slow = true)
+    public void FinishMoment(Transform subject, float seconds, System.Action done, bool slow = true, bool hold = false)
     {
+        holdFinish = hold;
         if (moment != null) StopCoroutine(moment);
         finish.Follow = finish.LookAt = subject;
         Take();
@@ -184,10 +185,13 @@ public class CameraRig : MonoBehaviour
             yield return null;
         }
         Time.timeScale = 1f;
-        finish.Priority = 0;
+        // Held: the camera stays where the turn ended (the door that held or gave way), the chase off.
+        if (holdFinish) { chase.enabled = start.enabled = false; }
+        else finish.Priority = 0;
         moment = null;
         done?.Invoke();
     }
+    bool holdFinish;
 
     // A door giving way: the camera takes a hit.
     public void Shake(float strength)

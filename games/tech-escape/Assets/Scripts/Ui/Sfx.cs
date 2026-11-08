@@ -17,7 +17,7 @@ public static class Sfx
     public static Luma luma;                   // whose voice ducks the rest
 
     static AudioSource src, ambient;
-    static AudioClip tick, buy, ruin, whoosh, crash, chime, clack, siren, fanfare, alarm, beep, go;
+    static AudioClip tick, buy, ruin, whoosh, crash, chime, clack, siren, fanfare, alarm, beep, go, rattle, glint;
     static float ambientWant;
 
     public enum Mood { Beep, Go, Fanfare, Alarm, Siren }
@@ -40,6 +40,29 @@ public static class Sfx
     public static void Crash(float strength = 1f) => Play(crash != null ? crash : (crash = CrashClip()), strength);
     public static void Chime() => Play(chime != null ? chime : (chime = Tone("chime", new[] { 880f, 1320f }, 0.09f, 0.28f)));
     public static void Clack() => Play(clack != null ? clack : (clack = Tone("clack", new[] { 523f, 392f }, 0.06f, 0.3f, true)));
+    // A door handle tried: three quick metal clicks and the latch's knock, quiet, from the corridor.
+    public static void Rattle() => Play(rattle != null ? rattle : (rattle = RattleClip()), 0.7f);
+    // A glint: something small catching the light as the camera passes it.
+    public static void Glint() => Play(glint != null ? glint : (glint = Tone("glint", new[] { 2093f, 2794f }, 0.06f, 0.1f)), 0.6f);
+
+    static AudioClip RattleClip()
+    {
+        int count = (int)(0.42f * Rate);
+        var data = new float[count];
+        for (int i = 0; i < count; i++)
+        {
+            float t = (float)i / Rate, s = 0f;
+            for (int k = 0; k < 3; k++)
+            {
+                float t0 = 0.02f + k * 0.075f, dt = t - t0;
+                if (dt >= 0f) s += Mathf.Sign(Mathf.Sin(2f * Mathf.PI * (1650f - k * 120f) * dt)) * 0.35f * Mathf.Exp(-dt * 90f);
+            }
+            float tk = t - 0.3f;
+            if (tk >= 0f) s += Mathf.Sin(2f * Mathf.PI * 95f * tk) * 0.6f * Mathf.Exp(-tk * 28f);
+            data[i] = s * 0.5f;
+        }
+        return Clip("rattle", data);
+    }
 
     public static void Sting(Mood mood)
     {
