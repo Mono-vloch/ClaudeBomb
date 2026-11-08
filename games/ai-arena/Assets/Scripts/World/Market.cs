@@ -20,7 +20,7 @@ using UnityEngine.EventSystems;
 // a fountain, lamps, the Higgsfield stalls heaped with Kenney's and Poly Haven's produce, the
 // rigged agent; a cell is 2.4 m and the main view is the street, behind the chosen agent.
 // Without the kit everything below falls back to the boxes it was made of before.
-public class Market : MonoBehaviour
+public partial class Market : MonoBehaviour
 {
     public enum View { Market, RobotsEye, Street }
 
@@ -56,6 +56,7 @@ public class Market : MonoBehaviour
     public static GameObject Kit(string name) => Resources.Load<GameObject>("Market/" + name);
     public static bool Real { get { if (!kitChecked) { kitChecked = true; kitSquare = Kit("Square"); } return kitSquare != null; } }
     public static float Pitch => Real ? KitPitch : 1f;
+    public static bool MemoryCards;              // the remembered turns ride behind the agent's head only in the garage and the round
 
     public static Vector3 Cell(Vector2Int p) => new Vector3(p.x - (Size - 1) / 2f, 0, (Size - 1) / 2f - p.y) * Pitch;
     public static Bounds Square => Real ? new Bounds(new Vector3(0, 1.0f, 0), new Vector3(Size * KitPitch + 1f, 2.2f, Size * KitPitch + 1f))
@@ -77,6 +78,7 @@ public class Market : MonoBehaviour
         if (effects == null) { effects = new GameObject("Effects").AddComponent<Effects>(); effects.transform.SetParent(transform.parent, false); }
         BuildGround();
         BuildLight();
+        if (Real) BuildClock();
         stallsRoot = new GameObject("Stalls").transform; stallsRoot.SetParent(transform, false);
         botsRoot = new GameObject("Robots").transform; botsRoot.SetParent(transform, false);
         foreach (var a in arena.agents) { BuildHouse(a); bots[a] = new RobotModel(botsRoot, a, dusk); }
@@ -186,11 +188,12 @@ public class Market : MonoBehaviour
     // title, in the real square) the first of them stands close, among the lit stalls, the way
     // Claude Bomb's title shows its device, the others strolling behind it.
     AgentState coverHero;
-    public void ShowCover(RectTransform frame, bool hero = false)
+    public void ShowCover(RectTransform frame, bool hero = false, AgentConfig heroConfig = null)
     {
         var rng = new System.Random(5);
         var configs = new List<AgentConfig>();
         for (int i = 0; i < 4; i++) configs.Add(new AgentConfig { name = Theme.TeamNames[i], colour = i });
+        if (heroConfig != null) { configs[0] = heroConfig.Clone(); for (int i = 1; i < 4; i++) if (configs[i].colour == heroConfig.colour) configs[i].colour = (heroConfig.colour + i * 3) % Theme.Team.Length; }
         var cover = new Arena(Brief.Make(0, rng), configs, 30_000, 21);
         coverHero = null;
         if (Real && hero)
@@ -232,9 +235,14 @@ public class Market : MonoBehaviour
         ApplyFog();
     }
 
+    public AgentState CoverHero => coverHero;
+
     public void Clear()
     {
         StopAllCoroutines();
+        ClearGarage();
+        batteries.Clear();
+        podium = null; clockRoot = null; hourHand = minuteHand = null; clockFaceR = null;
         wandering = null;
         thinking = false;
         Highlighted = null;
@@ -938,8 +946,9 @@ public class Market : MonoBehaviour
         // The haze: thick enough at street level for the houses to recede, thin from above.
         if (Real && cam != null) RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, FogFor(cam.mode), 1f - Mathf.Exp(-3f * Time.unscaledDeltaTime));
 
+        if (g != null) UpdateGarage();
         // A click on a robot chooses it, unless a card or a button took the click.
-        if (Input.GetMouseButtonDown(0) && Picked != null && !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+        if (g == null && Input.GetMouseButtonDown(0) && Picked != null && !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
         {
             RobotModel best = null;
             float bestDist = 48f;

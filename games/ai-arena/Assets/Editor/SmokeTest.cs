@@ -28,7 +28,7 @@ public static class SmokeTest
         var arena = new Arena(Brief.Make(0, rng), configs, 30_000, 7);
         Check(arena.agents.Select(a => a.home).Distinct().Count() == 3, "homes are distinct");
         Check(Arena.Homes(10).Distinct().Count() == 10, "ten homes are distinct");
-        Check(arena.ItemCount == 22, "22 items spawned, got " + arena.ItemCount);
+        Check(arena.ItemCount == 26, "26 items spawned, got " + arena.ItemCount);
 
         var a0 = arena.agents[0];
         string system = Observation.SystemPrompt(a0);
@@ -39,6 +39,21 @@ public static class SmokeTest
         Check(Decision.Parse("Sure!\n```json\n{\"think\": \"east looks good\", \"move\": \"E\"}\n```").move == "east", "fenced json with short direction");
         Check(!Decision.Parse("I will move north.").usable, "prose is not usable");
         Check(Decision.Parse("{\"move\":\"stay\",\"note\":\"apple at 3,4\"}").note == "apple at 3,4", "note is read");
+
+        // The garage's note: a drop rewrites the plain sentences only; the player's own words stay.
+        string note = "Buy apples. Nothing else. If no apples are in view, keep walking.";
+        note = NoteText.Place(note, "pear", NoteText.Zone.Basket);
+        Check(note.StartsWith("Buy apples and pears.") && note.Contains("If no apples are in view, keep walking."), "a drop joins the plain buy sentence: " + note);
+        note = NoteText.Place(note, "tomato", NoteText.Zone.Crate);
+        Check(note.Contains("Never buy tomatoes.") && NoteText.Of(note, "tomato") == NoteText.Zone.Crate, "a drop in the crate writes a never sentence: " + note);
+        note = NoteText.Place(note, "apple", NoteText.Zone.Table);
+        Check(note.StartsWith("Buy pears.") && NoteText.Of(note, "apple") == NoteText.Zone.Table && note.Contains("If no apples are in view, keep walking."), "back on the table takes it off, the rule stays: " + note);
+        Check(NoteText.Of("Get fruit.", "apple") == NoteText.Zone.Table, "a category names no item");
+        Check(NoteText.Of("Anything at the market is fine except corn, oranges and broccoli. Never buy those: Grandma is allergic.", "corn") == NoteText.Zone.Crate, "an exception reads as never");
+        Check(Verdicts.Named(NoteText.Place("", "apple", NoteText.Zone.Basket), "apple"), "the checks read a dropped item");
+        // The bubble: the first sentence, the coordinates and the stand-in's name taken out.
+        Check(ArenaScreen.Short("Apple at (6, 0) is one cell east. Moving onto it buys it.") == "Apple is one cell east.", "bubble: " + ArenaScreen.Short("Apple at (6, 0) is one cell east. Moving onto it buys it."));
+        Check(ArenaScreen.Short("Nearest apple at (3, 2). Going there.") == "Nearest apple. Going there.", "bubble keeps a second sentence after a short first: " + ArenaScreen.Short("Nearest apple at (3, 2). Going there."));
 
         Decision result = null;
         var e = new StandInBrain().Decide(a0, system, user, d => result = d);

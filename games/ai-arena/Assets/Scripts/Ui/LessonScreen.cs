@@ -1,16 +1,19 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The mission briefing, before the lists are written: the errand's market on the
-// right, sharp, the agents at their houses; on the left, in dark glass, the errand's
-// question, its headline, LUMA's opening line spoken and typed, the family's message,
-// and the agent's six parts with this errand's lit. Everything the course says beyond
-// that is in the file.
+// The briefing is a transmission, as Claude Bomb's: the family's house at dusk in the home
+// camera's feed on the left, the agent at the door; on the right the phone message arriving,
+// typed in, two short lines under it, and one button. No chips, no cards, no ladder.
+// Everything the course says beyond that is in the file, one icon away.
 public class LessonScreen
 {
     public readonly RectTransform root;
-    static readonly string[] Parts = { "The list", "Sight", "Memory", "Brain", "Effort", "Pocket money" };
+    const float PanelX = 1240f, PanelW = 640f;
+    bool hurry;
 
     public LessonScreen(Transform parent, App app)
     {
@@ -19,131 +22,97 @@ public class LessonScreen
         Ui.Stretch(root);
         app.Paper(Color.clear);
 
-        // The world: this errand's market by day, on the right, sharp.
-        var window = Ui.Node("Window", root);
-        Ui.Place(window, 900, 150, 980, 880);
-        app.world.Build(new Arena(app.brief, app.configs.ConvertAll(c => c.Clone()), app.budget, l.number * 17 + 3), false);
-        if (Market.Real) app.world.ShowOrbitOf(window); else app.world.ShowMarket(window); // the real square turning slowly, at the height of its roofs
+        // The world: the house at dusk, the agent at the door, in the home camera's feed.
+        var frame = Ui.Node("Frame", root);
+        Ui.Place(frame, 40, 60, 1100, 960);
+        var arena = new Arena(app.brief, app.configs.ConvertAll(c => c.Clone()), app.budget, l.number * 17 + 3);
+        var hero = arena.agents[0];
+        var inward = Market.Inward(hero.home);
+        var step = new Vector2Int(Mathf.RoundToInt(inward.x), -Mathf.RoundToInt(inward.z));
+        var side = new Vector2Int(step.y, step.x);
+        for (int d = 0; d <= 3; d++) for (int s = -2; s <= 2; s++) { var p = hero.home + step * d + side * s; if (Arena.InBounds(p)) arena.RemoveItem(p); }
+        app.world.Build(arena, true);
+        app.world.PlaceAtDoor(hero, false, 0.45f);
+        app.world.DoorLamp(hero);
+        app.world.ShowHouse(frame, hero, 5.0f, 38f);
+        CameraFeed.Build(frame, "HOME CAM  /  THE DOOR", "THE FAMILY'S HOUSE  /  DINNER TIME");
         app.atmosphere.MenuBlur(false);
 
-        // The briefing, left, in dark glass over the park.
-        var panel = Ui.Glass(root, "Brief", 40, 40, 840, 860, false);
-        var b = panel.transform;
-        var eyebrow = Ui.Eyebrow(b, $"ERRAND {l.id} OF {Ladder.Count}  ·  THE BRIEFING", Theme.Teal);
-        eyebrow.font = Theme.Bold;
-        Ui.Place(eyebrow.rectTransform, 40, 36, 760, 22);
-        var title = Ui.Text(b, l.title, 44, Color.white, true);
-        Ui.Place(title.rectTransform, 36, 66, 780, 120);
-        var kicker = Ui.Text(b, l.kicker, 24, Theme.Teal, true);
-        Ui.Place(kicker.rectTransform, 40, 192, 760, 70);
+        // The transmission, right, on the ink.
+        var shade = Ui.Box(root, "Shade", Theme.Ink, false);
+        Ui.Place(shade.rectTransform, PanelX - 80, -40, 1000, 1200);
+        shade.raycastTarget = false;
+        var fade = Ui.Node("Fade", root).gameObject.AddComponent<Image>();
+        fade.sprite = Ui.FadeStrip; fade.color = Theme.Ink; fade.raycastTarget = false;
+        fade.rectTransform.localScale = new Vector3(-1, 1, 1);
+        Ui.Place(fade.rectTransform, PanelX - 80, -40, 200, 1200);
 
-        app.luma.Line(b, 40, 290, 760, app.luma.Say("intro-" + l.number), true, true, 18);
+        var lines = Transmission(l, app.brief);
+        var dot = Ui.Dot(root, Theme.Teal, 12);
+        Ui.Place(dot.rectTransform, PanelX, 318, 12, 12);
+        var head = Ui.Text(root, l.decide ? Decide.Tasks[0].from : app.brief.from, 30, Color.white, true);
+        Ui.Place(head.rectTransform, PanelX + 24, 300, PanelW - 140, 44);
+        var sub = Ui.Eyebrow(root, "6:00 PM", Theme.Faint);
+        Ui.Place(sub.rectTransform, PanelX + 24, 348, PanelW - 140, 20);
+        var skip = Ui.Button(root, "Skip", () => hurry = true, Ui.ButtonStyle.GhostOnDark, 16);
+        Ui.Place(skip.GetComponent<RectTransform>(), PanelX + PanelW - 100, 300, 100, 40);
+        GameMenu.Icon(root);
 
-        // The mission: the family's message, as the garage will show it.
-        var msg = Ui.Box(b, "Message", new Color(1f, 1f, 1f, 0.08f));
-        Ui.Place(msg.rectTransform, 40, 420, 760, 120);
-        msg.raycastTarget = false;
-        var from = Ui.Eyebrow(msg.transform, $"A MESSAGE FROM {app.brief.from.ToUpperInvariant()}", Theme.Teal);
-        Ui.Place(from.rectTransform, 24, 16, 700, 22);
-        var rule = Ui.Text(msg.transform, app.brief.rule, 22, Color.white);
-        Ui.Place(rule.rectTransform, 24, 42, 712, 70);
-
-        // The agent's six parts: this errand's lit, the ones already open in white, the rest dim.
-        var partsTag = Ui.Eyebrow(b, "YOUR AGENT, PART BY PART  ·  THIS ERRAND OPENS", Theme.Teal);
-        Ui.Place(partsTag.rectTransform, 40, 572, 760, 20);
-        bool[] open = { true, l.vision, l.memory, l.model, l.effort, true };
-        bool[] lit =
+        var texts = new List<TextMeshProUGUI>();
+        float y = 400;
+        for (int i = 0; i < lines.Count; i++)
         {
-            l.number <= 2 || l.decide, l.number == Ladder.VisionLevel, l.number == Ladder.MemoryLevel,
-            l.number == Ladder.ModelLevel, l.number == Ladder.EffortLevel, l.number == Ladder.Count,
-        };
-        for (int i = 0; i < Parts.Length; i++)
-        {
-            float x = 40 + (i % 3) * 256, y = 600 + (i / 3) * 56;
-            var chip = Ui.Box(b, Parts[i], lit[i] ? Theme.Teal : open[i] ? new Color(1f, 1f, 1f, 0.14f) : new Color(1f, 1f, 1f, 0.05f));
-            Ui.Place(chip.rectTransform, x, y, 240, 46);
-            chip.raycastTarget = false;
-            var name = Ui.Text(chip.transform, l.decide && i == 0 ? "Agent, or a fixed rule" : Parts[i], 16, lit[i] ? Theme.Ink : open[i] ? Color.white : Theme.Faint, true, TextAlignmentOptions.Center);
-            Ui.Stretch(name.rectTransform);
+            bool message = i == 0, last = i == lines.Count - 1;
+            var t = Ui.Text(root, "", message ? 26 : 24, last ? Theme.Teal : Color.white, message || last);
+            float h = t.GetPreferredValues(lines[i], PanelW, 0).y + 8;
+            Ui.Place(t.rectTransform, PanelX, y, PanelW, h);
+            texts.Add(t);
+            y += h + (message ? 26 : 14);
         }
-
-        var go = Ui.Button(b, l.decide ? "Decide the tasks" : "Go to the garage", app.ShowSetup, Ui.ButtonStyle.Accent, 22);
-        Ui.Place(go.GetComponent<RectTransform>(), 40, 756, 320, 64);
-        var file = Ui.Button(b, "The file", () => app.ShowFile(), Ui.ButtonStyle.GhostOnDark, 18);
-        Ui.Place(file.GetComponent<RectTransform>(), 380, 756, 130, 64);
-        var home = Ui.Button(b, "Title screen", app.ShowTitle, Ui.ButtonStyle.GhostOnDark, 18);
-        Ui.Place(home.GetComponent<RectTransform>(), 530, 756, 170, 64);
-
-        // The ladder, over the market: the errands. Any other step jumps there.
-        var strip = Ui.Glass(root, "Ladder", 920, 40, 960, 82, false);
-        var ladder = Ui.Eyebrow(strip.transform, "THE LADDER", Theme.Teal);
-        Ui.Place(ladder.rectTransform, 20, 10, 600, 20);
-        for (int i = 1; i <= Ladder.Count; i++)
-        {
-            bool current = i == l.number, done = i <= app.LevelsDone;
-            var step = Ui.Card(strip.transform, "Step", current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.08f), current ? Theme.Teal : done ? Theme.TealDeep : new Color(1f, 1f, 1f, 0.3f));
-            Ui.Place(step.rectTransform, 20 + (i - 1) * 70, 34, 62, 38);
-            var n = Ui.Text(step.transform, "1." + i, 14, current ? Theme.Ink : Color.white, true, TextAlignmentOptions.Center);
-            Ui.Stretch(n.rectTransform);
-            if (!current)
-            {
-                step.raycastTarget = true;
-                var button = step.gameObject.AddComponent<Button>();
-                button.targetGraphic = step;
-                int number = i;
-                button.onClick.AddListener(() => { Sfx.Tick(); app.StartLevel(number); });
-            }
-        }
-        Ui.Emblem(root);
-
-        // The warm-up question (Recall) is off: the briefing opens straight onto the level.
-        // To bring it back: if (l.recall != null) Recall(app, l.recall);
+        var go = Ui.Button(root, l.decide ? "Decide" : "Pack the agent", app.ShowSetup, Ui.ButtonStyle.Accent, 22);
+        Ui.Place(go.GetComponent<RectTransform>(), PanelX, y + 24, 300, 64);
+        var runner = root.gameObject.AddComponent<Runner>();
+        runner.StartCoroutine(TypeAll(texts, lines));
     }
 
-    // The warm-up: one question from an earlier errand, over the briefing. No
-    // score. A wrong answer shows the right one.
-    void Recall(App app, Recall r)
+    IEnumerator TypeAll(List<TextMeshProUGUI> texts, List<string> lines)
     {
-        var overlay = Ui.Node("Recall", root);
-        Ui.Stretch(overlay);
-        var dim = Ui.Box(overlay, "Dim", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.72f), false);
-        Ui.Stretch(dim.rectTransform);
-        dim.raycastTarget = true;
-        var card = Ui.Float(overlay, "Card", 560, 300, 800, 440);
-        var t = card.transform;
-        var tag = Ui.Eyebrow(t, $"WARM-UP  ·  FROM ERRAND {r.from}  ·  NO SCORE", Theme.TealDeep);
-        tag.font = Theme.Bold;
-        Ui.Place(tag.rectTransform, 32, 28, 600, 22);
-        var q = Ui.Text(t, r.question, 26, Theme.Ink, true);
-        Ui.Place(q.rectTransform, 32, 60, 736, 80);
-        var verdict = Ui.Text(t, "", 20, Theme.Ink, true);
-        Ui.Place(verdict.rectTransform, 32, 330, 560, 56);
-        var go = Ui.Button(t, "Continue", () => Object.Destroy(overlay.gameObject), Ui.ButtonStyle.Accent, 17);
-        Ui.Place(go.GetComponent<RectTransform>(), 800 - 32 - 160, 380, 160, 46);
-        go.gameObject.SetActive(false);
-        var buttons = new Button[r.options.Length];
-        for (int i = 0; i < r.options.Length; i++)
+        yield return new WaitForSecondsRealtime(0.4f);
+        for (int i = 0; i < texts.Count; i++)
         {
-            int index = i;
-            buttons[i] = Ui.Button(t, r.options[i], () =>
-            {
-                bool right = index == r.answer;
-                verdict.text = right ? "Right." : "Not quite.";
-                verdict.color = right ? Theme.TealDeep : Theme.Danger;
-                if (right) Sfx.Chime(); else Sfx.Ruin();
-                for (int j = 0; j < buttons.Length; j++)
-                {
-                    buttons[j].interactable = false;
-                    buttons[j].transform.Find("Fill").GetComponent<Image>().color = j == r.answer ? Theme.Surface2 : j == index ? Theme.DangerSoft : Theme.Panel;
-                    buttons[j].GetComponent<Image>().color = j == r.answer ? Theme.Aqua : j == index ? Theme.Danger : Theme.Border;
-                }
-                go.gameObject.SetActive(true);
-            }, Ui.ButtonStyle.Secondary, 17);
-            var rt = buttons[i].GetComponent<RectTransform>();
-            Ui.Place(rt, 32, 150 + i * 56, 736, 48);
-            var label = buttons[i].GetComponentInChildren<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-            Ui.Stretch(label.rectTransform, 20, 0, 20, 0);
+            if (texts[i] == null) yield break;
+            yield return Ui.Type(texts[i], lines[i], 48f, () => hurry);
+            if (!hurry) yield return new WaitForSecondsRealtime(0.35f);
         }
     }
+
+    // The message first, verbatim, then two short lines of story: the level's kicker cut to
+    // sentences, or LUMA's first sentence where the kicker is one sentence.
+    public static List<string> Transmission(Lesson l, Brief brief)
+    {
+        var lines = new List<string> { l.decide ? Decide.Tasks[0].message : brief.rule };
+        switch (l.number)
+        {
+            case 1: lines.Add("Your agent shops alone. You write its list."); lines.Add("Once it leaves, nobody can help it."); break;
+            case 2: lines.Add("A vague list does not come home with a bad basket."); lines.Add("It comes home with a tomato in the fruit salad."); break;
+            case 3: lines.Add("The agent only knows the stalls in front of it."); lines.Add("Now you choose how far it sees."); break;
+            case 4: lines.Add("Every turn starts from nothing, unless you give it a memory."); lines.Add("Now you choose what it remembers."); break;
+            case 5: lines.Add("A bigger brain is not always a better buy."); lines.Add("It is always pricier."); break;
+            case 6: lines.Add("Five messages tonight. Not every one needs an agent."); lines.Add("A fixed rule costs nothing. It cannot decide anything."); break;
+            case 7: lines.Add("Everything is open, and there is no help this time."); lines.Add("Every choice costs tokens, every turn."); break;
+            default:
+                foreach (var s in Sentences(l.kicker)) if (lines.Count < 3) lines.Add(s);
+                break;
+        }
+        return lines;
+    }
+
+    static IEnumerable<string> Sentences(string text)
+    {
+        if (string.IsNullOrEmpty(text)) yield break;
+        foreach (var p in System.Text.RegularExpressions.Regex.Split(text.Trim(), @"(?<=[.!?])\s+"))
+            if (p.Trim().Length > 0) yield return p.Trim();
+    }
+
+    class Runner : MonoBehaviour { }
 }

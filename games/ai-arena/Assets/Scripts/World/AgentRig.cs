@@ -15,6 +15,7 @@ public class AgentRig : MonoBehaviour
     static readonly string[] Names = { "Idle", "Walk", "Look", "PickUp", "SentHome" };
 
     public Transform antenna, bulb, basket, goods, memory; // made by the kit, followed here
+    public Transform noteMount, hipMount, faceMount;        // mounts made here: the note on its chest, the battery on its hip, the lens on its eye
     public Renderer bulbRenderer;
 
     readonly Animator[] copies = new Animator[5];
@@ -51,6 +52,9 @@ public class AgentRig : MonoBehaviour
             head[i] = Deep(t, "Head"); headTop[i] = Deep(t, "head_end"); eyes[i] = Deep(t, "headfront");
             spine[i] = Deep(t, "Spine01"); chest[i] = Deep(t, "Spine02"); hand[i] = Deep(t, "LeftHand");
         }
+        noteMount = new GameObject("NoteMount").transform; noteMount.SetParent(transform, false);
+        hipMount = new GameObject("HipMount").transform; hipMount.SetParent(transform, false);
+        faceMount = new GameObject("FaceMount").transform; faceMount.SetParent(transform, false);
         bodies = GetComponentsInChildren<SkinnedMeshRenderer>(true);
         if (bodies.Length > 0)
         {
@@ -176,6 +180,14 @@ public class AgentRig : MonoBehaviour
             basket.SetPositionAndRotation(chest[i].position - transform.forward * 0.15f * transform.lossyScale.z - up * 0.04f, Quaternion.LookRotation(Vector3.ProjectOnPlane(transform.forward, up), up));
         if (memory != null && headTop[i] != null)
             memory.SetPositionAndRotation(headTop[i].position, transform.rotation); // what it remembers rides beside its head
+        var fwdFlat = Vector3.ProjectOnPlane(transform.forward, up).normalized;
+        if (fwdFlat.sqrMagnitude < 0.5f) fwdFlat = transform.forward;
+        if (noteMount != null && chest[i] != null)
+            noteMount.SetPositionAndRotation(chest[i].position + fwdFlat * 0.13f * transform.lossyScale.z - up * 0.02f, Quaternion.LookRotation(fwdFlat, up));
+        if (hipMount != null && spine[i] != null)
+            hipMount.SetPositionAndRotation(spine[i].position + transform.right * 0.17f * transform.lossyScale.x + fwdFlat * 0.02f, Quaternion.LookRotation(transform.right, up));
+        if (faceMount != null && eyes[i] != null)
+            faceMount.SetPositionAndRotation(eyes[i].position + fwdFlat * 0.03f, Quaternion.LookRotation(fwdFlat, up));
     }
 
     public Vector3 AntennaPoint => bulb != null ? bulb.position : transform.position + Vector3.up * 1.3f;

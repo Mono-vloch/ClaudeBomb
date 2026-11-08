@@ -63,46 +63,37 @@ from the ladder on a briefing. Free play keeps every dial open with any message.
 
 ## How a run goes
 
-1. **Briefing.** LUMA opens the errand: the idea it teaches,
-   the family's message, and which dial opens.
-2. **The garage.** The chosen agent stands in the market, big, on the left; its loadout is
-   on the right. The list is built by tapping the goods on the shelf (buy, never), picking
-   what the agent does when nothing on the list is in view, and adding the student's own
-   words; the exact text the agent will read is shown underneath, and "Write it yourself"
-   gives a plain text field. The four dials are upgrade cards, locked until their errand:
+Since the game-feel pass (`Docs/game-feel/ai-arena.md`, report in `Docs/game-feel/ai-arena-report.md`)
+every decision is an action on a thing in the world, and the screens carry one objective line, the
+menu icon and at most three small controls besides the main action.
 
-   | Dial | Concept | What it costs |
-   |---|---|---|
-   | The list | the system prompt | tokens on every single turn |
-   | Brain (Haiku, Sonnet, Opus 5.5) | model choice | price per token, speed |
-   | How far it sees, 1 to 3 cells | what goes into the context | more words per turn |
-   | Memory: none, last 3, last 10, notebook | context window vs external memory | history tokens per turn |
-   | Effort low to high | reasoning depth | output tokens, latency |
+1. **Title.** The player's own agent in the evening square: tap it to paint it the next colour, tap
+   its name tag to rename it. The errand map (seven stops and their stars) is the only ladder; Start
+   or Continue. The first Start plays **the story**: four short 3D shots with one LUMA sentence each
+   (the phone lights up, the note on the agent, it walks into the market, the tomato), skippable.
+2. **Briefing.** A transmission: the family's house at dusk in the home camera's feed, the message
+   typed in under its sender, two short lines of the errand's story, "Pack the agent".
+3. **The garage: packing the agent.** The agent at a market table by its house. Drag produce into
+   its basket ("Buy apples." on its note) or into the No crate ("Never buy tomatoes."); the catch and
+   the rule for an empty view stay in the player's own words: tap the note to write the list, word
+   for word (`Core/NoteText.cs` keeps the note and the table in step). Coins go into the battery on
+   its hip, whose ring of notches shows how many turns of the errand the money buys. From 1.3 the
+   parts are on the table and fitted with a tap: lenses (sight), cards or a notebook (memory), bulbs
+   (the brain), the dimmer at the antenna (effort). The phone holds the family's message. "Send".
+   Errand 1.6 is the kitchen table instead: five notes in a pile, dropped on the agent, the rule box
+   or the bin.
+4. **The round.** The street behind the agent. The clock on the square and at the top runs toward
+   dinner, amber in the last five turns; the family's window at the top right has a face per agent;
+   the battery drains; the agent's thought is a bubble (Claude's first sentence, coordinates taken
+   out; the whole of it on a tap). Camera cycles the street, the agent's eye and the market from
+   above; Call home is the off switch. Banners for the moments (sent home, out of tokens, all home).
+5. **Debrief.** The agent home at dusk on its podium step with its basket, the medal rising, LUMA's
+   one line, Next, Again and Details (the checks, the agents' figures and costs, the lists, the stars
+   in all, the takeaway and the question; the capstone's if-then plans). The platform is told the
+   result in the curriculum's form (`1.3:complete`, `:partial` or `:incomplete`, with the checks).
 
-   Each dial shows on the agent at once (its sight square, its antenna, what it drags
-   behind it or holds, its glow). Every agent gets the same pocket money; a fuel gauge
-   shows what one turn costs and how many turns the money buys.
-3. **The runs.** An errand with a ready setup opens on **Watch the pro**: every agent gets a
-   list that does the job, and LUMA says why it works. Then **Fix the broken bot**: the same
-   agents with the errand's planned mistake in them; the class deploys, watches it go wrong,
-   fixes the list and deploys again. Then **Your run**: the students' own lists, the one
-   that counts. Errand 1.6 instead asks the class to mark five family messages as an agent,
-   a simple automation or neither, then runs every shopping task with a fixed rule (no AI,
-   no tokens) against an agent, side by side.
-4. **The market.** A countdown sends the agents out. All agents decide at the same time,
-   each from its own observation (`Observation.cs`), and the moves resolve together
-   (`Simulation.cs`). Clicking an agent or its card shows the square it can actually see
-   and what it last texted home; "Agent's eye" watches from behind it, with every stall
-   beyond its sight a gray box. Banners mark the big moments: sent home, out of tokens,
-   home. LUMA's card names the first agent sent home, the first empty budget, lost turn and
-   buy, in the words of the lesson (`Coach.cs`).
-5. **Debrief.** Ranking with baskets and medals, then two sentences per agent on what
-   happened and why (`Verdicts.cs`), the errand's checks per agent, LUMA's takeaway and the
-   question to ask as the agent's manager, with real token usage and cost. After Your run
-   the errand's stars are banked and the next errand's unlock is revealed; the capstone also
-   names which part of the agent failed, introduces the five ways an agent goes wrong, and
-   asks for the student's two if-then plans. The platform is told the result in the
-   curriculum's form (`1.3:complete`, `:partial` or `:incomplete`, with the checks).
+The menu (Esc or the icon) holds the briefing, the file, this errand again, the story, free play,
+sound, LUMA's voice, the speed, the turns, the class (one agent per student) and the way out.
 
 ## Where things are
 
@@ -122,7 +113,8 @@ from the ladder on a briefing. Free play keeps every dial open with any message.
 | Claude brain and stand-in brain | `Scripts/Brains/Brains.cs` |
 | Reaching Claude: Claude Code on the desktop, the platform's key keeper in the browser | `Scripts/Claude/*.cs`, the kit in `../../kit` |
 | Look and feel, from the Maaloomatiia brand guidelines | `Scripts/Ui/Theme.cs`, `UiKit.cs`, `Sfx.cs` (sounds drawn at start), `Resources/Brand` |
-| Screens | `Scripts/Ui/TitleScreen.cs`, `StoryScreen.cs`, `LessonScreen.cs` (the briefing; its warm-up question is turned off), `SetupScreen.cs` (the garage) with `Tour.cs`, `DecideScreen.cs` and `DecideDebrief.cs` (errand 1.6), `ArenaScreen.cs` (the run), `ResultsScreen.cs` (the debrief) |
+| Screens | `Scripts/Ui/TitleScreen.cs`, `StoryScreen.cs`, `LessonScreen.cs` (the briefing), `SetupScreen.cs` (the garage), `DecideScreen.cs` and `DecideDebrief.cs` (errand 1.6), `ArenaScreen.cs` (the round), `ResultsScreen.cs` (the debrief), `GameMenu.cs`, `Hud.cs` (the objective, the clock, the window, the moments), `FileSheet.cs` |
+| The garage, the round's and the debrief's things in the world: the table, the produce, the parts, the battery, the clock, the podium, the dark plates | `Scripts/World/Market.Garage.cs`, `Market.Round.cs`, `Market.Props.cs` |
 | The market in three dimensions: the square, the stalls, the houses, the robots, a turn's moves, the robot's-eye view | `Scripts/World/Market.cs`, `RobotModel.cs`, `ItemModels.cs` |
 | The camera on the market: overview, robot's eye, the cover's slow turn | `Scripts/World/MarketCamera.cs` |
 | Shapes and materials, made in code; the three shaders | `Scripts/World/MeshKit.cs`, `Look.cs`, `Resources/Shaders` |
@@ -189,10 +181,11 @@ Three menu items, all usable from the command line too:
   answer parsing, the stand-in brain, and one real move through Claude Code if it is
   installed).
 - **AI Arena > Build macOS app** builds `Builds/mac/AI Arena.app`.
-- The built app, started with `-screenshots <folder>`, walks through every screen
-  (title, three beats of the story, lesson, tour, setup, market, debrief) with four
-  demo robots on the stand-in brain and saves a picture of each, then quits. The
-  current set is in `Docs/screenshots`.
+- The built app, started with `-screenshots <folder>` (and `-levels 1,5` for some errands),
+  walks through every screen on the stand-in brain: the title, the four story shots, every
+  errand's briefing and garage, and errands 1.1, 1.2, 1.5 and 1.6 played to the debrief. It saves
+  a picture of each and `counts.jsonl` with the game-feel pass's counts (words, controls, flags,
+  LUMA's lines), then quits.
 
 ```bash
 UNITY=/Applications/Unity/Hub/Editor/6000.3.9f1/Unity.app/Contents/MacOS/Unity

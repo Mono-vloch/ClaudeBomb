@@ -10,7 +10,7 @@ using UnityEngine;
 // stays straight. Changes glide.
 public class MarketCamera : MonoBehaviour
 {
-    public enum Mode { Off, Overview, Follow, Orbit, Portrait, Rig } // Rig: CameraRig drives the camera
+    public enum Mode { Off, Overview, Follow, Orbit, Portrait, Rig, Fixed } // Rig: CameraRig drives the camera; Fixed: a given place and a point to look at
 
     public Mode mode = Mode.Off;
     public RectTransform frame;   // the part of the screen (an overlay-canvas rect) the subject sits in
@@ -21,6 +21,8 @@ public class MarketCamera : MonoBehaviour
     public float orbitPitch = 26f, orbitDistance = 15f, orbitSpeed = 3.5f;
     public event Action Framed;   // after every frame's placing: labels follow
     public Func<Vector3, bool> Blocked; // the real square: is a camera point inside a stall?
+    public float followBack = 1.9f, followHeight = 1.3f, followAhead = 1.4f, followSide = 0.3f, followFov = 50f; // the street view of the game-feel pass: pulled back so the market shows ahead
+    Vector3 fixedAt, fixedLook; float fixedFov = 40f, fixedSway = 0.6f; bool fixedShift;
 
     Camera cam;
     Vector3 pos, velocity;
@@ -74,6 +76,17 @@ public class MarketCamera : MonoBehaviour
         this.frame = frame;
     }
 
+    // A given place and a point to look at, with a slow sway so it is not a still picture; the
+    // garage, the briefing's house, the story's shots, the debrief's door. With shift the point
+    // looked at is kept at the frame's centre; without it the picture is composed by aiming.
+    public void Fixed(RectTransform frame, Vector3 at, Vector3 lookAt, float fov = 40f, bool shift = false, float sway = 0.6f)
+    {
+        mode = Mode.Fixed;
+        this.frame = frame;
+        fixedAt = at; fixedLook = lookAt; fixedFov = fov; fixedShift = shift; fixedSway = sway;
+        subject = lookAt;
+    }
+
     // The next frame jumps into place instead of gliding (a new screen).
     public void Snap() => snap = true;
 
@@ -93,6 +106,7 @@ public class MarketCamera : MonoBehaviour
     {
         if (mode == Mode.Off || mode == Mode.Rig || frame == null) return;
         if ((mode == Mode.Follow || mode == Mode.Portrait) && follow == null) mode = Mode.Overview;
+        if (mode == Mode.Fixed && frame == null) return;
         float dt = Time.unscaledDeltaTime;
 
         Vector3 targetPos; Quaternion targetRot; float targetFov; Vector3 anchor;
@@ -109,21 +123,31 @@ public class MarketCamera : MonoBehaviour
                 targetFov = 36f;
                 break;
             }
+            case Mode.Fixed:
+            {
+                var fwd0 = (fixedLook - fixedAt).normalized;
+                var right0 = Vector3.Cross(Vector3.up, fwd0);
+                targetPos = fixedAt + right0 * (Mathf.Sin(Time.unscaledTime * 0.21f) * 0.3f * fixedSway) + Vector3.up * (Mathf.Sin(Time.unscaledTime * 0.13f) * 0.12f * fixedSway);
+                targetRot = Quaternion.LookRotation(fixedLook - targetPos);
+                targetFov = fixedFov;
+                anchor = fixedLook;
+                break;
+            }
             case Mode.Follow when Market.Real:
             {
-                // The street: behind and to the right of the agent at its shoulder, close enough
-                // that it is the hero of the frame, the market ahead of it; pulled in where a
-                // stall stands behind it.
+                // The street: behind and to the right of the agent at its shoulder, pulled back so
+                // the market shows ahead of it (the game-feel pass); pulled in where a stall stands
+                // behind it.
                 var fwd = Vector3.ProjectOnPlane(follow.forward, Vector3.up).normalized;
                 var right = Vector3.Cross(Vector3.up, fwd);
-                float back = 1.12f;
-                Vector3 At(float b) => follow.position - fwd * b + right * (0.74f * b / 1.12f) + Vector3.up * (1.05f + (1.12f - b) * 0.45f);
+                float back = followBack;
+                Vector3 At(float b) => follow.position - fwd * b + right * (0.74f * b / 1.9f) + Vector3.up * (followHeight + (followBack - b) * 0.3f);
                 targetPos = At(back);
                 while (Blocked != null && back > 0.8f && Blocked(targetPos)) { back -= 0.1f; targetPos = At(back); }
                 // Composed by aiming, not by shifting the picture: the agent's chest a little left of
-                // the middle of the screen (inside the part the drawer leaves), the market beyond it.
-                targetRot = Quaternion.LookRotation(follow.position + Vector3.up * 0.62f + fwd * 0.55f + right * 0.32f - targetPos);
-                targetFov = 52f;
+                // the middle of the screen, the market beyond it.
+                targetRot = Quaternion.LookRotation(follow.position + Vector3.up * 0.55f + fwd * followAhead + right * followSide - targetPos);
+                targetFov = followFov;
                 anchor = Vector3.zero; // no shift
                 break;
             }
@@ -190,7 +214,7 @@ public class MarketCamera : MonoBehaviour
         // Shift the picture so the subject sits at the frame's centre. In the
         // overview the subject is the middle of the square's picture, not of the
         // square: the far side is drawn smaller.
-        if (mode == Mode.Follow && Market.Real) { Framed?.Invoke(); return; } // the street view is composed by aiming
+        if ((mode == Mode.Follow && Market.Real) || (mode == Mode.Fixed && !fixedShift)) { Framed?.Invoke(); return; } // composed by aiming
         Vector2 at = mode == Mode.Overview ? ProjectedCentre() : (Vector2)cam.WorldToViewportPoint(anchor);
         var centre = FrameRect().center;
         float dx = (centre.x - at.x) * 2f, dy = (centre.y - at.y) * 2f;

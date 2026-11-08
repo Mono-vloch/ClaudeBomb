@@ -1,18 +1,22 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// LUMA, the coach: the same character as in Claude Bomb. She opens each level,
-// speaks up while the round runs when something worth naming happens, and reads
-// the recap on the debrief. Her fixed lines are recorded, one file per line id
-// in Resources/LumaVoice (AI Arena > Generate LUMA Voice); lines built on the
-// fly, with an agent's name in them, are shown as text only.
+// LUMA, the coach: the same character as in Claude Bomb and Robot Racing. She says one short
+// thing when something happens (the first turn, the first buy, an agent sent home) and the
+// takeaway on the debrief; her full lines live in the file. Her fixed lines are recorded, one
+// file per line id in Resources/LumaVoice (AI Arena > Generate LUMA Voice); lines built on the
+// fly, with an agent's name in them, are text only.
 public class Luma : MonoBehaviour
 {
-    // Every recorded line, by id. The level lines come from the ladder, so the
-    // lesson text and the voice can never drift apart.
+    public const int CueWords = 15; // a cue on screen is never longer than this
+
+    // Every recorded line, by id. The level lines come from the ladder, so the lesson text
+    // and the voice can never drift apart. The cues of the game-feel pass are sentences of her
+    // own longer lines, said at the moment they fit.
     public static Dictionary<string, string> Lines
     {
         get
@@ -21,26 +25,76 @@ public class Luma : MonoBehaviour
             {
                 ["recap"] = "The agents are home. Here is what each one practiced, and the one idea to take from this errand.",
                 ["free"] = Coach.FreeLive,
-                // The story, before the first errand.
+                // The story, in full: in the file. The four shots say one sentence of it each.
                 ["story-1"] = "This is your household agent. It can walk to the market, look at the stalls, and buy things. It cannot think of dinner on its own.",
                 ["story-2"] = "Every evening, the family sends a message about dinner. You read it. The agent never does.",
                 ["story-3"] = "You turn the message into a shopping list. That list is the agent's job description. It is the only thing the agent will know.",
                 ["story-4"] = "Once it leaves, there is no phone. At every stall it looks, decides, moves, and texts you one line. Then it looks again. That is the loop.",
                 ["story-5"] = "A vague list does not come home with a bad basket. It comes home with a tomato in the fruit salad. Say exactly what you mean.",
                 ["story-6"] = "Six errands, one idea each. Each one opens one more part of the agent. I will coach you along the way. Let's go.",
-                // The tour of the setup screen, on the first errand.
+                ["shot-1"] = "Every evening, the family sends a message about dinner.",
+                ["shot-2"] = "That list is the agent's job description.",
+                ["shot-3"] = "Once it leaves, there is no phone.",
+                ["shot-4"] = "Say exactly what you mean.",
+                // The garage, the first time, one thing at a time: her tour lines, whole or cut to a sentence.
                 ["tour-1"] = "Here is the family's message. Read it closely. The agent will never see it.",
                 ["tour-2"] = "Here you write the agent's list. Name the things. Say what to leave at the market.",
                 ["tour-3"] = "Every word costs tokens, the agent's pocket money. This line shows what one turn will cost.",
                 ["tour-4"] = "When every list is written, send the agents. From then on, nobody can help them.",
+                ["garage-note"] = "Here you write the agent's list.",
+                ["garage-phone"] = "Read it closely. The agent will never see it.",
+                ["garage-coin"] = "Every word costs tokens, the agent's pocket money.",
+                ["title"] = "Seven errands, one idea each.",
+                ["cue-nobody"] = "Nobody is steering.",
+                ["cue-off"] = "The one control you have left is Call them home, the off switch.",
+                ["decide"] = "Mark each task: an agent, a simple automation, or neither.",
+                ["round-2"] = "The catch tonight is the tomato.",
+                ["round-3"] = "Everything outside that square does not exist for it.",
+                ["round-4"] = "Memory is not free: every remembered turn rides along in the next prompt.",
+                ["round-5"] = "Watch the cost, not just the basket.",
+                ["round-6"] = "Watch the basket and the cost.",
+                ["round-7"] = "Everything is in play.",
+                ["arrive-3"] = "Now you choose how far the agent sees.",
+                ["arrive-4"] = "Now you choose what the agent remembers.",
+                ["arrive-5"] = "Now you choose the agent's brain and how hard it thinks.",
+                ["arrive-7"] = "Everything is open and there is no help this time.",
             };
             foreach (var l in Ladder.All)
             {
                 lines["intro-" + l.number] = l.luma;
                 lines["live-" + l.number] = l.live;
+                var take = FirstSentence(l.takeaway);
+                if (take != null) lines["take-" + l.number] = take;
+                if (l.broken != null)
+                {
+                    lines["fix-" + l.number] = l.broken.name.TrimEnd('.') + ".";
+                    var again = LastSentence(l.broken.why);
+                    if (again != null) lines["again-" + l.number] = again;
+                }
             }
             return lines;
         }
+    }
+
+    public static int Words(string text) => string.IsNullOrWhiteSpace(text) ? 0 : text.Split(' ').Count(w => w.Any(char.IsLetterOrDigit));
+
+    // The first sentence of a line that is short enough to say as a cue, or the next when the
+    // first is not; null when none is.
+    public static string FirstSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
+        foreach (var p in parts) if (Words(p) <= CueWords && Words(p) > 0) return p.Trim();
+        return null;
+    }
+
+    // The last sentence of a line, when short enough to say as a cue: what to do about it.
+    public static string LastSentence(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
+        for (int i = parts.Length - 1; i >= 0; i--) if (Words(parts[i]) <= CueWords && Words(parts[i]) > 0) return parts[i].Trim();
+        return null;
     }
 
     // What the voice says for a line: the text without any formatting.
@@ -57,12 +111,19 @@ public class Luma : MonoBehaviour
     public static Sprite Portrait => Resources.Load<Sprite>("Luma/luma");
 
     AudioSource voice;
+    public bool Speaking => speaking != null || (voice != null && voice.isPlaying);
+    // True while a line is still being typed or spoken: a moment that must not cover her
+    // mid-sentence waits on it.
+    public bool Busy => typing || Speaking;
+    bool typing;
+    Coroutine speaking;
+    RectTransform current; // the cue on screen, so the next replaces it
 
     void Awake()
     {
         voice = gameObject.AddComponent<AudioSource>();
         voice.playOnAwake = false;
-        voice.spatialBlend = 0f; // she speaks to the room, not from somewhere on the board
+        voice.spatialBlend = 0f; // she speaks to the room, not from somewhere on the market
     }
 
     // Says a recorded line aloud (voice on, recording present) and returns its text.
@@ -77,10 +138,8 @@ public class Luma : MonoBehaviour
         return Lines[id];
     }
 
-    Coroutine speaking;
-
-    // In the browser a clip is decoded in the background after it is loaded, so
-    // wait for it rather than play silence.
+    // In the browser a clip is decoded in the background after it is loaded, so wait for it
+    // rather than play silence.
     System.Collections.IEnumerator PlayWhenLoaded(AudioClip clip)
     {
         if (clip.loadState != AudioDataLoadState.Loaded)
@@ -96,17 +155,29 @@ public class Luma : MonoBehaviour
         speaking = null;
     }
 
-    // One line of coaching over a screen: her small portrait and the line typed out as she
-    // says it (or at reading speed when there is no recording). The strip fades once she is
-    // done unless it is to stay. Returns the strip, so a screen can replace the line.
-    public RectTransform Line(Transform parent, float x, float y, float w, string text, bool dark, bool stay = false, float size = 17)
+    // A cue: one of her short lines, said and shown whole (it fades in, never typed out
+    // mid-sentence), gone once she is done unless it is to stay. The id must be in Lines.
+    public RectTransform Cue(Transform parent, string id, float x = 40, float y = 944, float w = 820, bool stay = false)
+        => Line(parent, x, y, w, Say(id), true, stay, 18, type: false);
+
+    // A line built on the fly (an agent's name in it): shown whole, text only.
+    public RectTransform Text(Transform parent, string text, float x = 40, float y = 944, float w = 820, bool stay = false)
     {
+        Hush();
+        return Line(parent, x, y, w, text, true, stay, 18, type: false);
+    }
+
+    // One line of coaching over a screen: her small portrait and the line, typed out as she
+    // says it or shown whole. The strip fades once she is done unless it is to stay. Returns
+    // the strip, so a screen can replace the line.
+    public RectTransform Line(Transform parent, float x, float y, float w, string text, bool dark, bool stay = false, float size = 17, bool type = true)
+    {
+        if (current != null) { Destroy(current.gameObject); current = null; }
         var card = Ui.Box(parent, "Luma line", dark ? new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f) : Theme.Panel);
         card.raycastTarget = false;
         var t = card.transform;
         var body = Ui.Text(t, "", size, dark ? Color.white : Theme.Ink);
         float textH = body.GetPreferredValues(text ?? "", w - 110, 0).y;
-        if (!dark) card.color = Theme.Panel;
         float h = Mathf.Max(64f, textH + 38f);
         Ui.Place(card.rectTransform, x, y, w, h);
         var frame = Ui.Box(t, "Portrait", dark ? Theme.Ink : Theme.Surface2);
@@ -123,78 +194,33 @@ public class Luma : MonoBehaviour
         Ui.Place(name.rectTransform, h + 2, 9, 100, 18);
         Ui.Place(body.rectTransform, h + 2, 28, w - h - 16, h - 32);
         var group = Ui.Group(card);
-        StartCoroutine(RunLine(card, group, body, text ?? "", stay));
+        current = card.rectTransform;
+        StartCoroutine(RunLine(card, group, body, text ?? "", stay, type));
         return card.rectTransform;
     }
 
-    System.Collections.IEnumerator RunLine(Image card, CanvasGroup group, TMP_Text body, string text, bool stay)
+    System.Collections.IEnumerator RunLine(Image card, CanvasGroup group, TMP_Text body, string text, bool stay, bool type)
     {
-        yield return Ui.Type(body, text, 45f);
+        typing = true;
+        if (type) yield return Ui.Type(body, text, 45f);
+        else { body.text = text; group.alpha = 0f; yield return Ui.Fade(group, 1f, 0.25f); }
+        typing = false;
         float waited = 0f;
         while (card != null && Speaking && waited < 30f) { waited += Time.unscaledDeltaTime; yield return null; }
         if (stay || card == null) yield break;
-        yield return new WaitForSecondsRealtime(2.5f);
+        yield return new WaitForSecondsRealtime(type ? 2.5f : 1.5f + 0.3f * Words(text));
         if (card == null) yield break;
         yield return Ui.Fade(group, 0f, 0.6f);
         if (card != null) card.gameObject.SetActive(false);
     }
 
+    // The cue on screen goes now (a screen that moves on).
+    public void Clear() { if (current != null) { Destroy(current.gameObject); current = null; } Hush(); }
+
     public void Hush()
     {
         if (speaking != null) { StopCoroutine(speaking); speaking = null; }
         if (voice != null) voice.Stop();
-    }
-
-    // Whether a recorded line is still being said.
-    public bool Speaking => speaking != null || (voice != null && voice.isPlaying);
-
-    // A card with her portrait on the left, her name, what she says, and an
-    // optional second line in a quieter colour. On the dark cover screens the
-    // card is dark too. The returned text can be changed as the round goes on.
-    public static TextMeshProUGUI Card(Transform parent, float x, float y, float w, float h, string text, float fontSize = 18,
-                                       string second = null, Luma voiceToggle = null, bool dark = false, float portrait = 120)
-        => Make(parent, x, y, w, h, text, fontSize, second, voiceToggle, dark, portrait).text;
-
-    public static (Image card, TextMeshProUGUI text) Make(Transform parent, float x, float y, float w, float h, string text, float fontSize = 18,
-                                                           string second = null, Luma voiceToggle = null, bool dark = false, float portrait = 120)
-    {
-        var card = Ui.Card(parent, "Luma", dark ? Theme.Ink2 : Theme.Panel, dark ? Theme.TealDeep : Theme.Border1);
-        Ui.Place(card.rectTransform, x, y, w, h);
-        var t = card.transform;
-        float p = Mathf.Min(h - 24, portrait);
-        var frame = Ui.Box(t, "Portrait", dark ? Theme.Ink : Theme.Surface2);
-        Ui.Place(frame.rectTransform, 12, 12, p, h - 24);
-        var sprite = Portrait;
-        if (sprite != null)
-        {
-            var img = Ui.Node("Picture", frame.transform).gameObject.AddComponent<Image>();
-            img.sprite = sprite;
-            img.preserveAspect = true;
-            img.raycastTarget = false;
-            Ui.Stretch(img.rectTransform, 6, 6, 6, 6);
-        }
-        var name = Ui.Eyebrow(t, "LUMA", dark ? Theme.Teal : Theme.TealDeep);
-        name.font = Theme.Bold;
-        Ui.Place(name.rectTransform, p + 28, 14, 200, 22);
-        float textH = second == null ? h - 50 : (h - 50) * 0.5f;
-        var body = Ui.Text(t, text, fontSize, dark ? Color.white : Theme.Ink);
-        Ui.Place(body.rectTransform, p + 28, 38, w - p - 44, textH);
-        if (second != null)
-        {
-            var more = Ui.Text(t, second, fontSize - 2, dark ? Theme.Faint : Theme.Text2);
-            Ui.Place(more.rectTransform, p + 28, 38 + textH + 4, w - p - 44, h - 50 - textH - 4);
-        }
-        if (voiceToggle != null)
-        {
-            Button toggle = null;
-            toggle = Ui.Button(t, Voice ? "Voice on" : "Voice off", () =>
-            {
-                Voice = !Voice;
-                if (!Voice) voiceToggle.Hush();
-                Ui.SetLabel(toggle, Voice ? "Voice on" : "Voice off");
-            }, dark ? Ui.ButtonStyle.GhostOnDark : Ui.ButtonStyle.Quiet, 14);
-            Ui.Place(toggle.GetComponent<RectTransform>(), w - 122, 10, 110, 32);
-        }
-        return (card, body);
+        typing = false;
     }
 }

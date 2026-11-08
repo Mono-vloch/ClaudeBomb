@@ -27,6 +27,14 @@ public class RobotModel
     bool ghost, dim, outed;
 
     public static float Scale => Market.Real ? 1f : 1.25f; // the code-built robot is 1 tall in a 1-unit cell, shown this big
+    public AgentRig Rig => rig;                       // the kit's robot, for what the garage hangs on it (null without the kit)
+    public Transform Goods => basket;                 // where what it buys goes
+    public bool Outed => outed;
+    // The basket on its back: off while it lies on the garage table, on when the agent is sent.
+    public void ShowBasket(bool on) { if (rig != null && rig.basket != null) rig.basket.gameObject.SetActive(on && !ghost); }
+    public void ClearGoods() { foreach (var g in goods) Object.Destroy(g); goods.Clear(); }
+    public Vector3 NotePoint => rig != null && rig.noteMount != null ? rig.noteMount.position : body.TransformPoint(new Vector3(0f, 0.45f, 0.2f));
+    public Vector3 HipPoint => rig != null && rig.hipMount != null ? rig.hipMount.position : body.TransformPoint(new Vector3(0.25f, 0.4f, 0f));
 
     public RobotModel(Transform parent, AgentState a, bool dusk)
     {
@@ -123,7 +131,7 @@ public class RobotModel
         carried.Clear();
         var book = rig.memory != null ? rig.memory.Find("Notebook") : null;
         if (book != null) book.gameObject.SetActive(c.memory == MemoryModes.Notebook);
-        if (c.memory != MemoryModes.Notebook && rig.memory != null)
+        if (c.memory != MemoryModes.Notebook && rig.memory != null && Market.MemoryCards)
         {
             int turns = MemoryModes.Turns(c.memory);
             var card = Look.Glass(new Color(Mathf.Lerp(colour.r, 1f, 0.35f), Mathf.Lerp(colour.g, 1f, 0.35f), Mathf.Lerp(colour.b, 1f, 0.35f), 0.32f));
