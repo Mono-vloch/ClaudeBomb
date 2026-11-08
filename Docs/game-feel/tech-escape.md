@@ -218,4 +218,20 @@ Again, Details.
 3. **Teach by trying.** The first attack on an unfixed room is a free rehearsal: no debrief,
    not counted in the score or the platform report; the next run counts.
 
-The build that follows these answers is reported in [tech-escape-report.md](tech-escape-report.md).
+### After the round-2 report (8 November 2026)
+
+4. **The close-up.** A card brought close is shown face-on and flat, one row at a time,
+   everything readable. Every room's close-up is checked.
+5. **Values on the controls.** Every control shows its current value on its face ("Owner:
+   Omar", "Sensitivity: High"), as on Robot Racing's console.
+6. **Models.** Yes to the staff ID badges and the patch panel with cables; Charbel gets them
+   made. The current props stay until the files arrive.
+7. **No countdown.** When the attacker on the monitor reaches the room's door, he stops there
+   and tries the handle, with a sound, until the player is ready.
+8. **The main action** is "Lift the lockdown" (was "Run the attack").
+9. **The briefing** is the alarm and the story only. The motto moves to LUMA's line on the
+   debrief.
+10. **The podium** has a single step. Robot Racing's podium gets the same, after the merge.
+11. **Fixes asked**: the Operations Center monitor behind the console, and 1.5's small console.
+
+The builds that follow these answers are reported in [tech-escape-report.md](tech-escape-report.md).

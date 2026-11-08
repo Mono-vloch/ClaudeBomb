@@ -164,6 +164,7 @@ public partial class Building
     Coroutine lurking;
     static Material screenMat;
 
+    public const float MonitorScale = 0.72f; // smaller than a desk monitor, so it finds a free place on the wall
     public Transform Monitor(int room, Vector3 localPos, Quaternion localRot)
     {
         var door = doors[room];
@@ -174,6 +175,7 @@ public partial class Building
             shell = Instantiate(mon, door, false).transform;
             shell.name = "CorridorMonitor";
             shell.localPosition = localPos; shell.localRotation = localRot;
+            shell.localScale *= MonitorScale;
         }
         else
         {
@@ -184,15 +186,7 @@ public partial class Building
         var b = new Bounds(shell.position, Vector3.zero);
         bool any = false;
         foreach (var r in shell.GetComponentsInChildren<Renderer>()) { if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds); }
-        if (monitorTex == null) { monitorTex = new RenderTexture(320, 180, 16, RenderTextureFormat.Default) { name = "CorridorFeed", filterMode = FilterMode.Bilinear }; }
-        if (screenMat == null)
-        {
-            var shader = Resources.Load<Shader>("Shaders/Spark");
-            screenMat = new Material(shader) { name = "corridor-screen" };
-            screenMat.SetFloat("_Dst", (float)BlendMode.OneMinusSrcAlpha);
-        }
-        screenMat.mainTexture = monitorTex;
-        screenMat.color = new Color(1.25f, 1.55f, 1.5f, 1f); // a security feed's cold cast, brightened
+        FeedMaterial();
         var screen = new GameObject("Feed");
         screen.transform.SetParent(shell, false);
         screen.AddComponent<MeshFilter>().sharedMesh = Quad;
@@ -204,9 +198,56 @@ public partial class Building
         screen.transform.rotation = Quaternion.LookRotation(-fwd, Vector3.up); // a quad faces -Z: turned to face where the monitor faces
         screen.transform.position = b.center + fwd * (depth / 2f + 0.004f) + Vector3.up * b.size.y * 0.13f;
         screen.transform.localScale = new Vector3(width * 0.93f, b.size.y * 0.52f, 1f);
-        var rec = Box(screen.transform, "Rec", new Vector3(0.04f, 0.07f, 0.001f), new Vector3(0.44f, 0.4f, -0.002f), Lens, null, false);
+        Rec(screen.transform);
+        FeedCamera(room);
+        return shell;
+    }
+
+    void Rec(Transform screen)
+    {
+        var rec = Box(screen, "Rec", new Vector3(0.04f, 0.07f, 0.001f), new Vector3(0.44f, 0.4f, -0.002f), Lens, null, false);
         Glow(rec.GetComponent<Renderer>(), Theme.Danger, 2f);
         rec.AddComponent<Blink>();
+    }
+
+    Material FeedMaterial()
+    {
+        if (monitorTex == null) { monitorTex = new RenderTexture(320, 180, 16, RenderTextureFormat.Default) { name = "CorridorFeed", filterMode = FilterMode.Bilinear }; }
+        if (screenMat == null)
+        {
+            var shader = Resources.Load<Shader>("Shaders/Spark");
+            screenMat = new Material(shader) { name = "corridor-screen" };
+            screenMat.SetFloat("_Dst", (float)BlendMode.OneMinusSrcAlpha);
+        }
+        screenMat.mainTexture = monitorTex;
+        screenMat.color = new Color(1.25f, 1.55f, 1.5f, 1f); // a security feed's cold cast, brightened
+        return screenMat;
+    }
+
+    // The Operations Center has a wall of screens of its own: the corridor feed goes on one of them.
+    public Transform FeedOnScreen(int room, Renderer wallScreen)
+    {
+        FeedMaterial();
+        var b = wallScreen.bounds;
+        var n = doors[room].forward; // into the room's front: toward the camera
+        var quad = new GameObject("Feed");
+        quad.transform.SetParent(transform, false);
+        quad.AddComponent<MeshFilter>().sharedMesh = Quad;
+        var r = quad.AddComponent<MeshRenderer>();
+        r.sharedMaterial = screenMat; r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = false;
+        quad.transform.rotation = Quaternion.LookRotation(-n, Vector3.up);
+        quad.transform.position = b.center + n * (Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(n.x), 0f, Mathf.Abs(n.z)))) + 0.004f);
+        float width = Mathf.Abs(Vector3.Dot(b.size, new Vector3(Mathf.Abs(n.z), 0f, Mathf.Abs(n.x))));
+        quad.transform.localScale = new Vector3(width * 0.97f, b.size.y * 0.95f, 1f);
+        quad.transform.SetParent(wallScreen.transform.parent, true);
+        Rec(quad.transform);
+        FeedCamera(room);
+        return quad.transform;
+    }
+
+    void FeedCamera(int room)
+    {
+        var door = doors[room];
         // The camera: at the corridor's entrance under the ceiling, looking down it toward this room.
         if (monitorCam == null)
         {
@@ -227,7 +268,6 @@ public partial class Building
         monitorCam.transform.position = new Vector3(-Back + 0.3f, 2.25f, 0f);
         monitorCam.transform.LookAt(new Vector3(door.position.x, 0.9f, door.position.z * 0.35f));
         monitorCam.enabled = true;
-        return shell;
     }
 
     // The monitor camera renders one frame in four: a security feed's frame rate, a quarter of the cost.
@@ -235,7 +275,7 @@ public partial class Building
     class Blink : MonoBehaviour { Renderer r; void Update() { if (r == null) r = GetComponent<Renderer>(); if (r != null) r.enabled = Mathf.Repeat(Time.unscaledTime, 1.2f) < 0.7f; } }
 
     // While the player works, the attacker walks the corridor toward this room, door by door,
-    // and waits outside it, trying the handle now and then. It never attacks before "Run the attack".
+    // and waits outside it, trying the handle with a sound. It never attacks before "Lift the lockdown".
     public void Lurk(int room)
     {
         if (lurking != null) StopCoroutine(lurking);
@@ -250,27 +290,27 @@ public partial class Building
         var door = doors[room];
         var target = door.position + door.forward * 1.1f;
         float along = target.x - Entrance.x;
-        yield return new WaitForSeconds(2.5f);
-        // A pause at every door on the way, looking in.
-        int stops = Mathf.Max(0, Mathf.FloorToInt(along / Pitch));
+        yield return new WaitForSeconds(2f);
+        // A look in at a door or two on the way, then this room's door.
+        int stops = Mathf.Min(2, Mathf.Max(0, Mathf.FloorToInt(along / Pitch)));
         for (int i = 0; i < stops; i++)
         {
-            var at = new Vector3(Entrance.x + (i + 0.5f) * Pitch, 0f, 0f);
-            yield return WalkTo(at, 5.5f);
-            var side = doors[Mathf.Min(11, i * 2 + (room % 2))];
+            var at = new Vector3(Entrance.x + along * (i + 1f) / (stops + 1f), 0f, 0f);
+            yield return WalkTo(at, 3.5f);
+            var side = doors[Mathf.Clamp(Mathf.RoundToInt((at.x / Pitch)) * 2 + (room % 2 == 0 ? 1 : 0), 0, 11)];
             var face = side.position - attacker.position; face.y = 0f;
             attacker.rotation = Quaternion.LookRotation(face);
-            yield return new WaitForSeconds(2.2f);
+            yield return new WaitForSeconds(1.5f);
         }
-        yield return WalkTo(target, 5f);
+        yield return WalkTo(target, 3.5f);
+        // At the door: it stops there and tries the handle, with a sound, until the lockdown is lifted.
         while (true)
         {
             var face = door.position - attacker.position; face.y = 0f;
             attacker.rotation = Quaternion.LookRotation(face);
-            yield return new WaitForSeconds(Random.Range(4f, 7f));
-            if (body != null) body.Force(0.7f);
-            Sfx.Clack();
-            yield return new WaitForSeconds(1.2f);
+            if (body != null) body.Force(0.9f);
+            Sfx.Rattle();
+            yield return new WaitForSeconds(Random.Range(3.5f, 5.5f));
         }
     }
 
@@ -310,9 +350,9 @@ public partial class Building
         attacker.gameObject.SetActive(false);
     }
 
-    // Three steps numbered 1, 2, 3 in the corridor before the door; the medal hangs on a ribbon
-    // from the step it earned (gold on 1, silver on 2, bronze on 3) with its three stars on the
-    // ribbon, lit as earned. Built from the kit's steel and lens, no model.
+    // A single step in the corridor before the door; the medal hangs on a ribbon from its front
+    // edge (gold, silver or bronze) with its three stars over the disc, lit as earned. Built from
+    // the kit's steel and lens, no model.
     public Transform Podium(Transform door, int medal, Color colour)
     {
         if (podium != null) Destroy(podium.gameObject);
@@ -320,28 +360,16 @@ public partial class Building
         podium.SetParent(transform, false);
         podium.position = door.position + door.forward * 1.25f - door.right * 0.3f;
         podium.rotation = Quaternion.LookRotation(-door.forward); // its front toward the camera in the corridor
-        float[] heights = { 0.44f, 0.3f, 0.18f };
-        float[] widths = { 0.8f, 0.52f, 0.52f };
-        float[] xs = { 0f, -0.7f, 0.7f };
+        // One step: no second or third place in a game played alone.
         var face = new Color(0.12f, 0.16f, 0.28f);
-        for (int i = 0; i < 3; i++)
-        {
-            float w = widths[i], h = heights[i];
-            Box(podium, "Step", new Vector3(w, h, 0.7f), new Vector3(xs[i], h / 2f, 0f), Metal, face);
-            Box(podium, "Edge", new Vector3(w, 0.015f, 0.7f), new Vector3(xs[i], h + 0.008f, 0f), Metal, new Color(0.75f, 0.78f, 0.84f), false);
-            var num = new GameObject("Step").AddComponent<TextMeshPro>();
-            num.transform.SetParent(podium, false);
-            num.transform.localPosition = new Vector3(xs[i] + (i == 0 ? 0.26f : 0f), h * 0.5f, -0.36f);
-            num.font = Theme.Bold; num.fontSize = i == 0 ? 1.6f : 1.2f; num.color = new Color(0.8f, 0.84f, 0.9f); num.alignment = TextAlignmentOptions.Center;
-            num.rectTransform.sizeDelta = new Vector2(0.4f, 0.3f);
-            num.text = (i + 1).ToString();
-        }
+        const float StepH = 0.44f;
+        Box(podium, "Step", new Vector3(0.8f, StepH, 0.7f), new Vector3(0f, StepH / 2f, 0f), Metal, face);
+        Box(podium, "Edge", new Vector3(0.8f, 0.015f, 0.7f), new Vector3(0f, StepH + 0.008f, 0f), Metal, new Color(0.75f, 0.78f, 0.84f), false);
         if (medal > 0)
         {
-            int step = 3 - medal;
             var m = new GameObject("Medal").transform;
             m.SetParent(podium, false);
-            m.localPosition = new Vector3(xs[step] - (step == 0 ? 0.06f : 0f), heights[step] + 0.02f, -0.36f);
+            m.localPosition = new Vector3(0f, StepH + 0.02f, -0.36f);
             var ribbon = new Color(0.16f, 0.2f, 0.42f);
             float drop = 0.2f;
             foreach (float sx in new[] { -1f, 1f })
@@ -440,6 +468,23 @@ public partial class Building
         float d = Mathf.Min(Vector3.Distance(eye0, what.center), half / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * 1.45f + what.extents.z);
         cam.Inside(frame, what.center + dir * d, what.center, fov);
         cam.Snap();
+    }
+
+    // The card brought close: the camera faces it squarely, gliding there.
+    public void ShowFocus(RectTransform frame, Vector3 eye, Vector3 look, float fov)
+    {
+        this.frame = frame;
+        Mood(View.Room);
+        foreach (var l in stripLights) if (l != null) l.enabled = false;
+        cam.Inside(frame, eye, look, fov);
+    }
+
+    // Back to the room's own camera, gliding.
+    public void BackToRoom(RectTransform frame, int room)
+    {
+        this.frame = frame;
+        if (camPoints[room] == null) { ShowRoomFeed(frame, room); return; }
+        cam.Inside(frame, camPoints[room].position, lookAts[room].position, roomFov[room] > 0f ? roomFov[room] : 48f);
     }
 
     public void ShowRoomFeed(RectTransform frame, int room)

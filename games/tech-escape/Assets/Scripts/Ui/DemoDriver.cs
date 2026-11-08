@@ -94,11 +94,19 @@ public class DemoDriver : MonoBehaviour
         }
         if (RoomScreen.Current != null && RoomScreen.Current.Rig != null && RoomScreen.Current.Rig.Tokens.Count > 0)
         {
-            var first = RoomScreen.Current.Rig.Tokens.First(t => !t.loose && !t.sign);
+            var first = RoomScreen.Current.Rig.Tokens.First(t => !t.loose && !t.sign && !t.console);
             RoomScreen.Current.Rig.Select(first);
-            yield return new WaitForSeconds(0.7f);
+            yield return new WaitForSeconds(1.6f); // the camera glides to face the card
             yield return Shot($"{tag}-4-card-close");
+            var console = RoomScreen.Current.Rig.Tokens.FirstOrDefault(t => t.console);
+            if (console != null)
+            {
+                RoomScreen.Current.Rig.Select(console);
+                yield return new WaitForSeconds(1.6f);
+                yield return Shot($"{tag}-4b-console-close");
+            }
             RoomScreen.Current.Rig.Select(null);
+            yield return new WaitForSeconds(1.2f);
         }
         RoomScreen.Current?.AutoFix();
         yield return new WaitForSeconds(1.2f);

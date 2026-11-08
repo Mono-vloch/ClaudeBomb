@@ -29,40 +29,57 @@ public static class Script
         17 => "Rotate, invalidate, revoke. In order.",
         18 => "Put the chain in order.",
         19 => "Own and date every gap.",
-        _ => "Fix the room. Then run the attack.",
+        _ => "Fix the room. Then lift the lockdown.",
     };
 
     public const string Rehearsed = "Now fix it.";
+    public const string Lift = "Lift the lockdown";
 
-    // The night shift's transmission before each room: a header, the room, three short lines
-    // (the level's own words, cut to sentences, with one line of story) and the button.
+    // The alarm before each room: what is happening tonight and what the player is there to do,
+    // three short lines and the button. The level's motto is LUMA's line on the debrief, not here.
     public static (string header, string sub, List<string> lines, string button) Transmission(Room r)
     {
         var lines = r.number switch
         {
-            1 => new[] { "Welcome to the Harbor Permits Office.", "Lockdown: every door sealed until the attack is run.", "You cannot protect what you have not listed, and nobody protects what nobody owns." },
-            2 => new[] { "Six risks on the board, all rated Medium.", "Rate how likely, then how bad.", "Rate the risk, then pick the control for the risk." },
-            3 => new[] { "Six messages in a clerk's inbox.", "A phishing message is built to look right.", "The look is the attack. The ask, the address and the link are the evidence." },
-            4 => new[] { "Six accounts. One has a single proof.", "A stolen password is not enough when there are two.", "A password alone is one proof. The account that matters most needs two." },
-            5 => new[] { "Two scenes: a lost laptop, then files turning unreadable.", "The responder reads your form.", "Facts, not guesses." },
-            6 => new[] { "Access is granted for a job and almost never taken back.", "A contractor left in June.", "Only the access the job needs, reviewed on a date, signed by a name." },
-            7 => new[] { "Five weaknesses from a scan, sorted by score.", "The score says how bad, not whether anyone can reach it.", "Exposure says whether. The asset says how much it matters." },
-            8 => new[] { "The kiosk, the clerks and the database on one network.", "Whoever gets in anywhere can reach everything.", "Put a line wherever what you assume about the caller changes." },
-            9 => new[] { "A rule set that ends with \"allow everything\" is no rule set.", "Allow by name, block the rest, log the block." },
-            10 => new[] { "The register is encrypted. Its key sits beside it.", "A thief who takes the data takes the key too.", "Encrypted data with the key beside it is not encrypted." },
-            11 => new[] { "The cloud service arrived with its settings as they came.", "Each one is a door nobody decided to open.", "A default is a decision somebody else made for you." },
-            12 => new[] { "Tonight someone will sign in who should not.", "A log you never kept cannot be read later.", "You can only investigate what you logged." },
-            13 => new[] { "Ransomware on one machine. It is spreading.", "Wiping it destroys the only record of what happened.", "Cut it off, keep a copy, then clean." },
-            14 => new[] { "The backups sit on the same network, under the same keys.", "A backup the attacker can reach is not a backup." },
-            15 => new[] { "The whole facility, every room at once.", "Every risk needs a decision; every control, its evidence.", "A control nobody can show evidence for is a control nobody can be sure of." },
-            16 => new[] { "The facility is under attack for real.", "The first minutes decide the rest.", "Declare it, rate it, split the roles. Then act." },
-            17 => new[] { "The administrator's password is in the attacker's hands.", "Rotating alone leaves the attacker's open sessions open.", "Rotate, invalidate, revoke. In that order, all three." },
-            18 => new[] { "The attacker did not do one thing. They did a chain.", "A chain that ends at the click stops too early.", "The click is the trigger. The gaps are the causes." },
-            19 => new[] { "The review that names causes, never people.", "An action per gap: an owner, a date, a done-when.", "Then the exit opens." },
+            1 => new[] { "23:47. An intruder alarm at the Harbor Permits Office.", "Every door is sealed. Someone is in the corridor.", "Before you lift the lockdown, list what the Risk Room protects." },
+            2 => new[] { "The intruder is back, testing the doors one by one.", "The risk board rates every threat the same: Medium.", "Rate them for real before you lift the lockdown." },
+            3 => new[] { "A wave of emails hit a clerk's inbox at 23:40.", "Some of them were sent by the intruder.", "Sort the post before anyone opens it." },
+            4 => new[] { "A list of stolen passwords is on sale tonight.", "The intruder will try it on every account in the vault.", "Lock the accounts that matter most." },
+            5 => new[] { "Two calls came in at once.", "A laptop lost on the train, and files turning unreadable on the shared drive.", "The responder needs your report now." },
+            6 => new[] { "Badges at the gate still open doors for people long gone.", "A contractor left in June. Nobody took anything back.", "Check every account before the gate opens." },
+            7 => new[] { "A scan found five holes in the office's systems.", "The intruder only needs one it can reach.", "Two get patched before the lockdown lifts. Pick them." },
+            8 => new[] { "The intruder is in the lobby, at the public kiosk.", "From there, one flat network runs all the way to the database.", "Draw the lines before the lockdown lifts." },
+            9 => new[] { "Alarms on the firewall: someone is knocking on every port.", "Tonight's rules let the public side reach the admin portal.", "Close the doors that should never be open." },
+            10 => new[] { "The intruder wants a copy of the register's disk.", "The disk is encrypted. Its key sits right beside it.", "Move the keys before the lockdown lifts." },
+            11 => new[] { "The office's cloud went live this week, settings as they came.", "The intruder knows the defaults better than anyone here.", "Change them before the lockdown lifts." },
+            12 => new[] { "Tonight someone will sign in as an administrator, from abroad.", "Four thousand failed logins already fill the alert screen.", "Decide what gets logged, and what wakes you." },
+            13 => new[] { "Ransomware on a clerk's machine. It is spreading.", "Wipe it now and the trail of how it got in is gone.", "Choose the order of every step." },
+            14 => new[] { "The intruder carries ransomware and the administrator's keys.", "The backups sit on the same network, behind the same keys.", "Get them out of reach." },
+            15 => new[] { "Midnight: the intruder will try every room at once.", "Every gap you left is a door it can walk through.", "Show the evidence for every control." },
+            16 => new[] { "02:46. The register was copied to an address abroad.", "Omar, Lina and Dana are on the line, all talking at once.", "Declare it, and give each a role." },
+            17 => new[] { "The intruder holds the administrator's password and an open session.", "It is reading the register right now.", "Cut its access, in the right order." },
+            18 => new[] { "The intruder walked from a clerk's inbox to the backup vault.", "The exit stays locked until the chain is told, link by link.", "Put the links in order." },
+            19 => new[] { "The night is over. The panel wants the review.", "Four gaps, four actions, and not one name blamed.", "Then the exit opens." },
             _ => new[] { r.kicker },
         };
-        return ("Night shift", r.room, lines.ToList(), "Enter the " + r.room);
+        return ("Intruder alarm", r.room, lines.ToList(), "Enter the " + r.room);
     }
+
+    // The room's one-off decisions, as a card of their own: its name and its line.
+    public static string ConsoleName(Room r) => r.number switch
+    {
+        4 => "Sign-in rules", 5 => "The summary", 8 => "Crossings", 12 => "The sign-in", 16 => "Declaration", 19 => "Trigger and cause", _ => "The room",
+    };
+    public static string ConsoleLine(Room r) => r.number switch
+    {
+        4 => "How many guesses an account allows, and whether known stolen passwords are refused.",
+        5 => "The ransomware signs, and the three priority actions for the service.",
+        8 => "What may cross from one zone to the next.",
+        12 => "The replayed sign-in: an event, or an incident?",
+        16 => "How bad it is, and the fact that says so.",
+        19 => "What set it off, and what let it happen.",
+        _ => "",
+    };
 
     // The short name on a token's plate, at rest. The full name and the detail show on the card
     // brought close. Where the number is the lesson (the patch scores) it stays on the plate.
@@ -153,6 +170,16 @@ public static class Script
         if (colon > 0 && colon <= 24) return o.Substring(0, colon);
         var words = o.Split(' ');
         return words.Length <= 4 ? o : string.Join(" ", words, 0, 4) + "…";
+    }
+
+    // The value on a row of the card brought close: the option in full when it fits a line,
+    // its short form otherwise.
+    public static string Long(Room r, string itemKey, Field f, int index)
+    {
+        if (index < 0 || index >= f.options.Length) return "?";
+        if (PerItem.TryGetValue((r.number, itemKey, index), out var p) && (f.key == "value" || f.key == "done")) return p;
+        string o = f.options[index].Replace("\"", "");
+        return o.Length <= 34 ? o : Option(r, itemKey, f, index);
     }
 
     // A choice shown red rather than teal: the one that closes a door, or marks a danger.

@@ -5,31 +5,33 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-// The room's rows as things on the room's prop (the game-feel pass): every item is a token
-// (a card on the risk board, a lever module in the firewall rack, an envelope in the sorter, a
-// badge at the turnstile, a ticket on the bench) with its short name on a dark plate; every
-// decision is a switch on its token (a lever for two choices, a dial for more) with a lamp that
-// is amber while undecided and teal once set (red for the choice that closes or flags). Tap a
-// token to bring it close: its full name and its line show, and each switch shows its name and
-// its value; tap a switch to turn it. Rows that must be ordered are a rack: drag a module up or
-// down. The room's one-off decisions sit on a small console beside the grid, the record's
-// signature pad under it, and what is not on the list yet lies about the room to be found and
-// pinned. Everything writes the same RoomState the drawer's chips wrote, so the checks and the
-// report read the same values. Made from the kit's own materials; no model was added.
+// The room's rows as things on the room's prop (the game-feel pass): every item is a card on
+// the prop (a card on the risk board, a module in the firewall's rack, an envelope in the sorter,
+// a badge at the turnstile, a ticket on the bench) with its short name on a dark plate and a knob
+// for each decision. Every knob shows its value on its face, and a lamp beside it is amber while
+// the decision is open, teal once made, red for the choice that closes or flags. The room's
+// one-off decisions are a card of their own in the same grid. Tap a card to bring it close: a
+// flat card turns to face the camera, the full name and line at its top and one row per decision
+// ("Owner: Omar"); tap a row to turn it. Rows that must be ordered are a rack: drag a module up or
+// down. A record that must be signed has a pad beside the grid; what is not on the list yet lies
+// about the room, to be found and pinned. Everything writes the same RoomState the drawer's chips
+// wrote, so the checks and the report read the same values. Made from the kit's own materials.
 public class RoomRig : MonoBehaviour
 {
     public class Switch
     {
         public Field field; public string itemKey;
-        public Transform root, bar, namePlate, valuePlate; public Renderer lamp;
-        public bool dial;
+        public Transform root, notch, rowSlab; public Renderer lamp;
+        public TextMeshPro face;   // the value, on the knob's face
+        public TextMeshPro row;    // "Owner: Omar", on a row of the card brought close
     }
 
     public class Token
     {
         public Item item; public string key;
-        public Transform root, namePlate, detailPlate, unpinPlate; public Transform slab;
+        public Transform root, namePlate, slab;
         public readonly List<Switch> switches = new List<Switch>();
+        public List<Field> fields = new List<Field>();
         public Vector3 slot, homeLoose; public Quaternion slotRot;
         public bool loose, pinned, selected, pulsing, console, sign, dragging;
         public int order;
@@ -39,31 +41,30 @@ public class RoomRig : MonoBehaviour
     Building world; Room room; RoomState st; Action changed;
     Transform rig, roomRoot; Camera cam;
     readonly List<Token> tokens = new List<Token>();
-    readonly List<Switch> once = new List<Switch>();
+    readonly List<Switch> rows = new List<Switch>(); // the card brought close
     Token signPad, selected, held;
-    Transform consoleRoot;
-    Transform detail;
+    Transform focus, focusSlab, unpinRow;
+    Vector3 focusCentre; float focusD = 1f, focusFov = 52f;
     Bounds bounds;
     float zFace, gridLeft, gridRight, gridTop, gridBottom, cx, scale = 1f, cellW, cellH, gap, floorY;
     int cols; bool rack;
-    Vector2 downAt; float downTime; bool pointerDown;
+    Vector2 downAt; bool pointerDown;
     public bool Interactive = true;
-    public event Action<Token> Selected; // a token brought close (null: back to the room)
+    public event Action<Token> Selected; // a card brought close (null: back to the room)
     public Bounds Bounds => bounds;
-    public float? ConsoleX { get; private set; } // where the console or the pad stands, in the room's space; null when there is none
+    public float? ConsoleX { get; private set; }      // where the signature pad stands, in the room's space; null without one
     public float GridTop => gridTop;
     public float GridLeft => gridLeft;
     public float GridRight => gridRight;
-    public bool ConsoleAbove { get; private set; }
-    public float ConsoleTop { get; private set; }     // the console's (or the pad's) top edge, in the room's space
-    public Rect? ConsoleRect { get; private set; }    // the console, its plates and the pad, in the room's x and y
+    public float ConsoleTop { get; private set; }
+    public Rect? ConsoleRect { get; private set; }    // the pad, in the room's x and y
     public Rect? ConsoleView { get; private set; }    // the same, as the room camera sees it (degrees off its axis)
-    public Rect GridView { get; private set; }        // the grid of tokens, as the room camera sees it
+    public Rect GridView { get; private set; }        // the grid of cards, as the room camera sees it
     public readonly List<Rect> Occluders = new List<Rect>(); // the props between the camera and the rig, as the camera sees them
     public readonly List<Rect> WallOccluders = new List<Rect>(); // the same, for something on the back wall (clipped at the wall)
     public IReadOnlyList<Token> Tokens => tokens;
     static readonly Color Slate = new Color(0.16f, 0.2f, 0.32f), Paper = new Color(0.93f, 0.92f, 0.86f), Dim = new Color(0.62f, 0.66f, 0.72f);
-    const float Gap = 0.06f, RackGap = 0.02f;
+    const float Gap = 0.06f, RackGap = 0.02f, Pitch = 0.1f;
 
     public static RoomRig Build(Building world, int index, Room room, RoomState st, Action changed)
     {
@@ -87,7 +88,6 @@ public class RoomRig : MonoBehaviour
         zFace = hz1 + 0.16f;
         cx = (hx0 + hx1) / 2f;
         floorY = hy0; // the floor, or the desk top the prop stands on
-        maxValue = 0.5f;
         rack = room.ordered;
         FindOccluders(world.HeroOf(index));
         AddHeroToWall(world.HeroOf(index));
@@ -99,176 +99,139 @@ public class RoomRig : MonoBehaviour
             scale = Mathf.Clamp(visible / 2.2f, 0.5f, 1f);
         }
         var perRow = room.fields.Where(f => !f.once).ToList();
-        var items = room.items.Where(i => !i.hidden).ToList();
+        var onceFields = room.fields.Where(f => f.once).ToList();
         var order = st.order.Where(k => room.items.Any(i => i.key == k)).ToList();
         foreach (var a in st.added) if (!order.Contains(a)) order.Add(a);
-        int n = order.Count;
-        float w = rack ? 1.16f : Mathf.Max(0.34f, 0.1f * perRow.Count + 0.1f), h = rack ? 0.15f : 0.22f;
+        // The room's one-off decisions are a card of their own, last in the grid.
+        bool consoleCard = onceFields.Count > 0;
+        int n = order.Count + (consoleCard ? 1 : 0);
+        int knobs = Mathf.Max(perRow.Count, consoleCard ? onceFields.Count : 0);
+        float w = rack ? 1.16f : Mathf.Max(0.34f, Pitch * knobs + 0.1f), h = rack ? 0.15f : 0.22f;
         cellW = w * scale; cellH = h * scale; gap = (rack ? RackGap : Gap) * scale;
         cols = rack ? 1 : Mathf.Clamp(Mathf.FloorToInt((1.62f * scale + gap) / (cellW + gap)), 1, 3);
         if (!rack && n <= 4 && cols > 2) cols = 2;
-        // A console or a signature pad beside the grid needs the room: two columns at most.
-        if (!rack && cols > 2 && (room.fields.Any(f => f.once) || room.signable)) cols = 2;
-        int rows = Mathf.CeilToInt(n / (float)cols);
-        float gridW = cols * cellW + (cols - 1) * gap, gridH = rows * cellH + (rows - 1) * gap;
+        if (!rack && cols > 2 && room.signable) cols = 2; // the pad beside the grid needs the room
+        int rowsN = Mathf.CeilToInt(n / (float)cols);
+        float gridW = cols * cellW + (cols - 1) * gap, gridH = rowsN * cellH + (rowsN - 1) * gap;
         float yc = Mathf.Clamp((hy0 + hy1) / 2f + (rack ? 0.1f : 0.05f) * scale, 0.35f + gridH / 2f, 2.0f - gridH / 2f);
         gridTop = yc + gridH / 2f; gridBottom = yc - gridH / 2f;
         gridLeft = cx - gridW / 2f; gridRight = cx + gridW / 2f;
         // The grid's top row inside the feed: slide down while the floor allows.
         for (int guard = 0; guard < 12 && !InFrame(new Vector3(cx, gridTop + 0.04f, zFace), 3f) && gridBottom - 0.05f > 0.15f; guard++)
         { yc -= 0.05f; gridTop = yc + gridH / 2f; gridBottom = yc - gridH / 2f; }
-        for (int k = 0; k < n; k++)
+        // The Operations Center's wall of screens: the grid slides sideways, as little as it can
+        // and staying in the feed, so that one screen stays clear for the corridor feed.
+        var heroT = world.HeroOf(index);
+        var screens = heroT != null ? heroT.GetComponentsInChildren<Renderer>().Where(x => x.name == "Screen").Select(x => x.bounds).ToList() : new List<Bounds>();
+        if (!rack && screens.Count > 0)
+        {
+            Rect ScreenRect(Bounds b)
+            {
+                var lo = rig.InverseTransformPoint(b.min); var hi = rig.InverseTransformPoint(b.max);
+                return ViewRect(Mathf.Min(lo.x, hi.x), Mathf.Min(lo.y, hi.y), Mathf.Max(lo.x, hi.x), Mathf.Max(lo.y, hi.y), Mathf.Max(lo.z, hi.z));
+            }
+            var shown = screens.Where(b => InFrame(rig.InverseTransformPoint(b.center), 3f)).Select(ScreenRect).ToList();
+            bool Clear(float c) { var g = ViewRect(c - gridW / 2f - 0.05f, gridBottom - 0.05f, c + gridW / 2f + 0.05f, gridTop + 0.12f * scale, zFace); return shown.Any(v => !v.Overlaps(g)); }
+            bool Fits(float c) => InFrame(new Vector3(c - gridW / 2f, gridTop + 0.04f, zFace), 3f) && InFrame(new Vector3(c + gridW / 2f, gridTop + 0.04f, zFace), 3f)
+                                  && InFrame(new Vector3(c - gridW / 2f, gridBottom, zFace), 3f) && InFrame(new Vector3(c + gridW / 2f, gridBottom, zFace), 3f);
+            bool moved = false;
+            for (float d = 0f; d <= 0.8f && !moved; d += 0.05f)
+                foreach (float c in d == 0f ? new[] { cx } : new[] { cx - d, cx + d })
+                    if (Fits(c) && Clear(c)) { if (DemoDriver.Wanted && d > 0f) Debug.Log($"[Grid] {room.id}: slid {c - cx:+0.00;-0.00} m to keep a screen clear"); cx = c; moved = true; break; }
+            if (!moved && DemoDriver.Wanted) Debug.Log($"[Grid] {room.id}: no slide keeps a screen clear");
+            gridLeft = cx - gridW / 2f; gridRight = cx + gridW / 2f;
+        }
+        for (int k = 0; k < order.Count; k++)
         {
             var item = room.items.First(i => i.key == order[k]);
-            var t = MakeToken(item, w, h, perRow);
+            var t = MakeToken(item, w, h, perRow, false);
             t.order = k;
             t.pinned = item.hidden;
-            t.root.localScale = Vector3.one * scale;
-            t.root.localPosition = Slot(k); t.root.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            t.slot = t.root.localPosition; t.slotRot = t.root.localRotation;
-            tokens.Add(t);
+            Seat(t, k);
+        }
+        if (consoleCard)
+        {
+            var t = MakeToken(new Item("room", Script.ConsoleName(room), Script.ConsoleLine(room)), w, h, onceFields, true);
+            t.order = order.Count;
+            Seat(t, order.Count);
         }
         if (rack && tokens.Count > 0)
         {
             // One text size for every module (the smallest any name needed), and a dark panel
             // behind them: the modules are mounted in a rack, not floating.
-            float font = tokens.Where(x => !x.loose && !x.sign).Min(x => x.namePlate.GetComponentInChildren<TextMeshPro>().fontSize);
-            foreach (var x in tokens.Where(x => !x.loose && !x.sign))
+            float font = tokens.Min(x => x.namePlate.GetComponentInChildren<TextMeshPro>().fontSize);
+            foreach (var x in tokens)
             {
                 var tm = x.namePlate.GetComponentInChildren<TextMeshPro>(); tm.fontSize = font; Building.FitPlate(x.namePlate);
                 x.namePlate.localPosition = new Vector3(-x.w / 2f + 0.09f + x.namePlate.Find("Slab").localScale.x / 2f, 0f, -0.024f);
             }
-            // Behind the modules (the camera looks toward -z): the panel at -z, the rails flush.
-            var backing = Building.Box(rig, "Rack panel", new Vector3(gridRight - gridLeft + 0.08f * scale, gridTop - gridBottom + 0.08f * scale, 0.03f), new Vector3(cx, (gridTop + gridBottom) / 2f, zFace - 0.03f), Building.Trim, new Color(0.08f, 0.09f, 0.12f));
+            Building.Box(rig, "Rack panel", new Vector3(gridRight - gridLeft + 0.08f * scale, gridTop - gridBottom + 0.08f * scale, 0.03f), new Vector3(cx, (gridTop + gridBottom) / 2f, zFace - 0.03f), Building.Trim, new Color(0.08f, 0.09f, 0.12f));
             foreach (float side in new[] { -1f, 1f })
                 Building.Box(rig, "Rail", new Vector3(0.03f * scale, gridTop - gridBottom + 0.1f * scale, 0.04f), new Vector3(cx + side * (gridRight - gridLeft + 0.08f * scale) / 2f, (gridTop + gridBottom) / 2f, zFace - 0.015f), Building.Metal, new Color(0.35f, 0.38f, 0.44f));
         }
-        // The room's one-off decisions on a console beside the grid, the signature pad under it.
-        // Where: the first spot, in this order, whose four corners are in the feed, inside the
-        // room's walls and not behind a prop nearer the camera (the bin, the desk, the rack):
-        // beside the grid on the screen's right, then its left, each at rising heights; under the
-        // grid; beside it again with the values shortened; over the grid (in the lamp's pool) last.
-        var onceFields = room.fields.Where(f => f.once).ToList();
-        float consoleX = gridLeft - 0.3f * scale, consoleH = (onceFields.Count * 0.17f + 0.06f) * scale;
-        float cy = gridTop - 0.08f * scale;
-        bool under = false, above = false;
-        float cs = scale; // the console's own scale: it shrinks when nothing fits at full size
-        if (onceFields.Count > 0 || room.signable)
-        {
-            bool padOnly = onceFields.Count == 0;
-            bool found = false; float topY = gridTop;
-            foreach (float k in new[] { 1f, 0.8f, 0.65f })
-            {
-                cs = scale * k;
-                consoleH = (onceFields.Count * 0.17f + 0.06f) * cs;
-                // A console's name plate runs to the screen's left of its switches, its value to the
-                // right (the room's larger x is the screen's left).
-                float nameSpan = (padOnly ? 0.2f : 0.4f) * cs, valueSpan = (padOnly ? 0.24f : 0.62f) * cs, gapX = 0.05f * scale;
-                float bodyH = padOnly ? 0f : consoleH;
-                float totalH = bodyH + (room.signable ? (padOnly ? 0.12f : 0.24f) * cs : 0f); // the console, the gap, the pad
-                bool FitsAt(float x, float top)
-                {
-                    float bottom = top - totalH;
-                    if (bottom < floorY + 0.05f || top > 2.35f) return false;
-                    if (x - valueSpan < -1.75f || x + nameSpan > 1.75f) return false;
-                    foreach (var (px, py) in new[] { (x - valueSpan, top), (x + nameSpan, top), (x - valueSpan, bottom), (x + nameSpan, bottom) })
-                        if (!InFrame(new Vector3(px, py, zFace), 3f)) return false;
-                    return !Hidden(ViewRect(x - valueSpan, bottom, x + nameSpan, top, zFace));
-                }
-                float Right() => gridLeft - nameSpan - gapX;
-                float Left() => gridRight + valueSpan + gapX;
-                var lifts = new[] { 0f, 0.15f, 0.3f, 0.45f, 0.6f, -0.15f };
-                void Try(float x, float top, bool u = false, bool a = false)
-                {
-                    if (found || !FitsAt(x, top)) return;
-                    found = true; consoleX = x; topY = top; under = u; above = a;
-                }
-                foreach (var l in lifts) Try(Right(), gridTop + l * scale);
-                foreach (var l in lifts) Try(Left(), gridTop + l * scale);
-                Try(cx + (valueSpan - nameSpan) / 2f, gridBottom - 0.1f * scale, u: true);
-                if (!found)
-                {
-                    float fullValue = valueSpan;
-                    valueSpan = fullValue * 0.5f;
-                    foreach (var l in lifts) Try(Right(), gridTop + l * scale);
-                    foreach (var l in lifts) Try(Left(), gridTop + l * scale);
-                    if (found) maxValue = 0.26f;
-                    valueSpan = fullValue;
-                }
-                Try(cx + (valueSpan - nameSpan) / 2f, gridTop + 0.1f * scale + totalH, u: true, a: true);
-                if (found) break;
-            }
-            if (!found) { cs = scale; consoleH = (onceFields.Count * 0.17f + 0.06f) * cs; consoleX = gridLeft - (padOnly ? 0.2f : 0.4f) * cs - 0.05f * scale; topY = gridTop; }
-            // The console's centre sits under its top; a lone pad's centre likewise.
-            cy = padOnly ? topY : topY - 0.115f * cs;
-            ConsoleX = under ? (float?)null : consoleX;
-            ConsoleAbove = above;
-            ConsoleTop = topY;
-            if (DemoDriver.Wanted) Debug.Log($"[Console] {room.id}: {(found ? "placed" : "fallback")} at {cs / scale:P0} x {consoleX:0.00} top {topY:0.00} under {under} above {above}");
-        }
-        if (onceFields.Count > 0)
-        {
-            var console = new GameObject("Console").transform;
-            consoleRoot = console;
-            console.SetParent(rig, false);
-            console.localPosition = new Vector3(consoleX, cy - (onceFields.Count - 1) * 0.085f * cs, zFace);
-            console.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            console.localScale = Vector3.one * cs;
-            Building.Box(console, "Panel", new Vector3(0.42f, onceFields.Count * 0.17f + 0.06f, 0.025f), Vector3.zero, Building.Metal, Slate);
-            for (int i = 0; i < onceFields.Count; i++)
-            {
-                var sw = MakeSwitch(console, onceFields[i], "room", new Vector3(0.1f, (onceFields.Count - 1) * 0.085f - i * 0.17f, -0.02f), true);
-                sw.namePlate.gameObject.SetActive(true);
-                var fit = sw.namePlate.GetComponent<Building.PlateFit>(); fit.minW = 0.1f; Building.FitPlate(sw.namePlate);
-                sw.namePlate.localPosition = new Vector3(-0.06f - sw.namePlate.Find("Slab").localScale.x / 2f, 0f, -0.03f);
-                once.Add(sw);
-            }
-            cy = console.localPosition.y - consoleH / 2f - 0.12f * cs;
-        }
-
-        if (room.signable)
-        {
-            signPad = new Token { key = "sign", sign = true, w = 0.34f, h = 0.12f };
-            signPad.root = new GameObject("Sign pad").transform;
-            signPad.root.SetParent(rig, false);
-            signPad.root.localPosition = new Vector3(consoleX, Mathf.Max(floorY + 0.06f * cs + 0.02f, cy - 0.06f * cs), zFace);
-            signPad.root.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            signPad.root.localScale = Vector3.one * cs;
-            signPad.slab = Building.Box(signPad.root, "Pad", new Vector3(0.34f, 0.12f, 0.02f), Vector3.zero, Building.Metal, Slate).transform;
-            signPad.namePlate = Building.DarkPlate(signPad.root, "Sign", 0.5f, out _, 0.2f);
-            signPad.namePlate.localPosition = new Vector3(0.03f, 0f, -0.025f);
-            var sw = new Switch { itemKey = "sign" };
-            sw.root = new GameObject("Lamp").transform; sw.root.SetParent(signPad.root, false); sw.root.localPosition = new Vector3(-0.12f, 0f, -0.015f);
-            sw.lamp = Building.Lamp(sw.root, Vector3.zero, 0.03f, Theme.Amber);
-            signPad.switches.Add(sw);
-            signPad.slot = signPad.root.localPosition; signPad.slotRot = signPad.root.localRotation;
-            tokens.Add(signPad);
-        }
-        if (onceFields.Count > 0 || room.signable)
-        {
-            float top = consoleRoot != null ? consoleRoot.localPosition.y + consoleH / 2f : signPad.root.localPosition.y + 0.06f * cs;
-            float bottom = signPad != null ? signPad.root.localPosition.y - 0.06f * cs : consoleRoot.localPosition.y - consoleH / 2f;
-            float vs = (consoleRoot == null ? 0.24f : 0.62f) * cs, ns = (consoleRoot == null ? 0.2f : 0.4f) * cs;
-            ConsoleRect = Rect.MinMaxRect(consoleX - vs, bottom, consoleX + ns, top);
-            ConsoleView = ViewRect(consoleX - vs, bottom, consoleX + ns, top, zFace);
-            ConsoleTop = top;
-        }
+        if (room.signable) PlacePad();
         GridView = ViewRect(gridLeft - 0.05f, gridBottom - 0.05f, gridRight + 0.05f, gridTop + 0.12f * scale, zFace);
         // What is not on the list yet, about the room: a folder on a crate, a printer by the door, a sheet on the wall.
         int loose = 0;
         foreach (var hidden in room.items.Where(i => i.hidden && !st.added.Contains(i.key)))
-        {
-            var t = MakeLoose(hidden, loose++, hx0, hx1, hz1);
-            tokens.Add(t);
-        }
-        // What the close camera frames: the grid, the console and the pad.
-        var corners = new List<Vector3> { rig.TransformPoint(new Vector3(gridLeft, gridBottom, zFace)), rig.TransformPoint(new Vector3(gridRight, gridTop, zFace)) };
-        if (onceFields.Count > 0 || room.signable) corners.Add(rig.TransformPoint(new Vector3(consoleX + 0.25f * scale, Mathf.Max(0.3f, cy - 0.1f * scale), zFace)));
-        if (onceFields.Count > 0 || room.signable) corners.Add(rig.TransformPoint(new Vector3(consoleX - 0.25f * scale, gridTop, zFace)));
-        bounds = new Bounds(corners[0], Vector3.zero);
-        foreach (var c in corners) bounds.Encapsulate(c);
+            tokens.Add(MakeLoose(hidden, loose++, hx0, hx1, hz1));
+        // What the close camera frames: the grid and the pad.
+        bounds = new Bounds(rig.TransformPoint(new Vector3(cx, (gridTop + gridBottom) / 2f, zFace)), Vector3.zero);
+        bounds.Encapsulate(rig.TransformPoint(new Vector3(gridLeft, gridBottom, zFace)));
+        bounds.Encapsulate(rig.TransformPoint(new Vector3(gridRight, gridTop, zFace)));
+        if (ConsoleRect.HasValue) { var r = ConsoleRect.Value; bounds.Encapsulate(rig.TransformPoint(new Vector3(r.xMin, r.yMin, zFace))); bounds.Encapsulate(rig.TransformPoint(new Vector3(r.xMax, r.yMax, zFace))); }
         bounds.Expand(new Vector3(0.3f, 0.3f, 0.2f));
         Refresh();
+    }
+
+    void Seat(Token t, int k)
+    {
+        t.root.localScale = Vector3.one * scale;
+        t.root.localPosition = Slot(k); t.root.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        t.slot = t.root.localPosition; t.slotRot = t.root.localRotation;
+        tokens.Add(t);
+    }
+
+    // The signature pad beside the grid: the first spot, in this order, whose corners are in the
+    // feed, inside the room's walls and not behind a prop nearer the camera (the bin, the desk, the
+    // rack): beside the grid on the screen's right, then its left, at rising heights; then under it.
+    void PlacePad()
+    {
+        float ps = scale, nameSpan = 0.2f * ps, valueSpan = 0.24f * ps, gapX = 0.05f * scale, padH = 0.12f * ps;
+        bool FitsAt(float x, float top)
+        {
+            float bottom = top - padH;
+            if (bottom < floorY + 0.05f || top > 2.35f) return false;
+            if (x - valueSpan < -1.75f || x + nameSpan > 1.75f) return false;
+            foreach (var (px, py) in new[] { (x - valueSpan, top), (x + nameSpan, top), (x - valueSpan, bottom), (x + nameSpan, bottom) })
+                if (!InFrame(new Vector3(px, py, zFace), 3f)) return false;
+            return !Hidden(ViewRect(x - valueSpan, bottom, x + nameSpan, top, zFace));
+        }
+        float right = gridLeft - nameSpan - gapX, left = gridRight + valueSpan + gapX;
+        float x0 = right, top0 = gridTop; bool found = false;
+        foreach (var (x, l) in new[] { 0f, 0.15f, 0.3f, -0.15f, -0.3f }.Select(l => (right, l)).Concat(new[] { 0f, 0.15f, 0.3f, -0.15f }.Select(l => (left, l))))
+            if (!found && FitsAt(x, gridTop + l * scale)) { found = true; x0 = x; top0 = gridTop + l * scale; }
+        if (!found && FitsAt(cx, gridBottom - 0.08f * scale)) { found = true; x0 = cx; top0 = gridBottom - 0.08f * scale; }
+        signPad = new Token { key = "sign", sign = true, w = 0.34f, h = 0.12f };
+        signPad.root = new GameObject("Sign pad").transform;
+        signPad.root.SetParent(rig, false);
+        signPad.root.localPosition = new Vector3(x0, top0 - padH / 2f, zFace);
+        signPad.root.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        signPad.root.localScale = Vector3.one * ps;
+        signPad.slab = Building.Box(signPad.root, "Pad", new Vector3(0.34f, 0.12f, 0.02f), Vector3.zero, Building.Metal, Slate).transform;
+        signPad.namePlate = Building.DarkPlate(signPad.root, "Sign", 0.5f, out _, 0.2f);
+        signPad.namePlate.localPosition = new Vector3(0.03f, 0f, -0.025f);
+        var sw = new Switch { itemKey = "sign" };
+        sw.root = new GameObject("Lamp").transform; sw.root.SetParent(signPad.root, false); sw.root.localPosition = new Vector3(-0.12f, 0f, -0.015f);
+        sw.lamp = Building.Lamp(sw.root, Vector3.zero, 0.03f, Theme.Amber);
+        signPad.switches.Add(sw);
+        signPad.slot = signPad.root.localPosition; signPad.slotRot = signPad.root.localRotation;
+        tokens.Add(signPad);
+        ConsoleX = x0;
+        ConsoleRect = Rect.MinMaxRect(x0 - valueSpan, top0 - padH, x0 + nameSpan, top0);
+        ConsoleView = ViewRect(x0 - valueSpan, top0 - padH, x0 + nameSpan, top0, zFace);
+        ConsoleTop = top0;
+        if (DemoDriver.Wanted) Debug.Log($"[Pad] {room.id}: {(found ? "placed" : "fallback")} x {x0:0.00} top {top0:0.00}");
     }
 
     // Whether a local point lies inside the feed, with a margin in degrees, seen from the
@@ -373,27 +336,6 @@ public class RoomRig : MonoBehaviour
     public bool Hidden(Rect view) => Occluders.Any(o => o.Overlaps(view));
     public bool HiddenOnWall(Rect view) => WallOccluders.Any(o => o.Overlaps(view));
 
-    // The horizontal angle, in degrees, of a local point off the room camera's axis.
-    float Angle(Vector3 local)
-    {
-        if (!world.RoomCamera(Facility.RoomIndex(room.room), out var eye, out var look, out _)) return 0f;
-        var fwd = (look - eye).normalized; fwd.y = 0f; fwd.Normalize();
-        var d = rig.TransformPoint(local) - eye; d.y = 0f;
-        return Vector3.SignedAngle(fwd, d, Vector3.up);
-    }
-
-    // Whether the bin by the camera (0.75 m tall, at z -1.2) stands in the line of sight to a local point.
-    bool Occluded(Vector3 local, float binX)
-    {
-        if (!world.RoomCamera(Facility.RoomIndex(room.room), out var eye, out _, out _)) return false;
-        var e = rig.InverseTransformPoint(eye);
-        var p = local;
-        float dz = p.z - e.z; if (Mathf.Abs(dz) < 0.01f) return false;
-        float k = (-1.2f - e.z) / dz; if (k < 0f || k > 1f) return false;
-        var at = Vector3.Lerp(e, p, k);
-        return Mathf.Abs(at.x - binX) < 0.42f && at.y < 0.95f;
-    }
-
     Vector3 Slot(int k)
     {
         // The camera inside looks down -Z, so the screen's left is the larger local x.
@@ -401,95 +343,95 @@ public class RoomRig : MonoBehaviour
         return new Vector3(gridRight - cellW / 2f - col * (cellW + gap), gridTop - cellH / 2f - row * (cellH + gap), zFace);
     }
 
-    Token MakeToken(Item item, float w, float h, List<Field> perRow)
+    Token MakeToken(Item item, float w, float h, List<Field> fields, bool console)
     {
-        var t = new Token { item = item, key = item.key, w = w, h = h };
+        var t = new Token { item = item, key = item.key, w = w, h = h, fields = fields, console = console };
         t.root = new GameObject("Token " + item.key).transform;
         t.root.SetParent(rig, false);
-        bool paper = room.number == 3 || room.number == 5; // envelopes and report forms
-        t.slab = Building.Box(t.root, "Slab", new Vector3(w, h, 0.02f), Vector3.zero, paper ? Building.Enamel : Building.Metal, paper ? Paper : Slate).transform;
+        bool paper = !console && (room.number == 3 || room.number == 5); // envelopes and report forms
+        t.slab = Building.Box(t.root, "Slab", new Vector3(w, h, 0.02f), Vector3.zero, paper ? Building.Enamel : Building.Metal, paper ? Paper : console ? new Color(0.12f, 0.22f, 0.3f) : Slate).transform;
         if (rack)
         {
-            // A module in the rack: a grip at the left end, the name along it, the switches at the right end.
+            // A module in the rack: a grip at the left end, the name along it, the knobs at the right end.
             for (int g = 0; g < 2; g++) Building.Box(t.root, "Grip", new Vector3(0.012f, h * 0.7f, 0.01f), new Vector3(-w / 2f + 0.03f + g * 0.02f, 0f, -0.015f), Building.Trim, null, false);
             t.namePlate = Building.DarkPlate(t.root, Script.ItemName(room, item), 0.46f, out var nameText, 0.3f);
-            float room_ = w - 0.14f - perRow.Count * 0.13f;
+            float room_ = w - 0.14f - fields.Count * 0.11f;
             for (int guard = 0; guard < 6 && t.namePlate.Find("Slab").localScale.x > room_; guard++) { nameText.fontSize *= 0.9f; Building.FitPlate(t.namePlate); }
             t.namePlate.localPosition = new Vector3(-w / 2f + 0.09f + t.namePlate.Find("Slab").localScale.x / 2f, 0f, -0.024f);
-            float sx = w / 2f - 0.07f;
-            for (int k = perRow.Count - 1; k >= 0; k--) { t.switches.Add(MakeSwitch(t.root, perRow[k], item.key, new Vector3(sx, 0f, -0.02f), false, k % 2 == 1)); sx -= 0.13f; }
+            float sx = w / 2f - 0.065f;
+            for (int k = fields.Count - 1; k >= 0; k--) { t.switches.Add(Knob(t.root, fields[k], item.key, new Vector3(sx, 0f, -0.02f))); sx -= 0.11f; }
             t.switches.Reverse();
         }
         else
         {
-            t.namePlate = Building.DarkPlate(t.root, Script.ItemName(room, item), 0.44f, out _, 0.2f);
+            t.namePlate = Building.DarkPlate(t.root, console ? item.name : Script.ItemName(room, item), 0.44f, out var nameText, 0.2f);
+            for (int guard = 0; guard < 6 && t.namePlate.Find("Slab").localScale.x > w - 0.04f; guard++) { nameText.fontSize *= 0.9f; Building.FitPlate(t.namePlate); }
             t.namePlate.localPosition = new Vector3(0f, h / 2f - 0.05f, -0.024f);
-            float span = (perRow.Count - 1) * 0.1f;
-            for (int k = 0; k < perRow.Count; k++) t.switches.Add(MakeSwitch(t.root, perRow[k], item.key, new Vector3(-span / 2f + k * 0.1f, -h / 2f + 0.07f, -0.02f), false, k % 2 == 1));
-            var group = Script.Group(room, item);
+            float span = (fields.Count - 1) * Pitch;
+            for (int k = 0; k < fields.Count; k++) t.switches.Add(Knob(t.root, fields[k], item.key, new Vector3(-span / 2f + k * Pitch, -h / 2f + 0.065f, -0.02f)));
+            var group = console ? null : Script.Group(room, item);
             if (group != null) { var g = Building.DarkPlate(t.root, group, 0.26f, out var gt, 0.1f); gt.color = Dim; g.localPosition = new Vector3(0f, h / 2f + 0.045f, -0.02f); }
         }
-        var paperText = paper ? Theme.Ink : Color.white;
-        if (paper) foreach (var tm in t.namePlate.GetComponentsInChildren<TextMeshPro>()) tm.color = Color.white;
         return t;
     }
 
-    // A switch: a housing with a lamp, and a lever for two choices or a dial for more; its name
-    // over it and its value under it, shown while the card is close (always, for a console).
-    Switch MakeSwitch(Transform parent, Field f, string itemKey, Vector3 at, bool console, bool stagger = false)
+    // A knob: a dark housing, a disc with the current value on its face, a notch on its rim that
+    // turns with the value, and a lamp at its corner.
+    Switch Knob(Transform parent, Field f, string itemKey, Vector3 at)
     {
         var sw = new Switch { field = f, itemKey = itemKey };
-        sw.root = new GameObject("Switch " + f.key).transform;
+        sw.root = new GameObject("Knob " + f.key).transform;
         sw.root.SetParent(parent, false);
         sw.root.localPosition = at;
-        int real = f.options.Count(o => o != "?" && o != "n/a");
-        sw.dial = real > 2;
-        Building.Box(sw.root, "Housing", new Vector3(0.08f, 0.08f, 0.012f), Vector3.zero, Building.Trim, null, false);
-        if (sw.dial)
-        {
-            var disc = new GameObject("Dial");
-            disc.transform.SetParent(sw.root, false);
-            disc.transform.localPosition = new Vector3(0f, -0.004f, -0.012f);
-            disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            disc.transform.localScale = new Vector3(0.058f, 0.004f, 0.058f);
-            disc.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx");
-            var dr = disc.AddComponent<MeshRenderer>(); dr.sharedMaterial = Building.Metal; dr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            Building.Tint(dr, new Color(0.22f, 0.25f, 0.32f));
-            Building.Matte(dr);
-            sw.bar = Building.Box(sw.root, "Pointer", new Vector3(0.008f, 0.03f, 0.006f), Vector3.zero, Building.Lens, null, false).transform;
-            var pivot = new GameObject("Pivot").transform; pivot.SetParent(sw.root, false); pivot.localPosition = new Vector3(0f, -0.004f, -0.02f);
-            sw.bar.SetParent(pivot, false); sw.bar.localPosition = new Vector3(0f, 0.013f, 0f);
-            sw.bar = pivot;
-            Building.Glow(pivot.GetComponentInChildren<Renderer>(), Color.white, 0.8f);
-        }
-        else
-        {
-            var pivot = new GameObject("Lever").transform; pivot.SetParent(sw.root, false); pivot.localPosition = new Vector3(0f, -0.006f, -0.02f);
-            Building.Box(pivot, "Bar", new Vector3(0.014f, 0.056f, 0.012f), new Vector3(0f, 0.018f, 0f), Building.Metal, new Color(0.8f, 0.83f, 0.88f), false);
-            var knob = Building.Box(pivot, "Knob", new Vector3(0.022f, 0.022f, 0.022f), new Vector3(0f, 0.046f, 0f), Building.Lens, null, false);
-            Building.Glow(knob.GetComponent<Renderer>(), new Color(0.85f, 0.88f, 0.92f), 0.5f);
-            sw.bar = pivot;
-        }
-        sw.lamp = Building.Lamp(sw.root, new Vector3(0.028f, 0.028f, -0.008f), 0.012f, Theme.Amber);
-        sw.namePlate = Building.DarkPlate(sw.root, Script.FieldName(f), console || rack ? 0.3f : 0.24f, out var nt, 0.08f);
-        nt.color = Dim;
-        sw.namePlate.localPosition = new Vector3(0f, stagger ? 0.11f : 0.065f, -0.022f);
-        sw.namePlate.gameObject.SetActive(false);
-        sw.valuePlate = Building.DarkPlate(sw.root, "?", console || rack ? 0.34f : 0.27f, out _, 0.1f);
-        sw.valuePlate.localPosition = new Vector3(0f, stagger ? -0.115f : -0.07f, -0.024f);
-        sw.valuePlate.gameObject.SetActive(console);
-        if (console) PlaceValue(sw);
+        var housing = Building.Box(sw.root, "Housing", new Vector3(0.088f, 0.088f, 0.012f), Vector3.zero, Building.Metal, new Color(0.1f, 0.11f, 0.14f), false);
+        Building.Matte(housing.GetComponent<Renderer>()); // a shiny housing flares under the lamp
+        Disc(sw.root, 0.076f, new Vector3(0f, 0f, -0.012f));
+        sw.face = Label(sw.root, "?", 0.2f, Color.white, true, new Vector2(0.064f, 0.034f), new Vector3(0f, 0f, -0.019f), TextAlignmentOptions.Center, false);
+        sw.face.enableAutoSizing = true; sw.face.fontSizeMax = 0.2f; sw.face.fontSizeMin = 0.05f;
+        sw.notch = Notch(sw.root, new Vector3(0f, 0f, -0.018f), 0.033f, 0.008f);
+        sw.lamp = Building.Lamp(sw.root, new Vector3(0.036f, 0.036f, -0.008f), 0.011f, Theme.Amber);
         return sw;
     }
 
-    // A console's value plate hangs to the right of its switch, however long it reads.
-    float maxValue = 0.5f; // how wide a console's value plate may run, from where the console stands
-    void PlaceValue(Switch sw)
+    static void Disc(Transform parent, float diameter, Vector3 at, Color? tint = null)
     {
-        var tmp = sw.valuePlate.GetComponentInChildren<TextMeshPro>();
-        tmp.fontSize = 0.34f; Building.FitPlate(sw.valuePlate);
-        for (int guard = 0; guard < 8 && sw.valuePlate.Find("Slab").localScale.x > maxValue; guard++) { tmp.fontSize *= 0.88f; Building.FitPlate(sw.valuePlate); }
-        sw.valuePlate.localPosition = new Vector3(0.06f + sw.valuePlate.Find("Slab").localScale.x / 2f, 0f, -0.024f);
+        var disc = new GameObject("Dial");
+        disc.transform.SetParent(parent, false);
+        disc.transform.localPosition = at;
+        disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        // The built-in cylinder mesh is two units across (not one, as the primitive is): scale by its own size.
+        var mesh = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx");
+        var size = mesh.bounds.size;
+        disc.transform.localScale = new Vector3(diameter / size.x, 0.008f / size.y, diameter / size.z);
+        disc.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var dr = disc.AddComponent<MeshRenderer>(); dr.sharedMaterial = Building.Metal; dr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        Building.Tint(dr, tint ?? new Color(0.12f, 0.15f, 0.22f));
+        Building.Matte(dr);
+    }
+
+    // The notch: a short bright tick at the rim of a disc, turning about its centre.
+    static Transform Notch(Transform parent, Vector3 at, float radius, float size)
+    {
+        var pivot = new GameObject("Notch").transform;
+        pivot.SetParent(parent, false);
+        pivot.localPosition = at;
+        var bar = Building.Box(pivot, "Tick", new Vector3(size, size * 1.6f, 0.004f), new Vector3(0f, radius, 0f), Building.Lens, null, false);
+        Building.Glow(bar.GetComponent<Renderer>(), Color.white, 0.9f);
+        return pivot;
+    }
+
+    static TextMeshPro Label(Transform parent, string text, float size, Color colour, bool bold, Vector2 box, Vector3 at, TextAlignmentOptions align, bool wrap)
+    {
+        var go = new GameObject("Text");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = at;
+        var t = go.AddComponent<TextMeshPro>();
+        t.font = bold ? Theme.Bold : Theme.Body; t.fontSize = size; t.color = colour; t.alignment = align;
+        t.rectTransform.sizeDelta = box;
+        t.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+        t.overflowMode = TextOverflowModes.Overflow;
+        t.text = text;
+        return t;
     }
 
     // Something not on the list yet, standing about the room: a folder on a crate, a printer
@@ -573,7 +515,7 @@ public class RoomRig : MonoBehaviour
             }
             foreach (var sw in t.switches) Show(sw);
         }
-        foreach (var sw in once) Show(sw);
+        foreach (var sw in rows) Show(sw);
     }
 
     void Show(Switch sw)
@@ -586,22 +528,20 @@ public class RoomRig : MonoBehaviour
         Building.Glow(sw.lamp, colour, unset ? 1.4f : 1.8f);
         int first = f.options[0] == "?" || f.options[0] == "n/a" ? 1 : 0;
         int real = f.options.Length - first;
-        if (sw.dial)
-        {
-            float a = unset || na ? 0f : Mathf.Lerp(-130f, 130f, real > 1 ? (idx - first) / (float)(real - 1) : 0.5f);
-            sw.bar.localRotation = Quaternion.Euler(0f, 0f, -a);
-        }
-        else
-        {
-            float a = unset || na ? 0f : (idx - first) == 0 ? 32f : -32f;
-            sw.bar.localRotation = Quaternion.Euler(0f, 0f, a);
-        }
+        float a = unset || na ? -150f : Mathf.Lerp(-120f, 120f, real > 1 ? (idx - first) / (float)(real - 1) : 0.5f);
+        if (sw.notch != null) sw.notch.localRotation = Quaternion.Euler(0f, 0f, -a);
         string value = unset ? "?" : Script.Option(room, sw.itemKey, f, idx);
-        Building.SetPlate(sw.valuePlate, value, unset ? Theme.Amber : na ? Dim : Color.white);
-        if (sw.itemKey == "room") PlaceValue(sw);
+        if (sw.face != null) { sw.face.text = value; sw.face.color = unset ? Theme.Amber : na ? Dim : Color.white; }
+        if (sw.row != null)
+        {
+            string full = unset ? "?" : Script.Long(room, sw.itemKey, f, idx);
+            sw.row.text = $"<color=#9EAEBB>{f.label}:</color> {full}";
+            sw.row.color = unset ? Theme.Amber : Color.white;
+        }
     }
 
-    // A tap on a switch turns it to its next choice (skipping the question mark).
+    // A tap on a row turns its decision to the next choice (skipping the question mark); the
+    // knob on the board turns with it.
     void Turn(Switch sw)
     {
         var f = sw.field;
@@ -609,67 +549,183 @@ public class RoomRig : MonoBehaviour
         if (f.options[next] == "?" && f.options.Length > 1) next = (next + 1) % f.options.Length;
         st.Set(sw.itemKey, f.key, next);
         Sfx.Tick();
+        foreach (var t in tokens) foreach (var k in t.switches) if (k.field == f && k.itemKey == sw.itemKey) Show(k);
         Show(sw);
-        StartCoroutine(Pop(sw.root, 1.25f));
+        StartCoroutine(Pop(sw.rowSlab != null ? sw.rowSlab : sw.root, 1.04f));
         changed?.Invoke();
     }
 
     public void Select(Token t)
     {
         if (selected == t) return;
-        if (selected != null) Close(selected);
+        if (selected != null) { selected.selected = false; if (!selected.pulsing) Building.Halo(selected.namePlate, false); }
+        CloseFocus();
         selected = t;
         if (t == null) { Selected?.Invoke(null); return; }
         if (t.sign || t.loose) return;
         t.selected = true;
-        foreach (var sw in t.switches) { sw.namePlate.gameObject.SetActive(true); sw.valuePlate.gameObject.SetActive(true); }
-        if (!rack) t.namePlate.gameObject.SetActive(false);
         Building.Halo(t.namePlate, true);
-        // The card's full name and its line, on a plate below the grid.
-        if (detail != null) Destroy(detail.gameObject);
-        string text = t.item.name + (string.IsNullOrEmpty(t.item.detail) ? "" : "\n<size=80%><color=#9EAEBB>" + t.item.detail + "</color></size>");
-        detail = Building.DarkPlate(rig, text, 0.36f, out var dt, 0.5f, rack ? 1.4f : 0.95f);
-        dt.alignment = TextAlignmentOptions.Center;
-        detail.localRotation = Quaternion.Euler(0f, 180f, 0f);
-        detail.localScale = Vector3.one * scale;
-        // Under the card it describes, in front of the others while the card is close.
-        float dh = detail.Find("Slab").localScale.y * scale;
-        float grown = rack ? 1f : 1.45f;
-        float dy = t.slot.y - cellH * grown / 2f - 0.14f * scale - dh / 2f;
-        // A rack's rule reads above the rack, so it covers no other module.
-        if (rack) dy = gridTop + 0.06f * scale + dh / 2f;
-        detail.localPosition = new Vector3(t.slot.x, rack ? dy : Mathf.Max(floorY + 0.06f + dh / 2f, dy), zFace + 0.16f * scale);
-        if (t.pinned && t.item.hidden)
-        {
-            t.unpinPlate = Building.DarkPlate(t.root, "Unpin ×", 0.3f, out var ut, 0.1f);
-            ut.color = Look.Breached;
-            t.unpinPlate.localPosition = new Vector3(t.w / 2f - 0.1f, t.h / 2f + 0.06f, -0.024f);
-        }
+        OpenFocus(t);
         Sfx.Whoosh();
         Selected?.Invoke(t);
     }
 
-    // What the camera frames when a token is close: the card grown, its plates, its line under it.
-    public Bounds FocusBounds(Token t)
+    // The card brought close: flat, facing the camera, in front of the board. Its full name and
+    // line at the top, then one row per decision, "Owner: Omar", each with its lamp and knob; a
+    // pinned card has a last row to take it off the board again.
+    void OpenFocus(Token t)
     {
-        float grown = rack ? 1f : 1.45f;
-        float dh = detail != null ? detail.Find("Slab").localScale.y * scale : 0.15f;
-        var top = Mathf.Max(t.slot.y + cellH * grown / 2f + 0.15f * scale, detail != null ? detail.localPosition.y + dh / 2f + 0.04f : 0f);
-        var bottom = Mathf.Min(t.slot.y - cellH * grown / 2f - 0.06f * scale, detail != null ? detail.localPosition.y - dh / 2f - 0.04f : 99f);
-        float wdt = Mathf.Max(cellW * grown + 0.2f * scale, detail != null ? detail.Find("Slab").localScale.x * scale + 0.1f : 0f);
-        var c = rig.TransformPoint(new Vector3(t.slot.x, (top + bottom) / 2f, zFace + 0.12f * scale));
-        return new Bounds(c, new Vector3(wdt, top - bottom, 0.2f));
+        const float W = 0.96f, Pad = 0.05f, RH = 0.1f, RG = 0.018f, TextW = W - 0.1f;
+        focus = new GameObject("Card close").transform;
+        focus.SetParent(rig, false);
+        focus.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        string titleText = t.console ? t.item.name : t.item.name;
+        var title = Label(focus, titleText, 0.5f, Color.white, true, new Vector2(TextW, 0.5f), Vector3.zero, TextAlignmentOptions.TopLeft, true);
+        float titleH = title.GetPreferredValues(titleText, TextW, 0f).y;
+        TextMeshPro line = null; float lineH = 0f;
+        if (!string.IsNullOrEmpty(t.item.detail))
+        {
+            line = Label(focus, t.item.detail, 0.34f, new Color(0.62f, 0.68f, 0.76f), false, new Vector2(TextW, 0.5f), Vector3.zero, TextAlignmentOptions.TopLeft, true);
+            lineH = line.GetPreferredValues(t.item.detail, TextW, 0f).y;
+        }
+        bool canUnpin = t.pinned && t.item.hidden;
+        int n = t.fields.Count + (canUnpin ? 1 : 0);
+        float H = Pad + titleH + (line != null ? 0.012f + lineH : 0f) + 0.035f + n * (RH + RG) - RG + Pad;
+        float y = H / 2f - Pad;
+        title.rectTransform.sizeDelta = new Vector2(TextW, titleH + 0.01f);
+        title.transform.localPosition = new Vector3(0f, y - titleH / 2f, -0.016f);
+        y -= titleH;
+        if (line != null)
+        {
+            y -= 0.012f;
+            line.rectTransform.sizeDelta = new Vector2(TextW, lineH + 0.01f);
+            line.transform.localPosition = new Vector3(0f, y - lineH / 2f, -0.016f);
+            y -= lineH;
+        }
+        y -= 0.035f;
+        focusSlab = Building.Box(focus, "Card", new Vector3(W, H, 0.02f), new Vector3(0f, 0f, 0.012f), Building.Metal, Building.PlateInk).transform;
+        Building.Matte(focusSlab.GetComponent<Renderer>());
+        var keyline = Building.Box(focus, "Keyline", new Vector3(0.012f, H - 0.06f, 0.004f), new Vector3(-W / 2f + 0.012f, 0f, -0.002f), Building.Lens, null, false);
+        Building.Glow(keyline.GetComponent<Renderer>(), Theme.Teal, 1.1f);
+        foreach (var f in t.fields)
+        {
+            var sw = new Switch { field = f, itemKey = t.key };
+            sw.root = new GameObject("Row " + f.key).transform;
+            sw.root.SetParent(focus, false);
+            sw.root.localPosition = new Vector3(0f, y - RH / 2f, 0f);
+            sw.rowSlab = Building.Box(sw.root, "Row", new Vector3(W - 0.06f, RH, 0.01f), new Vector3(0f, 0f, -0.002f), Building.Metal, new Color(0.14f, 0.19f, 0.3f), false).transform;
+            Building.Matte(sw.rowSlab.GetComponent<Renderer>());
+            sw.lamp = Building.Lamp(sw.root, new Vector3(-W / 2f + 0.06f, 0f, -0.01f), 0.014f, Theme.Amber);
+            sw.row = Label(sw.root, "", 0.42f, Color.white, true, new Vector2(W - 0.26f, RH * 0.8f), new Vector3(-W / 2f + 0.09f + (W - 0.26f) / 2f, 0f, -0.012f), TextAlignmentOptions.MidlineLeft, false);
+            sw.row.enableAutoSizing = true; sw.row.fontSizeMax = 0.38f; sw.row.fontSizeMin = 0.22f;
+            Disc(sw.root, 0.07f, new Vector3(W / 2f - 0.075f, 0f, -0.01f), new Color(0.34f, 0.39f, 0.5f));
+            sw.notch = Notch(sw.root, new Vector3(W / 2f - 0.075f, 0f, -0.016f), 0.028f, 0.009f);
+            rows.Add(sw);
+            Show(sw);
+            y -= RH + RG;
+        }
+        // One text size for every row of the card: the one its longest possible line needs, so the
+        // rows read alike and none jumps in size when it is turned.
+        if (rows.Count > 0)
+        {
+            float avail = W - 0.26f, size = 0.38f;
+            foreach (var sw in rows)
+                for (int i = 0; i < sw.field.options.Length; i++)
+                {
+                    string full = $"{sw.field.label}: {Script.Long(room, sw.itemKey, sw.field, i)}";
+                    sw.row.enableAutoSizing = false; sw.row.fontSize = 0.38f;
+                    float wNeed = sw.row.GetPreferredValues(full, 0f, 0f).x;
+                    if (wNeed > avail) size = Mathf.Min(size, 0.38f * avail / wNeed);
+                }
+            size = Mathf.Max(size, 0.24f);
+            foreach (var sw in rows) { sw.row.enableAutoSizing = false; sw.row.fontSize = size; sw.row.overflowMode = TextOverflowModes.Ellipsis; Show(sw); }
+        }
+        if (canUnpin)
+        {
+            unpinRow = new GameObject("Unpin").transform;
+            unpinRow.SetParent(focus, false);
+            unpinRow.localPosition = new Vector3(0f, y - RH / 2f, 0f);
+            var slab = Building.Box(unpinRow, "Row", new Vector3(W - 0.06f, RH, 0.01f), new Vector3(0f, 0f, -0.002f), Building.Metal, new Color(0.3f, 0.12f, 0.12f), false);
+            Building.Matte(slab.GetComponent<Renderer>());
+            Label(unpinRow, "Take it off the board", 0.4f, new Color(1f, 0.6f, 0.55f), true, new Vector2(W - 0.2f, RH * 0.8f), new Vector3(0f, 0f, -0.012f), TextAlignmentOptions.Center, false);
+        }
+        // Where it stands: in front of the card it opens, inside the room, clear of the floor.
+        float fx = Mathf.Clamp(t.slot.x, -1.7f + W / 2f, 1.7f - W / 2f);
+        float fy = Mathf.Clamp(t.slot.y, Mathf.Max(floorY, 0f) + 0.12f + H / 2f, 2.3f - H / 2f);
+        focusCentre = new Vector3(fx, fy, zFace + 0.3f);
+        focus.localPosition = focusCentre;
+        // The loose things in front of the board would poke through it, and the lamp's cone and its
+        // dust would wash over it: they step aside while it is open.
+        foreach (var x in tokens) if (x.loose) x.root.gameObject.SetActive(false);
+        foreach (Transform c in roomRoot.GetComponentsInChildren<Transform>(true))
+            if ((c.name == "Beam" || c.name == "Dust") && !c.IsChildOf(rig)) { c.gameObject.SetActive(false); hiddenForFocus.Add(c.gameObject); }
+        FitFocus(W, H);
     }
 
-    void Close(Token t)
+    // The camera faces the card squarely, as far back as fits the whole card with a margin for
+    // the bars at the top and the bottom of the screen; when something in the room stands in the
+    // way (the bin, the chair, the desk), the camera comes closer and the card shrinks with it.
+    void FitFocus(float W, float H)
     {
-        t.selected = false;
-        if (t.namePlate != null) t.namePlate.gameObject.SetActive(true);
-        foreach (var sw in t.switches) { if (sw.namePlate != null) sw.namePlate.gameObject.SetActive(false); if (sw.valuePlate != null) sw.valuePlate.gameObject.SetActive(false); }
-        if (!t.pulsing) Building.Halo(t.namePlate, false);
-        if (detail != null) { Destroy(detail.gameObject); detail = null; }
-        if (t.unpinPlate != null) { Destroy(t.unpinPlate.gameObject); t.unpinPlate = null; }
+        focusFov = 52f;
+        float aspect = (float)Screen.width / Mathf.Max(1, Screen.height);
+        float tv = Mathf.Tan(focusFov * 0.5f * Mathf.Deg2Rad), th = tv * aspect;
+        float d0 = Mathf.Max(H * 0.5f * 1.4f / tv, W * 0.5f * 1.15f / th);
+        var blockers = roomRoot.GetComponentsInChildren<Renderer>()
+            .Where(r => !r.transform.IsChildOf(rig) && !(r is ParticleSystemRenderer) && r.GetComponent<TextMeshPro>() == null
+                        && (r.sharedMaterial == null || r.sharedMaterial.renderQueue < 3000) && r.bounds.size.x < 2.5f && r.bounds.size.y < 2.5f && r.bounds.size.z < 2.5f
+                        && r.enabled && r.gameObject.activeInHierarchy)
+            .Select(r => r.bounds).ToList();
+        float s = 1f;
+        for (int guard = 0; guard < 10; guard++)
+        {
+            float d = d0 * s;
+            var eyeL = focusCentre + new Vector3(0f, 0f, d);
+            if (eyeL.z <= -0.4f && !Blocked(eyeL, W * s, H * s, blockers)) break;
+            s *= 0.85f;
+        }
+        s = Mathf.Max(s, 0.3f);
+        focus.localScale = Vector3.one * s;
+        focusD = d0 * s;
+        if (DemoDriver.Wanted) Debug.Log($"[Focus] {room.id}: card {W:0.00} x {H:0.00} m at {s:P0}, camera {focusD:0.00} m off");
     }
+
+    bool Blocked(Vector3 eyeL, float w, float h, List<Bounds> blockers)
+    {
+        var eyeW = rig.TransformPoint(eyeL);
+        for (int i = 0; i <= 4; i++)
+            for (int j = 0; j <= 4; j++)
+            {
+                var pL = focusCentre + new Vector3((i / 4f - 0.5f) * w, (j / 4f - 0.5f) * h, 0.01f);
+                var pW = rig.TransformPoint(pL);
+                var ray = new Ray(eyeW, (pW - eyeW).normalized);
+                float dist = Vector3.Distance(eyeW, pW);
+                foreach (var b in blockers) if (b.IntersectRay(ray, out float hit) && hit < dist - 0.02f) return true;
+                if (blockers.Any(b => b.Contains(eyeW))) return true;
+            }
+        return false;
+    }
+
+    // Where the camera stands to face the card brought close.
+    public bool FocusView(out Vector3 eye, out Vector3 look, out float fov)
+    {
+        eye = look = Vector3.zero; fov = focusFov;
+        if (focus == null) return false;
+        look = rig.TransformPoint(focusCentre);
+        eye = rig.TransformPoint(focusCentre + new Vector3(0f, 0f, focusD));
+        return true;
+    }
+
+    void CloseFocus()
+    {
+        if (focus != null) Destroy(focus.gameObject);
+        focus = null; focusSlab = null; unpinRow = null;
+        rows.Clear();
+        foreach (var x in tokens) if (x.loose && x.root != null) x.root.gameObject.SetActive(true);
+        foreach (var g in hiddenForFocus) if (g != null) g.SetActive(true);
+        hiddenForFocus.Clear();
+    }
+    readonly List<GameObject> hiddenForFocus = new List<GameObject>();
 
     // The planned mistake's things pulse after a rehearsal: a halo on their plates.
     public void Pulse(IEnumerable<string> keys, bool on)
@@ -682,7 +738,7 @@ public class RoomRig : MonoBehaviour
         }
     }
 
-    // Pinning: what was found in the room goes onto the board, as a card with its switches;
+    // Pinning: what was found in the room goes onto the board, as a card with its knobs;
     // unpinning sends it back where it lay.
     void Pin(Token t)
     {
@@ -708,7 +764,8 @@ public class RoomRig : MonoBehaviour
         Select(null);
         var pulsing = tokens.Where(x => x.pulsing).Select(x => x.key).ToList();
         foreach (var t in tokens) Destroy(t.root.gameObject);
-        tokens.Clear(); once.Clear(); signPad = null; consoleRoot = null;
+        tokens.Clear(); rows.Clear(); signPad = null;
+        ConsoleX = null; ConsoleRect = null; ConsoleView = null;
         foreach (Transform c in rig) Destroy(c.gameObject);
         Make(Facility.RoomIndex(room.room));
         Pulse(pulsing, true);
@@ -729,16 +786,15 @@ public class RoomRig : MonoBehaviour
         Rebuild();
     }
 
-    // ---- Picking: a tap on a switch, a tap on a token, a drag up or down the rack ----
+    // ---- Picking: a tap on a card, a tap on a row of the card brought close, a drag up or down the rack ----
 
     void Update()
     {
         if (!Interactive || cam == null) return;
         foreach (var t in tokens)
         {
-            if (t.dragging) continue;
-            var want = t.slot + (t.selected ? new Vector3(0f, 0f, 0.12f * scale) : Vector3.zero); // toward the camera (+z), in front of its neighbours
-            t.root.localPosition = Vector3.Lerp(t.root.localPosition, want, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
+            if (t.dragging || t.root == null || !t.root.gameObject.activeSelf) continue;
+            t.root.localPosition = Vector3.Lerp(t.root.localPosition, t.slot, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
             if (t.pulsing && t.namePlate != null) { var halo = t.namePlate.Find("Halo"); if (halo != null) Building.Glow(halo.GetComponent<Renderer>(), Theme.Teal, 0.8f + 0.8f * Mathf.Sin(Time.unscaledTime * 5f)); }
             // Something not on the list yet glints now and then: a thing in the room to pick up.
             if (t.loose && t.slab != null && !t.pulsing)
@@ -747,20 +803,14 @@ public class RoomRig : MonoBehaviour
                 Building.Glow(t.slab.GetComponent<Renderer>(), t.key == "printer" ? new Color(0.78f, 0.8f, 0.84f) : Paper, 0.5f + 0.9f * k);
                 var lamp = t.root.Find("Glow"); if (lamp != null) lamp.GetComponent<Light>().intensity = 0.6f + 1.6f * k;
             }
-            // The open card grows a little, so its switches' names and values have room.
-            if (!t.loose && !t.sign && !rack)
-            {
-                float want2 = scale * (t.selected ? 1.45f : 1f);
-                t.root.localScale = Vector3.one * Mathf.Lerp(t.root.localScale.x, want2, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
-            }
         }
         if (GameMenu.Paused || FileSheet.IsOpen) return;
         var pos = (Vector2)Input.mousePosition;
         if (Input.GetMouseButtonDown(0))
         {
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
-            pointerDown = true; downAt = pos; downTime = Time.unscaledTime;
-            if (rack) held = PickToken(pos, 90f, true);
+            pointerDown = true; downAt = pos;
+            if (rack && focus == null) held = PickToken(pos, 90f, true);
         }
         if (pointerDown && Input.GetMouseButton(0) && held != null && !held.dragging && (pos - downAt).magnitude > 10f) { held.dragging = true; Select(null); }
         if (held != null && held.dragging) Drag(pos);
@@ -770,39 +820,39 @@ public class RoomRig : MonoBehaviour
             if (held != null && held.dragging) { held.dragging = false; held = null; Settle(); return; }
             held = null;
             if ((pos - downAt).magnitude > 14f) return;
-            var sw = PickSwitch(pos, 36f);
-            if (sw != null) { if (sw.itemKey == "sign") { st.signed = true; st.signedBy = "You, as the reviewer"; st.signedOn = DateTime.Now.ToString("d MMM yyyy"); Sfx.Buy(); Refresh(); changed?.Invoke(); } else Turn(sw); return; }
-            var t = PickToken(pos, 95f, false);
-            if (t != null && t.unpinPlate != null && t.selected)
+            if (focus != null)
             {
-                var up = cam.WorldToScreenPoint(t.unpinPlate.position);
-                if (up.z > 0 && Vector2.Distance(new Vector2(up.x, up.y), pos) < 40f) { Unpin(t); return; }
+                // The card brought close: a row turns, the last row unpins, outside the card closes it.
+                foreach (var sw in rows) if (Inside(sw.rowSlab, pos)) { Turn(sw); return; }
+                if (unpinRow != null && Inside(unpinRow.Find("Row"), pos)) { var t0 = selected; Unpin(t0); return; }
+                if (Inside(focusSlab, pos)) return;
+                Select(null);
+                return;
             }
-            if (t == null) { Select(null); return; }
+            var t = PickToken(pos, 95f, false);
+            if (t == null) return;
             if (t.loose) { Pin(t); return; }
             if (t.sign) { st.signed = true; st.signedBy = "You, as the reviewer"; st.signedOn = DateTime.Now.ToString("d MMM yyyy"); Sfx.Buy(); Refresh(); changed?.Invoke(); return; }
-            Select(t.selected ? null : t);
+            Select(t);
         }
     }
 
-    Switch PickSwitch(Vector2 screen, float reach)
+    // Whether a screen point falls on a box's face, as the camera sees it.
+    bool Inside(Transform box, Vector2 screen)
     {
-        Switch best = null; float bestD = reach;
-        IEnumerable<Switch> all = once;
-        if (selected != null) all = all.Concat(selected.switches);
-        foreach (var sw in all)
+        if (box == null) return false;
+        var r = box.GetComponent<Renderer>();
+        if (r == null) return false;
+        var b = r.bounds;
+        float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
+        for (int i = 0; i < 8; i++)
         {
-            var s = cam.WorldToScreenPoint(sw.root.position);
-            if (s.z < 0) continue;
-            float d = Vector2.Distance(new Vector2(s.x, s.y), screen);
-            if (sw.valuePlate != null && sw.valuePlate.gameObject.activeSelf)
-            {
-                var v = cam.WorldToScreenPoint(sw.valuePlate.position);
-                if (v.z > 0) d = Mathf.Min(d, Vector2.Distance(new Vector2(v.x, v.y), screen));
-            }
-            if (d < bestD) { bestD = d; best = sw; }
+            var c = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+            var s = cam.WorldToScreenPoint(c);
+            if (s.z < 0) return false;
+            x0 = Mathf.Min(x0, s.x); x1 = Mathf.Max(x1, s.x); y0 = Mathf.Min(y0, s.y); y1 = Mathf.Max(y1, s.y);
         }
-        return best;
+        return screen.x >= x0 && screen.x <= x1 && screen.y >= y0 && screen.y <= y1;
     }
 
     Token PickToken(Vector2 screen, float reach, bool gridOnly)
@@ -810,20 +860,13 @@ public class RoomRig : MonoBehaviour
         Token best = null; float bestD = reach;
         foreach (var t in tokens)
         {
-            if (gridOnly && (t.loose || t.sign)) continue;
+            if (t.root == null || !t.root.gameObject.activeInHierarchy) continue;
+            if (gridOnly && (t.loose || t.sign || t.console)) continue;
+            if (!t.loose && !t.sign && Inside(t.slab, screen)) return t;
             var centre = t.slab != null ? t.slab.position : t.root.position;
             var s = cam.WorldToScreenPoint(centre);
             if (s.z < 0) continue;
-            // A wide module counts along its whole length.
             float d = Vector2.Distance(new Vector2(s.x, s.y), screen);
-            if (rack && !t.loose && !t.sign)
-            {
-                var left = cam.WorldToScreenPoint(t.root.TransformPoint(new Vector3(-t.w / 2f, 0f, 0f)));
-                var right = cam.WorldToScreenPoint(t.root.TransformPoint(new Vector3(t.w / 2f, 0f, 0f))); // TransformPoint carries the root's scale
-                var a = new Vector2(left.x, left.y); var b = new Vector2(right.x, right.y);
-                var ab = b - a; float k = Mathf.Clamp01(Vector2.Dot(screen - a, ab) / Mathf.Max(1f, ab.sqrMagnitude));
-                d = Vector2.Distance(a + ab * k, screen);
-            }
             if (d < bestD) { bestD = d; best = t; }
         }
         return best;
@@ -839,8 +882,7 @@ public class RoomRig : MonoBehaviour
         var local = rig.InverseTransformPoint(ray.GetPoint(enter));
         float y = Mathf.Clamp(local.y, gridBottom - 0.05f, gridTop + 0.05f);
         held.root.localPosition = new Vector3(held.slot.x, y, zFace + 0.06f * scale);
-        // Which slot is nearest to where it is now?
-        var grid = tokens.Where(t => !t.loose && !t.sign).OrderBy(t => t.order).ToList();
+        var grid = tokens.Where(t => !t.loose && !t.sign && !t.console).OrderBy(t => t.order).ToList();
         int nearest = held.order; float best = float.MaxValue;
         for (int k = 0; k < grid.Count; k++) { float d = Mathf.Abs(Slot(k).y - y); if (d < best) { best = d; nearest = k; } }
         if (nearest != held.order)
@@ -857,18 +899,19 @@ public class RoomRig : MonoBehaviour
 
     System.Collections.IEnumerator Pop(Transform t, float by)
     {
+        if (t == null) yield break;
         float d = 0.18f, e = 0f;
-        var s0 = Vector3.one;
+        var s0 = t.localScale;
         while (e < d && t != null) { e += Time.unscaledDeltaTime; float k = e / d; t.localScale = s0 * (1f + (by - 1f) * Mathf.Sin(k * Mathf.PI)); yield return null; }
         if (t != null) t.localScale = s0;
     }
 
-    // Whether every per-row decision of each listed item is made, in the rack's order (the board of lamps).
+    // Whether every per-row decision of each listed item is made, in the grid's order (the board of lamps).
     public List<bool> Decided()
     {
         var perRow = room.fields.Where(f => !f.once).ToList();
         var list = new List<bool>();
-        foreach (var t in tokens.Where(x => !x.loose && !x.sign).OrderBy(x => x.order))
+        foreach (var t in tokens.Where(x => !x.loose && !x.sign && !x.console).OrderBy(x => x.order))
             list.Add(perRow.All(f => { int p = st.Pick(t.key, f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; }));
         return list;
     }

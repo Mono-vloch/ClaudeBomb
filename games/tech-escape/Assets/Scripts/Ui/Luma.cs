@@ -32,7 +32,7 @@ public class Luma : MonoBehaviour
                 if (live != null) lines["live-" + l.number] = live;
                 var watch = LastSentence(l.live);
                 if (watch != null && watch != live) lines["watch-" + l.number] = watch;
-                var take = FirstSentence(l.takeaway);
+                var take = Motto(l.takeaway);
                 if (take != null) lines["take-" + l.number] = take;
             }
             return lines;
@@ -49,6 +49,24 @@ public class Luma : MonoBehaviour
         var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+");
         foreach (var p in parts) if (Words(p) <= CueWords && Words(p) > 0) return p.Trim();
         return null;
+    }
+
+    // The level's motto for the debrief: as many of the takeaway's whole sentences as fit fifteen
+    // words; a single longer sentence stops at its first ", and".
+    public static string Motto(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        var parts = Regex.Split(text.Trim(), @"(?<=[.!?])\s+").Where(p => Words(p) > 0).ToList();
+        string acc = null;
+        foreach (var p in parts)
+        {
+            string next = acc == null ? p : acc + " " + p;
+            if (Words(next) > CueWords) break;
+            acc = next;
+        }
+        if (acc != null) return acc.Trim();
+        int cut = parts[0].IndexOf(", and ");
+        return cut > 0 && Words(parts[0].Substring(0, cut)) <= CueWords ? parts[0].Substring(0, cut).Trim() + "." : null;
     }
 
     // The shortest whole sentence of a line: the room's cue on a level with no planned mistake.

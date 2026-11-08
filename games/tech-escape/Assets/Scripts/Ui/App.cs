@@ -121,7 +121,7 @@ public class App : MonoBehaviour
 
     // The facility runs the attack by itself; the player fixes the room and watches. A
     // level with a planned mistake opens with the room as it was handed over, the mistake
-    // in it (fix it, or run the attack and watch it get through); one with only a ready
+    // in it (fix it, or lift the lockdown and watch the attack get through); one with only a ready
     // room opens with that. A room the player already ran comes back as they left it.
     public void StartLevel(int number)
     {

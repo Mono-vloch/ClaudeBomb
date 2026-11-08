@@ -25,7 +25,7 @@ No Claude, no key, no network: the attacks are written into the rooms.
 ## The ladder
 
 Every level is a question and gives two training runs before the student's own: **Watch the pro** (the room as it
-should be, read only; run the attack and watch it hold), **Fix the broken room** (the room
+should be, read only; lift the lockdown and watch it hold), **Fix the broken room** (the room
 with the level's planned mistake in it; the attack finds it) and **Your run**, the one that
 counts and goes on the record.
 
@@ -53,28 +53,27 @@ counts and goes on the record.
 
 The highest level finished is remembered on the machine, with every room as the student
 left it, the record, and the stars each level earned (gold, silver or bronze from the
-checks; for motivation only). Any level can be started from the title screen's track or
-from the ladder on a briefing, so a tester or a class can go straight to one room.
+checks; for motivation only). Any level can be started from the title screen's Levels map,
+so a tester or a class can go straight to one room.
 
 ## How a run goes
 
-1. **Briefing.** LUMA opens the level: the idea in plain words,
-   what the student fixes, and the planned mistake if the level has one. The facility is
-   listed room by room on the right with what the record says about each: held, a gap, or
-   not yet.
-2. **The room.** The room in three dimensions on the left, its door open; on the right the
-   system as it was handed over, row by row (assets, accounts, messages, rules, steps), each
-   with its decisions as chips that cycle through their options. Rows that must be put in
-   order have arrows. A thing nobody listed can be added. A record that must be signed has a
-   signature line, with the date. Then: run the attack.
-3. **The attack.** The corridor from above, with the attacker walking to every door the
-   attack tries; line by line on the right, what it tried and whether the door held or gave.
-   Banners mark each door. On the last level the exit opens when nothing got through.
-4. **Debrief.** What got through and what held, the level's checks, a medal, the facility's
-   record so far (the spine the exit asks for), LUMA's takeaway and the question to take back
-   to work, the next level's unlock, and on a capstone the two if-then plans. The platform is
-   told the result in the curriculum's form (`2.2:complete`, `:partial` or `:incomplete`, with
-   the checks).
+1. **Briefing.** The intruder alarm: the corridor from the ceiling camera, this level's door
+   lit amber, three short lines of what is happening tonight and what the player is there to
+   do, and "Enter the room".
+2. **The room.** The room through its security camera, full screen. Every row is a card on
+   the room's prop with a knob per decision, its value on the knob's face; tap a card to bring
+   it close and tap its rows to turn them. A thing nobody listed lies in the room to be found
+   and pinned; a record that must be signed has a pad. One objective line at the top, a lamp
+   per row beside it, the attacker on the wall monitor trying the door. Then: lift the lockdown.
+3. **The attack.** The camera flies in over the entrance and chases the attacker door to door;
+   a door that holds flashes teal, one that gives way goes scarlet; the twelve door lamps at the
+   top. The first attack on an untouched room is a rehearsal and goes back to the room.
+4. **Debrief.** The corridor outside the room, its door shut or broken, the medal rising on a
+   step, LUMA saying the level's motto; Next and Again. Behind Details: what got through and what
+   held, the checks, the stars, the question to take back to work, the file, and on a capstone
+   the two if-then plans. The platform is told the result in the curriculum's form
+   (`2.2:complete`, `:partial` or `:incomplete`, with the checks).
 
 ## Where things are
 
@@ -108,14 +107,16 @@ Notes:
   line has no recording. Since the game-feel pass she says one short cue when something
   happens (`Luma.Lines`: her first sentence on entering a room, the attack's line, the
   takeaway); her full lines and the curriculum are in the file. The walk below is silent.
-- **The game-feel pass (8 November 2026).** Every row of a room is a thing on the room's prop
-  (`World/RoomRig.cs`): a token with its short name on a dark plate and a switch per decision;
-  tap a token to bring it close, tap a switch to turn it, drag a module up or down a rack. The
-  corridor monitor on the wall shows the attacker coming (a second camera). The first attack
-  on an untouched room is a rehearsal and counts for nothing. The objective lines, the
-  transmissions and the short names are in `Core/Script.cs`; the data in `Rooms.cs`, the
-  checks and the report are as they were.
-- **Rooms and progress persist** in PlayerPrefs on the machine.
+- **The game-feel pass (8 November 2026).** Every row of a room is a card on the room's prop
+  (`World/RoomRig.cs`), its short name on a dark plate and a knob per decision with the value on
+  the knob's face; the room's one-off decisions are a card of their own. Tap a card to bring it
+  close: a flat card faces the camera, the full name and line at the top, one row per decision
+  ("Owner: Omar"); tap a row to turn it. Drag a module up or down a rack. The corridor monitor
+  on the wall shows the attacker coming to the door, where it tries the handle until the player
+  lifts the lockdown (in the Operations Center the feed is on one of the room's own screens).
+  The first attack on an untouched room is a rehearsal and counts for nothing. The objective
+  lines, the alarms before each room and the short names are in `Core/Script.cs`; the data in
+  `Rooms.cs`, the checks and the report are as they were.
 
 ## Checking it without opening the Editor
 
