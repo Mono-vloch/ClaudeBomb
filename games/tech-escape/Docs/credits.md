@@ -85,6 +85,25 @@ detailed models 180, two standard 24).
 Credits spent on the first list: 128.75 of the 185 approved (11 design images 2.75, Meshy 38, Tripo
 72, two rigging clips 16), from the account's transaction list of 7 November 2026.
 
+## Higgsfield, the game-feel pass (8 November 2026)
+
+Made in the user's Higgsfield account for the game-feel pass's round 4 and handed over as
+files. The patch panel went through the same cleanup as the heroes above:
+`Tools/glb_maps.py` (a rewrite of the realism pass's tool, which was lost with its session's
+scratch folder) split it into a geometry-only GLB and URP maps at 1K in
+`Assets/Models/Hero/PatchPanel/`; `Tech Escape > Build patch panel` (in
+`Assets/Editor/FacilityKit.Prefabs.cs`) fixes its scale, pivot and facing.
+
+| Model | Design image job | 3D job | Triangles | Maps | Notes |
+|---|---|---|---|---|---|
+| Patch panel with cables (2.4's firewall rack) | `248f8cde-c338-4fa0-b73b-2cfa4414bdfe` | `7ba8b068-856e-4e0c-8990-f0885dec79c2` (Tripo H3.1, PBR, real-world size) | 8,998 | 1K base; normal and mask at 512 in the build | 1.1 m wide as a prefab; the rig mounts it under the five rule modules (0.74 m wide there, to fit above the floor). No emission map: the green LEDs are too dim in the base map to pick out (28 pixels), and the amber ones match the yellow cables |
+
+| Images | Jobs | Used |
+|---|---|---|
+| Two printed sheets of six staff badges (Sami the contractor, gone in June; Dana; Omar; Lina; Nour; the intern) | sheet A `339dc1e0-bf86-4ce3-b179-1516ee2dbfab`, sheet B `653dbd79-8bd3-47fe-bf71-75af2533c409` | Both are spelled right ("HARBOR PERMITS OFFICE", every name and role). Sheet B is used: its Sami badge says LEFT JUNE as the game does, and its large names and coloured role bands read from the room camera. Each badge cropped into `Assets/Resources/Badges/<key>.jpg` (240 x 340) and put on a thin card on 2.1's turnstile accounts and 3.1's roles |
+
+Credits: 18 for the patch panel's 3D job, 1 for the badge sheets (as given by the user).
+
 ## Made in the project
 
 - The monitor's inbox screen, the post room's poster, a flat normal map, and the

@@ -118,7 +118,23 @@ public static partial class FacilityKit
         h["TapeLibrary"] = Hero("TapeLibrary", "tape_library", 1024, 90f, 1, 1.95f, emission: 2.5f, detail: 512);
         h["FilingCabinet"] = Hero("FilingCabinet", "filing_cabinet", 1024, 90f, 1, 1.32f, detail: 512);
         h["NoticeBoard"] = Hero("NoticeBoard", "notice_board", 1024, 90f, 0, 0.9f, detail: 512);
+        h["PatchPanel"] = PatchPanel();
         return h;
+    }
+
+    // The patch panel of 2.4's firewall rack (Tripo, 8 November 2026), turned like the other
+    // heroes (the import mirrors glTF's X); the rig mounts it under the rule modules.
+    static GameObject PatchPanel() => Hero("PatchPanel", "patch_panel", 1024, 90f, 0, 1.1f, detail: 512);
+
+    // The patch panel alone, without rebuilding the rooms.
+    [MenuItem("Tech Escape/Build patch panel")]
+    public static void BuildPatchPanel()
+    {
+        Directory.CreateDirectory(Out + "/Hero");
+        AssetDatabase.Refresh();
+        PatchPanel();
+        AssetDatabase.SaveAssets();
+        if (Application.isBatchMode) EditorApplication.Exit(0);
     }
 
     static GameObject Hero(string folder, string file, int texSize, float yaw, int axis, float size, float emission = 0f, float clipThickness = 0f, int detail = 0)

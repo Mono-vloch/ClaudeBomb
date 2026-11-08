@@ -45,6 +45,7 @@ public class RoomScreen
         if (app.world.HasInterior(index)) CameraFeed.Build(frame, $"CAM {index + 1:00}", "", 96, bottom: false); // the buttons sit where the lower brackets would
 
         Rig = RoomRig.Build(app.world, index, room, st, Changed);
+        Rig.Right = k => room.RowRight(st, app.session, k);
         Rig.Selected += t =>
         {
             if (t != null && Rig.FocusView(out var eye, out var look, out float fov)) app.world.ShowFocus(frame, eye, look, fov);
@@ -56,7 +57,7 @@ public class RoomScreen
 
         objective = Hud.Objective(root, app.rehearsed ? Script.Rehearsed : Script.Objective(room));
         int missing = room.items.Count(i => i.hidden && !i.decoy && !st.added.Contains(i.key));
-        int lampCount = Rig.Decided().Count + missing + (room.fields.Any(f => f.once) || room.signable ? 1 : 0);
+        int lampCount = Rig.RowKeys().Count + missing + (room.fields.Any(f => f.once) || room.signable ? 1 : 0);
         rowLamps = Hud.DoorLamps(root, (Ui.W - (Mathf.Min(12, lampCount) * 28 + 28)) / 2f, 24, Mathf.Min(12, lampCount));
         GameMenu.Icon(root);
         Hud.Small(root, "Camera", 40, 120, ToggleCamera);
@@ -65,6 +66,7 @@ public class RoomScreen
 
         var runner = root.gameObject.AddComponent<Runner>();
         runner.StartCoroutine(Open());
+        if (Rig.LookAround) Turnable();
     }
 
     // The corridor monitor on the back wall, on the far side of the prop from the board.
@@ -236,13 +238,15 @@ public class RoomScreen
     void Changed()
     {
         if (Rig == null) return;
-        var decided = Rig.Decided();
-        app.world.ShowConfig(index, decided);
+        // Each row's lamp: teal when it is set right (the room's own checks say), amber when not.
+        var right = Rig.RowKeys().Select(k => room.RowRight(st, app.session, k)).ToList();
+        app.world.ShowConfig(index, right);
+        Rig.ShowRight();
         // The progress at the top: a lamp per row on the prop, and one for the console and the pad.
         if (rowLamps != null)
         {
-            bool roomDone = room.fields.Where(f => f.once).All(f => { int p = st.Pick("room", f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; }) && (!room.signable || st.signed);
-            var all = new List<bool>(decided);
+            bool roomDone = (!room.fields.Any(f => f.once) || room.RowRight(st, app.session, "room")) && (!room.signable || st.signed);
+            var all = new List<bool>(right);
             // What should be on the board and is not yet: an amber lamp each, so the row never reads as done too early.
             foreach (var i in room.items) if (i.hidden && !i.decoy && !st.added.Contains(i.key)) all.Add(false);
             if (room.fields.Any(f => f.once) || room.signable) all.Add(roomDone);
@@ -251,11 +255,49 @@ public class RoomScreen
         if (room.number == 1 && st.added.Contains("shared") && root != null)
         {
             Rig.Pulse(Script.Mistake(room), false);
-            bool owned = st.Pick("shared", "owner") > 0;
-            Hud.SetObjective(objective, owned ? "Lift the lockdown." : "Set its owner. Then lift the lockdown.");
-            if (owned && !watched) { watched = true; app.luma.Cue(root, "watch-1", 40, 924); }
+            bool owned = st.Pick("shared", "owner") > 0, found = room.RowRight(st, app.session, "shared");
+            Hud.SetObjective(objective, found ? "Lift the lockdown." : owned ? "Rate it. Then lift the lockdown." : "Set its owner. Then lift the lockdown.");
+            if (found && !watched) { watched = true; app.luma.Cue(root, "watch-1", 40, 924); }
         }
         else if (app.rehearsed && Rig.Decided().All(d => d) && Script.Mistake(room).All(k => st.Pick(k, room.fields.FirstOrDefault(f => !f.once)?.key ?? "") >= 0)) Rig.Pulse(Script.Mistake(room), false);
+    }
+
+    // Where the camera can be turned: two faint chevrons at the edges of the feed, breathing,
+    // until the player first turns it.
+    void Turnable()
+    {
+        var hints = new List<UnityEngine.UI.Image>();
+        foreach (int side in new[] { -1, 1 })
+        {
+            var node = Ui.Node("Turn hint", root);
+            Ui.Place(node, side < 0 ? 30 : Ui.W - 30 - 40, Ui.H / 2f - 40, 40, 80);
+            foreach (int arm in new[] { -1, 1 })
+            {
+                var bar = Ui.Box(node, "Arm", new Color(1f, 1f, 1f, 0.5f), false);
+                bar.raycastTarget = false;
+                var rt = bar.rectTransform;
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(6f, 46f);
+                rt.anchoredPosition = new Vector2(0f, arm * 15f);
+                rt.localRotation = Quaternion.Euler(0f, 0f, side * arm * 40f); // pointing out, the way the camera turns
+                hints.Add(bar);
+            }
+        }
+        root.GetComponent<Runner>().StartCoroutine(Breathe(hints));
+    }
+
+    IEnumerator Breathe(List<UnityEngine.UI.Image> hints)
+    {
+        float gone = -1f;
+        while (root != null)
+        {
+            bool turned = Mathf.Abs(app.world.cam.lookYaw) > 3f || Mathf.Abs(app.world.cam.lookPitch) > 3f;
+            if (turned && gone < 0f) gone = Time.unscaledTime;
+            float a = gone < 0f ? 0.28f + 0.22f * Mathf.Sin(Time.unscaledTime * 2.4f) : Mathf.Max(0f, 0.5f - (Time.unscaledTime - gone) * 0.8f);
+            foreach (var h in hints) if (h != null) h.color = new Color(1f, 1f, 1f, a);
+            if (gone >= 0f && a <= 0f) { foreach (var h in hints) if (h != null) Object.Destroy(h.transform.parent.gameObject); yield break; }
+            yield return null;
+        }
     }
 
     // The walk's fix: the room set right through the rig, as a player would leave it.

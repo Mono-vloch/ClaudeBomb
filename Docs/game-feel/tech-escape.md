@@ -234,4 +234,23 @@ Again, Details.
 10. **The podium** has a single step. Robot Racing's podium gets the same, after the merge.
 11. **Fixes asked**: the Operations Center monitor behind the console, and 1.5's small console.
 
+### After the round-3 report (8 November 2026)
+
+12. **Knob values** show on the card brought close and on the knob just turned, nowhere else.
+    From the room camera each row on the board shows its lamp, teal when it is right and amber
+    when not, and no values. The card brought close may go over 30 words: it is the reading
+    moment.
+13. **The badges and the patch panel** go where proposed: the badges on 2.1's turnstile
+    accounts and on 3.1's roles, the patch panel as 2.4's firewall rack. Charbel gets the
+    files made.
+14. **Finding what nobody listed.** On levels about something nobody listed, the missing item is
+    in the room (a drive under the desk, a device on a crate). It glints when the camera passes
+    it; tapping it flies it to the board. The room's camera lets the player look around enough
+    to find it.
+15. **The attack pays off both ways.** If the door gives way, the attacker grabs the item and
+    runs off with it; if it holds, he rattles the handle, gives up and walks away. No body or
+    role for the player.
+16. **The knobs on the open card** are light on dark, readable at a glance. LUMA's strip stays
+    as it is: it is shared, and is fixed once after the merge.
+
 The builds that follow these answers are reported in [tech-escape-report.md](tech-escape-report.md).

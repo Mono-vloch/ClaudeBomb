@@ -85,6 +85,10 @@ public class DemoDriver : MonoBehaviour
             yield return new WaitForSeconds(4.2f);
             yield return Shot($"{tag}-3-rehearsal");
             float w0 = 0f;
+            // The door gives way: the attacker comes back out with the drive and runs.
+            while (Building.Payoff != "grab" && AttackScreen.Running && w0 < 40f) { w0 += Time.unscaledDeltaTime; yield return null; }
+            yield return new WaitForSeconds(0.55f);
+            yield return Shot($"{tag}-3a-rehearsal-grab");
             while (AttackScreen.Running && w0 < 60f) { w0 += Time.unscaledDeltaTime; yield return null; }
             yield return new WaitForSeconds(0.6f);
             yield return Shot($"{tag}-3b-rehearsal-end");
@@ -92,12 +96,46 @@ public class DemoDriver : MonoBehaviour
             yield return new WaitForSeconds(3.2f);
             yield return Shot($"{tag}-3c-room-after-rehearsal");
         }
+        var rig = RoomScreen.Current != null ? RoomScreen.Current.Rig : null;
+        if (play && rig != null && rig.LookAround)
+        {
+            // The look around: the camera turns toward the corner, the drive glints as it passes,
+            // a tap flies it to the board.
+            var key = l.items.First(i => i.hidden && !i.decoy).key;
+            var aim = rig.LookToward(key);
+            float glint0 = rig.GlintAt(key);
+            bool shot = false;
+            for (float e = 0f; e < 2.6f; e += Time.unscaledDeltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, e / 2.6f);
+                app.world.cam.lookYaw = aim.x * k; app.world.cam.lookPitch = aim.y * k;
+                if (!shot && rig.GlintAt(key) > glint0 && Time.unscaledTime - rig.GlintAt(key) > 0.2f) { shot = true; yield return Shot($"{tag}-3d-look-around"); }
+                yield return null;
+            }
+            if (!shot) yield return Shot($"{tag}-3d-look-around");
+            Debug.Log($"[Search] {l.id}: turned {app.world.cam.lookYaw:0} / {app.world.cam.lookPitch:0} deg toward {aim}, the drive glinted {rig.GlintAt(key) > glint0}");
+            yield return new WaitForSeconds(0.6f);
+            rig.Find(key);
+            yield return new WaitForSeconds(0.45f);
+            yield return Shot($"{tag}-3e-to-the-board");
+            while (rig.Flying) yield return null;
+            yield return new WaitForSeconds(1.2f);
+        }
         if (RoomScreen.Current != null && RoomScreen.Current.Rig != null && RoomScreen.Current.Rig.Tokens.Count > 0)
         {
-            var first = RoomScreen.Current.Rig.Tokens.First(t => !t.loose && !t.sign && !t.console);
+            var hiddenKey = l.items.FirstOrDefault(i => i.hidden && !i.decoy)?.key;
+            var first = RoomScreen.Current.Rig.Tokens.FirstOrDefault(t => t.key == hiddenKey && !t.loose) ?? RoomScreen.Current.Rig.Tokens.First(t => !t.loose && !t.sign && !t.console);
             RoomScreen.Current.Rig.Select(first);
             yield return new WaitForSeconds(1.6f); // the camera glides to face the card
             yield return Shot($"{tag}-4-card-close");
+            if (first.key == hiddenKey)
+            {
+                RoomScreen.Current.Rig.TurnRow(0);
+                yield return new WaitForSeconds(0.6f);
+                RoomScreen.Current.Rig.TurnRow(0);
+                yield return new WaitForSeconds(0.8f);
+                yield return Shot($"{tag}-4c-card-turned");
+            }
             var console = RoomScreen.Current.Rig.Tokens.FirstOrDefault(t => t.console);
             if (console != null)
             {
@@ -123,6 +161,10 @@ public class DemoDriver : MonoBehaviour
             yield return Shot($"{tag}-6-attack");
             Coverage($"{tag}-6-attack: the attacker", app.world.AttackerTransform);
             float waited = 0f;
+            // The door holds: he tries the handle again, gives up and walks away.
+            while (Building.Payoff != "leave" && Building.Payoff != "grab" && AttackScreen.Running && waited < 40f) { waited += Time.unscaledDeltaTime; yield return null; }
+            yield return new WaitForSeconds(Building.Payoff == "leave" ? 1.3f : 0.55f);
+            yield return Shot($"{tag}-6a-attack-ending");
             while (AttackScreen.Running && waited < 60f) { waited += Time.unscaledDeltaTime; yield return null; }
             yield return new WaitForSeconds(0.6f);
             yield return Shot($"{tag}-6b-attack-end");

@@ -17,16 +17,18 @@ public static class FileSheet
 
     public const string Room =
         "The room as it was handed over: every asset, account, message, rule or step is a card on the room's prop (on the board, in the rack, " +
-        "in the sorter, at the gate), with its name on a plate and a knob for each decision, its value on the knob's face. A lamp beside each knob " +
-        "is amber while the decision is open and teal once it is made (red for the choice that closes or flags); the board on the wall shows the " +
-        "same, one lamp per row, and the lamps at the top of the screen count the room. Tap a card to bring it close: it turns to face you, its " +
-        "full name and line at the top and one row per decision (\"Owner: Omar\"); tap a row to turn it. The room's one-off decisions are a card " +
-        "of their own. Rows that must be ordered are a rack: drag a module up or down. A record that must be signed has a pad beside the board. " +
-        "Something not on the list yet lies about the room: tap it to pin it to the board.\n\n" +
-        "Then lift the lockdown: the facility runs the attack against whatever you built. The attacker walks the corridor door by door, a door " +
-        "that holds flashes teal, a door that gives way goes scarlet, and what got through goes to the record the exit will ask for. The first " +
-        "attack on a room as it was handed over is a rehearsal: it shows the door break and counts for nothing; the next run counts. The monitor " +
-        "on the room's wall shows the corridor camera: the attacker comes to the door while you work and tries the handle until you are ready.";
+        "in the sorter, at the gate), with its name on a plate, a knob for each decision and a lamp: teal when the row is set right, amber when " +
+        "not. The board on the wall and the lamps at the top of the screen show the same. Tap a card to bring it close: it turns to face you, its " +
+        "full name and line at the top and one row per decision with its value (\"Owner: Omar\"); tap a row to turn it, and the knob on the " +
+        "board shows the value it was turned to. The room's one-off decisions are a card of their own. Rows that must be ordered are a rack: drag " +
+        "a module up or down. A record that must be signed has a pad beside the board. Something not on the list yet waits in a corner of the " +
+        "room: turn the camera (drag across the room, or the arrow keys), and it glints as the camera passes it; tap it and it flies to the board.\n\n" +
+        "Then lift the lockdown: the facility runs the attack against whatever you built. The attacker walks the corridor door by door. A door " +
+        "that gives way goes scarlet, and he comes back out with what he took and runs; a door that holds flashes teal, and he tries the handle, " +
+        "gives up and walks away. What got through goes to the record the exit will ask for. The first attack on a room as it was handed over is " +
+        "a rehearsal: it shows the door break and counts for nothing; the next run counts. The monitor on the room's wall shows the corridor " +
+        "camera: the attacker comes to the door while you work and tries the handle until you are ready.";
+
 
     public static void Toggle(App app, Transform screen, params (string head, string body)[] extra)
     {

@@ -24,6 +24,8 @@ public class SceneCamera : MonoBehaviour
     public float minDistance = 4f;                              // Overview: how close the fit may bring the camera (inside a room, nearer than four metres)
     public event Action Framed;   // after every frame's placing: labels follow
     Vector3 insideEye, insideLook; float insideFov = 46f;
+    public float lookYaw, lookPitch; // Inside: the security camera turned by the player, in degrees (yaw to the right, pitch down)
+    public Quaternion InsideBase => Quaternion.LookRotation(insideLook - insideEye); // where it points unturned
 
     Camera cam;
     Vector3 pos, velocity;
@@ -77,6 +79,7 @@ public class SceneCamera : MonoBehaviour
         mode = Mode.Inside;
         this.frame = frame;
         insideEye = eye; insideLook = look; insideFov = fieldOfView;
+        lookYaw = lookPitch = 0f;
     }
 
     // One thing up close, from the front and a little to its side.
@@ -134,9 +137,11 @@ public class SceneCamera : MonoBehaviour
             {
                 float pan = Mathf.Sin(Time.unscaledTime * 0.17f) * 1.2f;
                 targetPos = insideEye;
-                targetRot = Quaternion.Euler(0f, pan, 0f) * Quaternion.LookRotation(insideLook - insideEye);
+                targetRot = Quaternion.Euler(0f, pan + lookYaw, 0f) * Quaternion.LookRotation(insideLook - insideEye) * Quaternion.Euler(lookPitch, 0f, 0f);
                 targetFov = insideFov;
-                anchor = insideLook;
+                // The point kept in the frame's middle turns with the player's look, or the picture
+                // would only skew around the prop instead of turning away from it.
+                anchor = insideEye + Quaternion.Euler(0f, lookYaw, 0f) * (Quaternion.LookRotation(insideLook - insideEye) * Quaternion.Euler(lookPitch, 0f, 0f) * Vector3.forward) * Vector3.Distance(insideEye, insideLook);
                 break;
             }
             case Mode.Orbit:

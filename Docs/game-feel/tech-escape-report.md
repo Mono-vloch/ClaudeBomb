@@ -8,10 +8,137 @@ All nineteen levels run on the new screens. Only `games/tech-escape/`, this file
 doc's answers changed; the kit, the server and the other games are untouched. Frames and counts:
 `games/tech-escape/Builds/look-audit/game-feel/` (not in git).
 
-Round 3 comes first below: what changed after Charbel's answers to the round-2 report, the
-new counts, the web size and the third player test. Rounds 1 and 2 follow as they were
-reported; where round 3 changed something (the close-up, the console, "Run the attack", the
-briefing's motto, the podium's steps), the round-3 section is the one that holds.
+Round 4 comes first below: Charbel's answers to the round-3 report, the Higgsfield files, the
+new counts, the web size and the fourth player test. Round 3, then rounds 1 and 2, follow as
+they were reported; where a later round changed something, the later section is the one that
+holds.
+
+## Round 4: the owner's answers and the Higgsfield files (8 November)
+
+What Charbel answered after the round-3 report, and what the build does now:
+
+1. **Values only where they are read.** From the room camera the knobs show no values; each
+   card on the board has one lamp at its corner, teal when the row is set right and amber when
+   not. "Right" is the room's own judgement (`Room.RowRight` in `Core/Facility.cs`): the row
+   as the player has it is tried in the setup that works, and it is right when nothing more
+   gets through or fails, so any answer the checks accept turns the lamp teal, not only the one
+   in the setup. The board of lamps on the wall and the lamps at the top of the screen follow
+   the same judgement. The card brought close shows every value ("Owner: Dana, clerk") and the
+   card's lamp by its title; the knob just turned shows its value on the board until the next
+   one is turned.
+2. **Light knobs on the open card**: a light face and a dark pointer from the centre to the
+   rim, at the end of each row.
+3. **Finding what nobody listed (1.1).** The working copy of applicants' documents is a small
+   network drive, labelled SHARED, on a crate on the floor of the room, out of the camera's
+   view as the room opens. The player turns the security camera by dragging across the room
+   or with the arrow keys (36 degrees each way, 22 down); two faint chevrons at the edges of
+   the feed say it turns, and fade once it has. Anything not yet on the list glints, a small
+   star and a chime, when the camera passes it. A tap flies the drive up to the board, where
+   it becomes the card, while the camera turns back. The printer and the canteen menu, the
+   decoys, glint and fly the same way (in the code; the walk taps only the drive). No other
+   level has an unlisted thing to find.
+4. **The attack pays off both ways.** A door that gives way: the attacker goes in, comes back
+   out with the drive in his hand (lit teal, so it reads down the dark corridor) and runs off
+   with it. A door that holds: he tries the handle twice more, the door shaking in its frame,
+   stands a moment, gives up and walks away down the corridor. Then the end held on the door, as
+   before. No body or role for the player.
+5. **The staff badges** (Higgsfield's two printed sheets). Both sheets are spelled right,
+   "HARBOR PERMITS OFFICE" and every name and role included. Sheet B is used: its Sami badge says
+   LEFT JUNE as the game does, and its large names and coloured role bands read from the room
+   camera. Each badge is cropped into its own texture and clipped on a thin card at the left of
+   each of 2.1's six turnstile accounts and 3.1's three roles.
+6. **The patch panel** (Higgsfield, Tripo). Split into a geometry-only model and 1K maps by the
+   same cleanup as the other heroes (`Tools/glb_maps.py`, a rewrite of the realism pass's lost
+   tool) and built as a prefab by `Tech Escape > Build patch panel`. The model is a 2U panel
+   full of blue, yellow and red cables hanging in front, not five sockets; hung above the rules
+   its cables would cover them, so it is the rack's bottom unit, 0.74 m wide under 2.4's five
+   rule modules, cables hanging below. 8,998 triangles, no emission map.
+7. **LUMA's strip** is left as it is: it is shared and is fixed once after the merge.
+
+Two bugs found on the way and fixed: the room camera kept the prop in the middle of the frame
+by shifting its projection, so a turned camera only skewed the picture around the board; the
+point it keeps in the middle now turns with the player's look. And a card found in the room
+told the screen before the board was rebuilt, so the lamps at the top lagged one step.
+
+### Words and controls, round 4
+
+From the last walk (`Builds/look-audit/game-feel/final/counts.jsonl`, all nineteen levels,
+130 pictures). With the values off the knobs the rooms are back within the brief:
+
+| Level | Briefing | Room as handed over | Card close | Room set right | Debrief |
+|---|---|---|---|---|---|
+| 1.1 | 44 | 20 | 54 | 26 | 18 |
+| 1.2 | 43 | 24 | 55 | 24 | – |
+| 1.3 | 40 | 20 | 55 | 20 | 19 |
+| 1.4 | 41 | 23 | 43 | 23 | – |
+| 1.5 | 41 | 19 | 72 | 19 | – |
+| 2.1 | 42 | 21 | 35 | 21 | – |
+| 2.2 | 41 | 28 | 43 | 28 | – |
+| 2.3 | 44 | 22 | 28 | 22 | – |
+| 2.4 | 43 | 30 | 42 | 30 | 13 |
+| 2.5 | 41 | 20 | 38 | 20 | – |
+| 2.6 | 41 | 19 | 26 | 19 | – |
+| 2.7 | 42 | 28 | 32 | 28 | – |
+| 2.8 | 42 | 23 | 23 | 23 | – |
+| 2.9 | 39 | 23 | 27 | 23 | – |
+| 2.10 | 41 | 23 | 43 | 23 | – |
+| 3.1 | 43 | 17 | 21 | 17 | – |
+| 3.2 | 39 | 19 | 27 | 19 | – |
+| 3.3 | 43 | 24 | 40 | 24 | – |
+| 3.4 | 37 | 25 | 48 | 25 | – |
+
+Every room within 30 words and 3 controls plus Lift the lockdown, as handed over and set
+right; every briefing within 50; every debrief within 30; the eleven LUMA lines on the walk's
+screens whole and 15 words or fewer; no flags. The card brought close goes over 30 on most
+levels (21 to 72 words, the board around it included), as agreed: it is the reading moment.
+The badges' printed words are not counted (they are pictures, not text the walk can read).
+
+### Web, round 4
+
+| | Round 3 | Round 4 |
+|---|---|---|
+| Transferred (the platform's page in headless Chrome, port 8086) | 42.4 MB | 43.2 MB |
+| Load (software GL) | 4.5 s | 4.9 s |
+
+Under the 45 MB limit with 1.8 MB in hand; the patch panel and the badges cost 0.8 MB. The
+game loads on the platform (`Builds/look-audit/game-feel/platform/platform-tech-escape-round4.png`).
+
+### The player test, round 4
+
+A fresh agent, the same prompt, only 1.1's eighteen screens from the last walk (its answer in
+full: `Builds/look-audit/game-feel/reviewers/player-round4/answer.md`). It told the level back
+whole: the lockdown at the Harbor Permits Office, the board in the Risk Room, the one asset
+nobody listed, the rehearsal in which the intruder steals it, the shared drive found, added,
+owned and rated, the door holding, three stars.
+
+- **What it read as play**: finding the drive ("the one real 'aha, there it is' moment"), the
+  attacker running off with "something glowing" ("the best moment so far, because something
+  was taken"), and the door that "visibly refuses him" before he walks away.
+- **What it read as a form or instructions**: the briefing ("the mission verb is 'list'"), the
+  card brought close with its question marks ("this is the form"), Details ("a report card").
+  The board as handed over is "closest to play", but Lift the lockdown is lit from the start
+  "like a Submit button".
+- **What it could not tell**: whether the drive in mid-air was carried, dragged or a glitch
+  (the flight caught in a still), and whether the hooded figure was the player or the
+  intruder (the chase camera sits over his shoulder).
+- **What it saw as broken, and where it stands**:
+  - No values on the board's knobs. As asked: the lamps carry the state, and the values are on
+    the card brought close.
+  - The board's cards stick out past the whiteboard's frame, and the open card cuts the cards
+    beside it. True in the frames.
+  - "Take it off the board" in salmon reads like a delete button.
+  - LUMA's "Watch which door it goes through" comes while the player is still in the room.
+    That is the line she says once the drive is owned, before the attack.
+  - Framing: door signs cut at the frame's edges, flat ceiling lights, the medal small on a
+    dark step, the HUD's corner marks over props, a dark wedge under the Details panel.
+- **Its changes**: slot the drive into the board by hand and set the owner by handing it to a
+  person, with the ratings coming from what the rehearsal showed; make the threat real, with the
+  player walking as the agent and a countdown; hide Lift the lockdown until the board is
+  complete; a bigger, brighter medal. The countdown and the player's body go against your
+  answers (no countdown; no body or role), so they are not taken up. Hiding Lift the lockdown
+  until the board is complete would undo the rehearsal, which needs the room as handed over.
+
+None of this was acted on after the test: the build committed is the one in the frames.
 
 ## Round 3: the owner's answers (8 November)
 
@@ -66,7 +193,7 @@ rule against the brief's limit; see Waiting for Charbel.
 
 ### Words and controls, round 3
 
-From the last walk (`Builds/look-audit/game-feel/final/counts.jsonl`, all nineteen levels),
+From round 3's walk (`Builds/look-audit/game-feel/final-round3/counts.jsonl`, all nineteen levels),
 counted as in rounds 1 and 2: every visible word, the world's labels included when the camera
 sees them. The values on the knob faces now count, as they are on screen.
 
@@ -415,64 +542,60 @@ dials, the briefing rewritten as an alarm, the maxim off the briefing.
 
 ## Where Tech Escape stands
 
-All nineteen levels run on the new screens with Charbel's round-3 answers in. The close-up is
-a flat card, face-on and readable in every room (nineteen card close-ups and six console
-close-ups in the last walk). The Operations Center feed plays on a clear screen in all three
-rooms. 1.5's console is a full-size card. The attacker waits at the door trying the handle,
-and the main action is Lift the lockdown. Every machine check of the brief holds on every
-screen of the last walk but one: with the values on the knob faces, the rooms count more than
-30 words on twelve levels as handed over, up to 68.
+All nineteen levels run on the new screens with Charbel's round-4 answers and the Higgsfield
+files in. Every machine check of the brief holds on every screen of the last walk again: the
+knob values are off the board, so every room is within 30 words. On 1.1 the unlisted drive is
+found by turning the camera, glints as the camera passes it and flies to the board; the
+attack ends with the attacker running off with the drive, or giving up at a door that held.
+2.1 and 3.1 carry the staff badges, 2.4's rules stand on the patch panel, and the web build is
+43.2 MB.
 
-The player test, round 3, tells the whole level back and calls the attack the best moment.
-It still reads the board, the card brought close, the briefing and Details as forms or
-instructions. It asks to search the room by hand for the missing thing and to see the attack
-pay off both ways.
+The player test, round 4, tells the level back whole and calls two of the new moments the
+best in it: finding the drive, and the attacker running off with it. It still reads the card
+brought close and Details as forms and the briefing as instructions, and it asks for
+hands-on actions in place of the card's rows.
 
 Known in the last frames, not fixed:
-- The knob values on the board are too small to read from the room camera; they read on the
-  card brought close.
-- The row knobs on the open card are dark on dark; their notch shows, the disc barely.
-- LUMA's strip is see-through, and the scene shows through it.
+- On 2.9 the corridor monitor covers the C of the wall's BACKUP lettering (the stencils are
+  not among the things the monitor keeps clear of).
+- LUMA's strip is see-through: left for the shared fix after the merge, as asked.
+- The open card's lamp and the board's lamps are small from the room camera.
 
 ## Waiting for Charbel
 
-1. **The knob values against the brief's 30 words.** Your rule puts every value on its knob,
-   and that takes twelve rooms over 30 words as handed over (3.4: 68). From the room camera
-   most values are too small to read, which the player test noticed. Keep them all, or show
-   the value only on the card brought close and on the knob just turned? Placeholder: every
-   knob shows its value.
-2. **The badges and the patch panel** (approved; you are having them made). Where I would put
-   them when the files arrive: the badges on the turnstile's accounts (2.1) and on the roles
-   of 3.1 (Omar, Lina, Dana); the patch panel as 2.4's firewall rack, one cable per rule. The
-   spec as proposed: (a) four staff ID badges on lanyards, front-facing, photo and first name
-   (Dana, Omar, Lina, Nour), a flat card about 9 by 6 cm, PBR, under 3k triangles each; (b) a
-   wall-mounted patch panel with five labelled sockets and five short cables with plugs, 60 by
-   30 cm, PBR, under 8k triangles. Placeholder: the current cards and rack.
-3. **The player test's changes.** Searching the room by hand and carrying the missing thing to
-   the board, and an attack that pays off both ways (the attacker running off with the item, or
-   turned away at the door), are new mechanics. They are yours to approve before I start.
-   Placeholder: as built.
-4. **No Claude Bomb debrief frame on disk.** The side-by-side for the debrief used Claude
-   Bomb's title in round 2. The Claude Bomb test was not run again in round 3; you asked for
-   the player test.
+1. **The lamps tell the answer.** Teal when right means a player can turn a knob until its
+   card's lamp goes teal, before any attack: the lamps judge each row with the room's own
+   checks. That is what was asked ("teal when right, amber when not"). If you meant teal once a
+   row is set, whatever its value, it is one line (`RoomScreen.Changed` and `RoomRig.ShowRight`
+   would use `Decided` again). Placeholder: teal when right.
+2. **The patch panel is the rack's bottom unit, not the rack.** The model came as a 2U panel
+   full of cables; above the rules its cables would cover them, so it sits below. A panel with
+   five labelled sockets and one cable per rule (the first spec) would let each rule be its
+   own cable; that would be a new model. Placeholder: the panel under the five modules.
+3. **No Claude Bomb debrief frame on disk**, and the Claude Bomb test was not run again in
+   rounds 3 and 4; you asked for the player test.
 
-After the merge, not waiting on anything: Robot Racing's podium gets the single step too.
+After the merge, not waiting on anything: Robot Racing's podium gets the single step, and
+LUMA's strip is fixed once for all games.
 
 ## Files
 
 - Code: `games/tech-escape/Assets/Scripts/Core/Script.cs`, `World/RoomRig.cs`,
-  `World/Building.Stage.cs`, `Ui/GameMenu.cs`, `Ui/Hud.cs` (new); `Ui/App.cs`, `AttackScreen.cs`,
-  `CameraFeed.cs`, `DemoDriver.cs`, `FileSheet.cs`, `LessonScreen.cs`, `Luma.cs`,
-  `ResultsScreen.cs`, `RoomScreen.cs`, `Sfx.cs`, `TitleScreen.cs`, `UiKit.cs`,
-  `World/Building.cs`, `World/CameraRig.cs`, `World/SceneCamera.cs` (changed);
-  `Resources/LumaVoice/` (72 recordings: in round 3 the eight debrief lines whose words
-  changed were recorded again and take-19 is new; the 38 old intro and live recordings no
-  screen says any more are removed).
+  `World/Building.Stage.cs`, `Ui/GameMenu.cs`, `Ui/Hud.cs` (new); `Core/Facility.cs`,
+  `Ui/App.cs`, `AttackScreen.cs`, `CameraFeed.cs`, `DemoDriver.cs`, `FileSheet.cs`,
+  `LessonScreen.cs`, `Luma.cs`, `ResultsScreen.cs`, `RoomScreen.cs`, `Sfx.cs`, `TitleScreen.cs`,
+  `UiKit.cs`, `World/AttackerRig.cs`, `World/Building.cs`, `World/CameraRig.cs`,
+  `World/SceneCamera.cs`, `Editor/FacilityKit.Prefabs.cs` (changed); `Resources/LumaVoice/` (72
+  recordings).
+- The Higgsfield files: `Assets/Models/Hero/PatchPanel/` (geometry and maps),
+  `Assets/Resources/Facility/Hero/PatchPanel.prefab`, `Assets/Resources/Badges/` (six badges),
+  `Tools/glb_maps.py` (the cleanup tool), recorded in `games/tech-escape/Docs/credits.md`.
 - Frames (not in git), under `games/tech-escape/Builds/look-audit/game-feel/`:
-  - `final/`: the last walk, round 3, 123 pictures and `counts.jsonl`.
-  - `final-round2/`: round 2's walk and its `side-by-sides/`.
-  - `reviewers/`: what each reviewer saw; `player-round3/answer.md` is round 3's answer.
+  - `final/`: the last walk, round 4, 130 pictures and `counts.jsonl`.
+  - `final-round3/`, `final-round2/`: the earlier rounds' walks (round 2's with `side-by-sides/`).
+  - `reviewers/`: what each reviewer saw; `player-round3/answer.md` and
+    `player-round4/answer.md` are the last two answers.
   - `claude-bomb/`: the reference frames.
-  - `platform/`: the game on the platform, rounds 2 and 3.
+  - `platform/`: the game on the platform, rounds 2, 3 and 4.
 - Docs: this report; `Docs/game-feel/tech-escape.md` (the owner's answers recorded, rounds 2
-  and 3); `games/tech-escape/README.md`.
+  to 4); `games/tech-escape/README.md`.

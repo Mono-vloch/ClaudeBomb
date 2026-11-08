@@ -17,7 +17,7 @@ public static class Sfx
     public static Luma luma;                   // whose voice ducks the rest
 
     static AudioSource src, ambient;
-    static AudioClip tick, buy, ruin, whoosh, crash, chime, clack, siren, fanfare, alarm, beep, go, rattle;
+    static AudioClip tick, buy, ruin, whoosh, crash, chime, clack, siren, fanfare, alarm, beep, go, rattle, glint;
     static float ambientWant;
 
     public enum Mood { Beep, Go, Fanfare, Alarm, Siren }
@@ -42,6 +42,8 @@ public static class Sfx
     public static void Clack() => Play(clack != null ? clack : (clack = Tone("clack", new[] { 523f, 392f }, 0.06f, 0.3f, true)));
     // A door handle tried: three quick metal clicks and the latch's knock, quiet, from the corridor.
     public static void Rattle() => Play(rattle != null ? rattle : (rattle = RattleClip()), 0.7f);
+    // A glint: something small catching the light as the camera passes it.
+    public static void Glint() => Play(glint != null ? glint : (glint = Tone("glint", new[] { 2093f, 2794f }, 0.06f, 0.1f)), 0.6f);
 
     static AudioClip RattleClip()
     {

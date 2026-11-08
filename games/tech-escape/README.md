@@ -62,13 +62,18 @@ so a tester or a class can go straight to one room.
    lit amber, three short lines of what is happening tonight and what the player is there to
    do, and "Enter the room".
 2. **The room.** The room through its security camera, full screen. Every row is a card on
-   the room's prop with a knob per decision, its value on the knob's face; tap a card to bring
-   it close and tap its rows to turn them. A thing nobody listed lies in the room to be found
-   and pinned; a record that must be signed has a pad. One objective line at the top, a lamp
-   per row beside it, the attacker on the wall monitor trying the door. Then: lift the lockdown.
-3. **The attack.** The camera flies in over the entrance and chases the attacker door to door;
-   a door that holds flashes teal, one that gives way goes scarlet; the twelve door lamps at the
-   top. The first attack on an untouched room is a rehearsal and goes back to the room.
+   the room's prop with a knob per decision and a lamp, teal when the row is set right and
+   amber when not; tap a card to bring it close (one row per decision with its value) and tap
+   its rows to turn them. Where something nobody listed is to be found (1.1), it waits in a
+   corner of the room: turn the camera (drag across the room, or the arrow keys), it glints as
+   the camera passes it, and a tap flies it to the board. A record that must be signed has a
+   pad. One objective line at the top, a lamp per row beside it, the attacker on the wall
+   monitor trying the door. Then: lift the lockdown.
+3. **The attack.** The camera flies in over the entrance and chases the attacker door to door.
+   A door that gives way goes scarlet, and the attacker comes back out with the drive and runs
+   off with it; one that holds flashes teal, and he tries the handle, gives up and walks away.
+   The twelve door lamps at the top. The first attack on an untouched room is a rehearsal and
+   goes back to the room.
 4. **Debrief.** The corridor outside the room, its door shut or broken, the medal rising on a
    step, LUMA saying the level's motto; Next and Again. Behind Details: what got through and what
    held, the checks, the stars, the question to take back to work, the file, and on a capstone
@@ -108,15 +113,24 @@ Notes:
   happens (`Luma.Lines`: her first sentence on entering a room, the attack's line, the
   takeaway); her full lines and the curriculum are in the file. The walk below is silent.
 - **The game-feel pass (8 November 2026).** Every row of a room is a card on the room's prop
-  (`World/RoomRig.cs`), its short name on a dark plate and a knob per decision with the value on
-  the knob's face; the room's one-off decisions are a card of their own. Tap a card to bring it
-  close: a flat card faces the camera, the full name and line at the top, one row per decision
-  ("Owner: Omar"); tap a row to turn it. Drag a module up or down a rack. The corridor monitor
-  on the wall shows the attacker coming to the door, where it tries the handle until the player
-  lifts the lockdown (in the Operations Center the feed is on one of the room's own screens).
-  The first attack on an untouched room is a rehearsal and counts for nothing. The objective
-  lines, the alarms before each room and the short names are in `Core/Script.cs`; the data in
-  `Rooms.cs`, the checks and the report are as they were.
+  (`World/RoomRig.cs`), its short name on a dark plate, a knob per decision and a lamp: teal
+  when the row is set right, amber when not (`Room.RowRight` in `Core/Facility.cs` asks the
+  room's own attack and checks, so any answer they accept is right). The knobs show no values
+  at rest, only the one just turned. Tap a card to bring it close: a flat card faces the
+  camera, the full name and line at the top, one row per decision ("Owner: Omar") with a light
+  knob; tap a row to turn it. Drag a module up or down a rack. On 1.1 the unlisted drive waits
+  on a crate out of the opening view: the camera turns (`SceneCamera.lookYaw`/`lookPitch`), the
+  drive glints as it passes, a tap flies it to the board. The corridor monitor on the wall
+  shows the attacker coming to the door, where it tries the handle until the player lifts the
+  lockdown (in the Operations Center the feed is on one of the room's own screens). The attack
+  ends at the door: through it, the attacker runs off with the drive (`Building.Grab`); held,
+  he gives up and walks away (`Building.GiveUp`). The first attack on an untouched room is a
+  rehearsal and counts for nothing. 2.1's accounts and 3.1's roles carry the staff badges
+  (`Resources/Badges/`, cropped from Higgsfield's printed sheet); 2.4's rack of rules stands on
+  the patch panel (`Models/Hero/PatchPanel/`, split by `Tools/glb_maps.py`, built by
+  `Tech Escape > Build patch panel`). The objective lines, the alarms before each room and the
+  short names are in `Core/Script.cs`; the data in `Rooms.cs`, the checks and the report are
+  as they were.
 
 ## Checking it without opening the Editor
 

@@ -93,10 +93,12 @@ public class AttackScreen
         float waited = 0f;
         while (app.luma.Busy && waited < 12f) { waited += Time.unscaledDeltaTime; yield return null; }
         Transform last = app.world.AttackerTransform;
+        int lastDoor = -1, lastBroken = -1;
+        Building.Payoff = "";
         foreach (var line in attack.lines)
         {
             int index = Facility.RoomIndex(line.room);
-            if (index >= 0) { yield return app.world.Visit(index, !line.held, 1.0f); last = app.world.DoorTransform(index); }
+            if (index >= 0) { yield return app.world.Visit(index, !line.held, 1.0f); last = app.world.DoorTransform(index); lastDoor = index; if (!line.held) lastBroken = index; }
             else if (!line.held) { Sfx.Crash(); app.atmosphere.Pulse(Theme.Danger, 0.5f, 0.6f); app.world.Alarm(2f); }
             else Sfx.Clack();
             if (line.held) held++; else through++;
@@ -104,6 +106,10 @@ public class AttackScreen
             yield return Moment(line.held ? "HELD" : "THROUGH", Labels.Of(line.held ? line.reached : line.gap), line.held ? Theme.Teal : Look.Breached, line.held ? 0.7f : 1.1f, !line.held, line.held ? Sfx.Mood.Beep : Sfx.Mood.Alarm);
             yield return new WaitForSeconds(0.15f);
         }
+        // The ending at the door: through it, the attacker comes back out with the drive and runs
+        // off with it; held, he tries the handle again, gives up and walks away.
+        if (lastBroken >= 0) { yield return app.world.Grab(lastBroken); last = app.world.DoorTransform(lastBroken); }
+        else if (lastDoor >= 0) yield return app.world.GiveUp(lastDoor, walkAway: !room.Exit);
         bool finished = false;
         if (room.Exit && !attack.AnyThrough)
         {

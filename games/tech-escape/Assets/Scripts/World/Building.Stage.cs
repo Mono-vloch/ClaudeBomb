@@ -282,6 +282,114 @@ public partial class Building
         lurking = StartCoroutine(DoLurk(room));
     }
 
+    // A small network drive, the thing an unlisted asset lives on: a dark two-bay box with a
+    // lamp on its front and a label. Built from the kit's own steel and lens, about 22 cm deep.
+    public static Transform Drive(Transform parent, string label = "SHARED")
+    {
+        var d = new GameObject("Drive").transform;
+        d.SetParent(parent, false);
+        Matte(Box(d, "Body", new Vector3(0.2f, 0.15f, 0.24f), new Vector3(0f, 0.075f, 0f), Metal, new Color(0.11f, 0.12f, 0.14f)).GetComponent<Renderer>());
+        Box(d, "Front", new Vector3(0.18f, 0.13f, 0.01f), new Vector3(0f, 0.075f, -0.121f), Trim, new Color(0.3f, 0.32f, 0.36f), false);
+        for (int i = 0; i < 2; i++)
+            Matte(Box(d, "Bay", new Vector3(0.07f, 0.1f, 0.006f), new Vector3(-0.042f + i * 0.084f, 0.07f, -0.128f), Metal, new Color(0.07f, 0.08f, 0.1f), false).GetComponent<Renderer>());
+        var led = Box(d, "Led", new Vector3(0.012f, 0.012f, 0.006f), new Vector3(0.075f, 0.13f, -0.129f), Lens, null, false);
+        Glow(led.GetComponent<Renderer>(), Theme.Teal, 2.2f);
+        if (!string.IsNullOrEmpty(label))
+        {
+            var plate = DarkPlate(d, label, 0.2f, out var t, 0.1f);
+            t.color = new Color(0.95f, 0.93f, 0.86f);
+            plate.localPosition = new Vector3(0f, 0.153f, -0.02f);
+            plate.localRotation = Quaternion.Euler(70f, 0f, 0f);
+            plate.name = "Label";
+        }
+        return d;
+    }
+
+    // The payoff of a door that gave way: the attacker goes in, comes back out with the drive in
+    // his hand, and runs off down the corridor with it.
+    public IEnumerator Grab(int room)
+    {
+        var door = doors[room];
+        yield return Walk(door.position - door.forward * 0.9f, 0.55f);
+        yield return new WaitForSeconds(0.5f);
+        var loot = Drive(transform, "");
+        loot.name = "Loot";
+        // A teal glow about it, so it reads in his hand down a dark corridor.
+        var shine = new GameObject("Shine").AddComponent<Light>();
+        shine.transform.SetParent(loot, false); shine.transform.localPosition = new Vector3(0f, 0.08f, -0.2f);
+        shine.type = LightType.Point; shine.range = 1.1f; shine.intensity = 2.2f; shine.color = Theme.Teal; shine.shadows = LightShadows.None;
+        foreach (float y in new[] { 0.025f, 0.125f })
+            Glow(Box(loot, "Strip", new Vector3(0.17f, 0.008f, 0.004f), new Vector3(0f, y, -0.13f), Lens, null, false).GetComponent<Renderer>(), Theme.Teal, 2.4f);
+        Corridor(loot.gameObject);
+        var hand = body != null ? body.Hand(AttackerRig.Pose.Walk) : null;
+        if (hand != null)
+        {
+            loot.SetParent(hand, false);
+            float k = hand.lossyScale.x > 1e-4f ? 1f / hand.lossyScale.x : 1f;
+            loot.localScale = Vector3.one * 1.15f * k;
+            loot.localPosition = Vector3.zero;
+            loot.localRotation = Quaternion.identity;
+        }
+        else { loot.SetParent(attacker, false); loot.localPosition = new Vector3(0.25f, 0.85f, 0.25f); }
+        Payoff = "grab";
+        if (body != null) body.Speed(1.8f);
+        yield return Walk(door.position + door.forward * 1.3f, 0.45f);
+        var away = Away(door);
+        yield return Walk(away, Mathf.Clamp(Vector3.Distance(attacker.position, away) / 4.2f, 0.8f, 2.2f));
+        if (body != null) body.Speed(1f);
+        if (loot != null) Destroy(loot.gameObject);
+        Payoff = "gone";
+    }
+
+    // The payoff of a door that held: he tries the handle again, harder, twice; stands a moment;
+    // then gives up and walks off down the corridor, slowly.
+    public IEnumerator GiveUp(int room, bool walkAway = true)
+    {
+        var door = doors[room];
+        var face = door.position - attacker.position; face.y = 0f;
+        if (face.sqrMagnitude > 0.01f) attacker.rotation = Quaternion.LookRotation(face);
+        Payoff = "rattle";
+        for (int i = 0; i < 2; i++)
+        {
+            if (body != null) body.Force(0.6f);
+            Sfx.Rattle();
+            StartCoroutine(Jiggle(room));
+            yield return new WaitForSeconds(0.9f);
+        }
+        if (body != null) body.Show(AttackerRig.Pose.Idle);
+        yield return new WaitForSeconds(1.0f);
+        Payoff = "leave";
+        if (!walkAway) yield break;
+        var away = Away(door);
+        yield return Walk(away, Mathf.Clamp(Vector3.Distance(attacker.position, away) / 1.6f, 1.8f, 4f));
+        Payoff = "gone";
+    }
+
+    // Down the corridor, the way he came, as far as it goes (the other way when the door is near the entrance).
+    Vector3 Away(Transform door)
+    {
+        float back = door.position.x - 6.5f;
+        float x = back >= Entrance.x + 0.5f ? back : Mathf.Min(door.position.x + 6.5f, ExitPoint.x);
+        return new Vector3(x, 0f, 0f);
+    }
+
+    // The door shaking in its frame under the handle.
+    IEnumerator Jiggle(int room)
+    {
+        var h = hinges[room];
+        if (h == null) yield break;
+        var r0 = h.localRotation;
+        for (float t = 0f; t < 0.4f; t += Time.deltaTime)
+        {
+            h.localRotation = r0 * Quaternion.Euler(0f, Mathf.Sin(t * 70f) * 1.6f * (1f - t / 0.4f), 0f);
+            yield return null;
+        }
+        h.localRotation = r0;
+    }
+
+    // Where the attack's ending is: "grab", "rattle", "leave", "gone" (the walk takes its pictures by it).
+    public static string Payoff = "";
+
     IEnumerator DoLurk(int room)
     {
         attacker.gameObject.SetActive(true);
