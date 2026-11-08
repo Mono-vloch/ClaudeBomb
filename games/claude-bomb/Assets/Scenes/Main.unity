@@ -1872,6 +1872,7 @@ MonoBehaviour:
   meshFace: 3
   floatRoot: {fileID: 1175177165}
   floatHeight: 0.012
+  shoulder: {x: 0.17, y: 0.37, z: 0.057}
 --- !u!1 &281080080
 GameObject:
   m_ObjectHideFlags: 0
@@ -7323,8 +7324,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ViewButtons
   cameraController: {fileID: 330585548}
-  arrowFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
-  labelFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
   chatArea: {fileID: 1094259271}
 --- !u!4 &962177675
 Transform:
@@ -8471,9 +8470,6 @@ MonoBehaviour:
   sendButton: {fileID: 1356777487}
   scrollRect: {fileID: 918697061}
   contentParent: {fileID: 184336861}
-  messagePrefab: {fileID: 8835792286154017513, guid: 3329980e6da8ae142976beed2243ab79, type: 3}
-  playerTextColor: {r: 0.93, g: 0.93, b: 0.93, a: 1}
-  claudeTextColor: {r: 0.55, g: 0.9, b: 0.62, a: 1}
 --- !u!1 &1102787012
 GameObject:
   m_ObjectHideFlags: 0
@@ -8878,8 +8874,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8fcd687b8f05bc4c9a0702fe9f7a684, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HelpPanel
-  titleFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
-  bodyFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
 --- !u!4 &1204198066
 Transform:
   m_ObjectHideFlags: 0
@@ -9075,9 +9069,6 @@ MonoBehaviour:
   lumaCamera: {fileID: 2032557629}
   luma: {fileID: 274890857}
   lumaView: {fileID: 669676626}
-  titleFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
-  bodyFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
-  lumaColor: {r: 0.42, g: 0.7, b: 1, a: 1}
   stuckHintSeconds: 120
 --- !u!4 &1218441458
 Transform:
@@ -11080,7 +11071,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PaperDesk
   claude: {fileID: 1952763233}
-  uiFont: {fileID: 11400000, guid: dbd71d4088f75a24d945f4976f31c8b3, type: 2}
   paperFont: {fileID: 11400000, guid: 5d03f63ff549f274e99304f7447bf6d3, type: 2}
   chatArea: {fileID: 1094259271}
   chatInput: {fileID: 1218687743}
@@ -12486,10 +12476,14 @@ PrefabInstance:
       propertyPath: m_ReceiveShadows
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 78ade93446b54d74ca1651b967c28ebc, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: be71af0d7738745338f7528121d764ad, type: 2}
     - target: {fileID: -5754084199372789682, guid: 78ade93446b54d74ca1651b967c28ebc, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 4300000, guid: 30128dd6cc85f9e4b9d2d95ed788a338, type: 2}
+      objectReference: {fileID: 4300000, guid: c52d813268f1a407da8d1c316f3c2b9f, type: 2}
     - target: {fileID: 919132149155446097, guid: 78ade93446b54d74ca1651b967c28ebc, type: 3}
       propertyPath: m_Name
       value: LUMA
@@ -14109,17 +14103,9 @@ MonoBehaviour:
   explosionEffect: {fileID: 232623761}
   smokeEffect: {fileID: 1155091431}
   bombObject: {fileID: 1125202155115375860}
-  losePanel: {fileID: 1496538085}
-  resultText: {fileID: 862575976}
-  panelTimerText: {fileID: 114835636}
-  restartButton: {fileID: 1241254986}
-  quitButton: {fileID: 259696494}
   explosionToSmokeDelay: 1.5
   smokeToPanelDelay: 1.5
-  loseMessage: You lost !
-  winMessage: You won !
-  loseColor: {r: 1, g: 0, b: 0, a: 1}
-  winColor: {r: 0, g: 1, b: 0, a: 1}
+  winToPanelDelay: 1.6
 --- !u!1 &2020945313
 GameObject:
   m_ObjectHideFlags: 0

@@ -16,6 +16,13 @@ public class LumaRig : MonoBehaviour
     [SerializeField] Axis meshFace = Axis.NegY;   // ...and the face looks down -Y
     [SerializeField] Transform floatRoot;         // bobbed up and down; defaults to the parent
     [SerializeField] float floatHeight = 0.012f;  // world units
+    // Where each arm pivots, as fractions of the model's size: x out from the middle
+    // (of the hand-to-hand width), y up from the base (of the height), z toward the
+    // face (of the depth). The default suits the first Meshy LUMA; the painted LUMA
+    // (Assets/Models/LUMA) pivots at her teal shoulder collars, set by LumaModelTools.
+    [SerializeField] Vector3 shoulder = new Vector3(0.294f, 0.432f, 0.093f);
+
+    public Vector3 Shoulder { get => shoulder; set => shoulder = value; }
 
     Vector3 up, face, right;                       // mesh-local axes of the upright frame
     Transform head, armL, armR;
@@ -77,8 +84,8 @@ public class LumaRig : MonoBehaviour
         var bodyR = new Vector3(0.18f * W, 0.226f * H, 0.18f * W);
         var neck = new Vector3(c.x, min.y + 0.437f * H, c.z);
         float armRadius = 0.065f * H;
-        Vector3 shoulderL = new Vector3(c.x - 0.294f * W, min.y + 0.432f * H, c.z + 0.093f * D);
-        Vector3 shoulderR = new Vector3(c.x + 0.294f * W, shoulderL.y, shoulderL.z);
+        Vector3 shoulderL = new Vector3(c.x - shoulder.x * W, min.y + shoulder.y * H, c.z + shoulder.z * D);
+        Vector3 shoulderR = new Vector3(c.x + shoulder.x * W, shoulderL.y, shoulderL.z);
         // Each arm's line runs from the shoulder to a bit past the hand's centre, so
         // the mitten's tip belongs to the arm too.
         Vector3 handL = Centroid(u, p => p.x - c.x < -0.41f * W);
@@ -103,6 +110,8 @@ public class LumaRig : MonoBehaviour
         // above the neck, with a short fade there too; the body keeps the rest.
         var weights = new BoneWeight[u.Length];
         float neckLo = neck.y - 0.03f * H, neckHi = neck.y + 0.06f * H;
+        Color32[] marks = mesh.colors32;
+        bool marked = marks != null && marks.Length == u.Length;
         for (int i = 0; i < u.Length; i++)
         {
             var p = u[i];
@@ -119,8 +128,12 @@ public class LumaRig : MonoBehaviour
             // perfect sphere, and its lower edge sits close to the shoulders), and -
             // near the shoulder - outside the body.
             // The glasses ring sticks out past the head beside the hands: anything that
-            // high up and that close to the middle is head, not arm.
-            bool glasses = Mathf.Abs(p.x - c.x) < 0.325f * W && p.y > c.y + 0.07f * H;
+            // high up and that close to the middle is head, not arm. The painted LUMA
+            // marks her glasses exactly (red vertex colour, set by LumaModelTools), since
+            // her wrist cuffs sit inside that box too and must follow the arms.
+            bool glasses = marked
+                ? marks[i].r > 127
+                : Mathf.Abs(p.x - c.x) < 0.325f * W && p.y > c.y + 0.07f * H;
             if (dArm < 1.9f && dHead > 1.12f && !glasses && (tArm > 0.3f || dBody > 0.9f))
                 arm = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.02f, 0.32f, tArm))
                     * (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1.5f, 1.9f, dArm)));
