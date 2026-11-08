@@ -8,10 +8,33 @@ All nineteen levels run on the new screens. Only `games/tech-escape/`, this file
 doc's answers changed; the kit, the server and the other games are untouched. Frames and counts:
 `games/tech-escape/Builds/look-audit/game-feel/` (not in git).
 
-Round 4 comes first below: Charbel's answers to the round-3 report, the Higgsfield files, the
-new counts, the web size and the fourth player test. Round 3, then rounds 1 and 2, follow as
-they were reported; where a later round changed something, the later section is the one that
-holds.
+Round 5 comes first below (two last changes), then round 4: Charbel's answers to the round-3
+report, the Higgsfield files, the counts, the web size and the fourth player test. Round 3,
+then rounds 1 and 2, follow as they were reported; where a later round changed something, the
+later section is the one that holds.
+
+## Round 5: two last changes (8 November)
+
+1. **The board's lamps are teal once every decision on the row is set**, amber while one is
+   still a question mark; whether it was right, only the attack shows. The lamps at the top of
+   the screen, the board of lamps on the wall and the lamp on the card brought close follow
+   the same rule. On 2.4 the two rules that are wrong as handed over now show teal like the
+   others; on 1.1 the found drive's card stays amber until its five decisions are made ("Set
+   its owner", then "Rate it", then "Lift the lockdown"). The round-4 test of rightness
+   (`Room.RowRight`) is gone from the code.
+2. **2.9's corridor monitor clears the wall's BACKUP.** The monitor's search now counts the
+   words stencilled on a room's back wall among the things to keep clear of. Where its bracket
+   would still cross them (2.9, where no spot on the wall is wholly clear), it hangs from a rod
+   to the ceiling instead, lifted until its foot clears the words. On 2.9 it now hangs above
+   BACKUP, which reads whole.
+
+Re-walked: 1.1, 2.4 and 2.9 only (`Builds/look-audit/game-feel/round5/`, 38 pictures). Their
+counts are unchanged (1.1's room 20 and 26 words, 2.4's 30, 2.9's 23; briefings 44, 43, 39;
+debriefs 18 and 13), no flags, LUMA's lines whole. The other sixteen levels were not walked
+again: the lamp rule is the same code in every room, and the monitor moves only where its spot
+crosses a room's lettering, which in round 4's frames was 2.9 alone (2.3 and 3.3 have COMMS on
+the wall with the monitor well below it; they were not walked again). The web build was made
+again with these changes (41.1 MB on disk, the same as round 4, whose transfer measured 43.2 MB).
 
 ## Round 4: the owner's answers and the Higgsfield files (8 November)
 
@@ -555,24 +578,20 @@ best in it: finding the drive, and the attacker running off with it. It still re
 brought close and Details as forms and the briefing as instructions, and it asks for
 hands-on actions in place of the card's rows.
 
+Round 5 then set the lamps to "every decision made" and moved 2.9's monitor off the
+lettering (above).
+
 Known in the last frames, not fixed:
-- On 2.9 the corridor monitor covers the C of the wall's BACKUP lettering (the stencils are
-  not among the things the monitor keeps clear of).
 - LUMA's strip is see-through: left for the shared fix after the merge, as asked.
 - The open card's lamp and the board's lamps are small from the room camera.
 
 ## Waiting for Charbel
 
-1. **The lamps tell the answer.** Teal when right means a player can turn a knob until its
-   card's lamp goes teal, before any attack: the lamps judge each row with the room's own
-   checks. That is what was asked ("teal when right, amber when not"). If you meant teal once a
-   row is set, whatever its value, it is one line (`RoomScreen.Changed` and `RoomRig.ShowRight`
-   would use `Decided` again). Placeholder: teal when right.
-2. **The patch panel is the rack's bottom unit, not the rack.** The model came as a 2U panel
+1. **The patch panel is the rack's bottom unit, not the rack.** The model came as a 2U panel
    full of cables; above the rules its cables would cover them, so it sits below. A panel with
    five labelled sockets and one cable per rule (the first spec) would let each rule be its
    own cable; that would be a new model. Placeholder: the panel under the five modules.
-3. **No Claude Bomb debrief frame on disk**, and the Claude Bomb test was not run again in
+2. **No Claude Bomb debrief frame on disk**, and the Claude Bomb test was not run again in
    rounds 3 and 4; you asked for the player test.
 
 After the merge, not waiting on anything: Robot Racing's podium gets the single step, and
@@ -591,7 +610,8 @@ LUMA's strip is fixed once for all games.
   `Assets/Resources/Facility/Hero/PatchPanel.prefab`, `Assets/Resources/Badges/` (six badges),
   `Tools/glb_maps.py` (the cleanup tool), recorded in `games/tech-escape/Docs/credits.md`.
 - Frames (not in git), under `games/tech-escape/Builds/look-audit/game-feel/`:
-  - `final/`: the last walk, round 4, 130 pictures and `counts.jsonl`.
+  - `final/`: the last full walk, round 4, 130 pictures and `counts.jsonl`.
+  - `round5/`: round 5's walk of 1.1, 2.4 and 2.9, 38 pictures.
   - `final-round3/`, `final-round2/`: the earlier rounds' walks (round 2's with `side-by-sides/`).
   - `reviewers/`: what each reviewer saw; `player-round3/answer.md` and
     `player-round4/answer.md` are the last two answers.

@@ -62,8 +62,8 @@ so a tester or a class can go straight to one room.
    lit amber, three short lines of what is happening tonight and what the player is there to
    do, and "Enter the room".
 2. **The room.** The room through its security camera, full screen. Every row is a card on
-   the room's prop with a knob per decision and a lamp, teal when the row is set right and
-   amber when not; tap a card to bring it close (one row per decision with its value) and tap
+   the room's prop with a knob per decision and a lamp, teal once every decision on it is made
+   and amber while one is open; tap a card to bring it close (one row per decision with its value) and tap
    its rows to turn them. Where something nobody listed is to be found (1.1), it waits in a
    corner of the room: turn the camera (drag across the room, or the arrow keys), it glints as
    the camera passes it, and a tap flies it to the board. A record that must be signed has a
@@ -114,9 +114,8 @@ Notes:
   takeaway); her full lines and the curriculum are in the file. The walk below is silent.
 - **The game-feel pass (8 November 2026).** Every row of a room is a card on the room's prop
   (`World/RoomRig.cs`), its short name on a dark plate, a knob per decision and a lamp: teal
-  when the row is set right, amber when not (`Room.RowRight` in `Core/Facility.cs` asks the
-  room's own attack and checks, so any answer they accept is right). The knobs show no values
-  at rest, only the one just turned. Tap a card to bring it close: a flat card faces the
+  once every decision on the row is made, amber while one is still a question mark; whether it
+  was right, only the attack shows. The knobs show no values at rest, only the one just turned. Tap a card to bring it close: a flat card faces the
   camera, the full name and line at the top, one row per decision ("Owner: Omar") with a light
   knob; tap a row to turn it. Drag a module up or down a rack. On 1.1 the unlisted drive waits
   on a crate out of the opening view: the camera turns (`SceneCamera.lookYaw`/`lookPitch`), the

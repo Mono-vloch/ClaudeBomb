@@ -17,8 +17,8 @@ public static class FileSheet
 
     public const string Room =
         "The room as it was handed over: every asset, account, message, rule or step is a card on the room's prop (on the board, in the rack, " +
-        "in the sorter, at the gate), with its name on a plate, a knob for each decision and a lamp: teal when the row is set right, amber when " +
-        "not. The board on the wall and the lamps at the top of the screen show the same. Tap a card to bring it close: it turns to face you, its " +
+        "in the sorter, at the gate), with its name on a plate, a knob for each decision and a lamp: teal once every decision on it is made, " +
+        "amber while one is still open; whether it was right, only the attack shows. The board on the wall and the lamps at the top of the screen show the same. Tap a card to bring it close: it turns to face you, its " +
         "full name and line at the top and one row per decision with its value (\"Owner: Omar\"); tap a row to turn it, and the knob on the " +
         "board shows the value it was turned to. The room's one-off decisions are a card of their own. Rows that must be ordered are a rack: drag " +
         "a module up or down. A record that must be signed has a pad beside the board. Something not on the list yet waits in a corner of the " +

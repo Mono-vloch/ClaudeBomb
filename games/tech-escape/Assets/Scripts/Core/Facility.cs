@@ -111,48 +111,6 @@ public class Room
         s.order.AddRange(items.Where(i => !i.hidden).Select(i => i.key));
         return s;
     }
-
-    // Whether one row (an item, or "room" for the one-off decisions) is set right, judged by the
-    // room's own attack and checks: in the setup that works, with only this row as the player has
-    // it (its picks, its place in the order, whether it is on the board), does anything more get
-    // through or fail? So any answer the checks accept is right, not only the one in the setup.
-    public bool RowRight(RoomState st, Session x, string key)
-    {
-        if (attack == null || ready.Count == 0) return true;
-        var good = Preset(ready, readyOrder);
-        good.signed = st.signed; good.signedBy = st.signedBy; good.signedOn = st.signedOn; good.text = st.text;
-        int baseline = Badness(good, x);
-        var probe = good.Clone();
-        foreach (var f in fields)
-        {
-            string k = key + "/" + f.key;
-            if (st.picks.TryGetValue(k, out int v)) probe.picks[k] = v; else probe.picks.Remove(k);
-        }
-        var item = items.FirstOrDefault(i => i.key == key);
-        if (item != null && item.hidden)
-        {
-            if (st.added.Contains(key)) { probe.added.Add(key); if (!probe.order.Contains(key)) probe.order.Add(key); }
-            else { probe.added.Remove(key); probe.order.Remove(key); }
-        }
-        if (ordered && probe.order.Contains(key) && st.order.Contains(key))
-        {
-            probe.order.Remove(key);
-            probe.order.Insert(Math.Min(st.order.IndexOf(key), probe.order.Count), key);
-        }
-        return Badness(probe, x) <= baseline;
-    }
-
-    int Badness(RoomState s, Session x)
-    {
-        try
-        {
-            var a = attack(s, x);
-            int bad = a.lines.Count(l => !l.held);
-            if (check != null) bad += check(s, x, a).Count(c => c.result == Practised.Missed);
-            return bad;
-        }
-        catch (Exception) { return 0; }
-    }
 }
 
 // The whole campaign's memory: each room's last state, and the record (the spine).

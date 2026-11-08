@@ -253,4 +253,10 @@ Again, Details.
 16. **The knobs on the open card** are light on dark, readable at a glance. LUMA's strip stays
     as it is: it is shared, and is fixed once after the merge.
 
+### After the round-4 report (8 November 2026)
+
+17. **The board's lamps** are teal once every decision on the row is set, amber while one is
+    still "?". Whether it was right is only shown by the attack.
+18. **2.9's corridor monitor** no longer covers the "C" of the wall's BACKUP.
+
 The builds that follow these answers are reported in [tech-escape-report.md](tech-escape-report.md).

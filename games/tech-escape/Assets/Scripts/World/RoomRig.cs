@@ -36,7 +36,7 @@ public class RoomRig : MonoBehaviour
         public bool loose, pinned, selected, pulsing, console, sign, dragging;
         public int order;
         public float w, h;
-        public Renderer lamp;            // the row's lamp: teal when it is set right, amber when not
+        public Renderer lamp;            // the row's lamp: teal once every decision on it is made, amber while one is open
         public Transform flyer;          // a loose thing: what flies to the board when it is tapped
         public bool wasInView; public float glintAt = -10f;
     }
@@ -57,7 +57,6 @@ public class RoomRig : MonoBehaviour
     int cols; bool rack;
     Vector2 downAt, dragWas; bool pointerDown;
     public bool Interactive = true;
-    public Func<string, bool> Right;   // whether a row ("room" for the one-off decisions) is set right
     string lastTurned;                  // "item/field": the knob just turned, the one on the board that shows its value
     Renderer focusLamp;
     bool lookAround, panning, flying; float lastLook = -10f; Vector2 lookWas;
@@ -693,20 +692,20 @@ public class RoomRig : MonoBehaviour
             foreach (var sw in t.switches) Show(sw);
         }
         foreach (var sw in rows) Show(sw);
-        ShowRight();
+        ShowLamps();
     }
 
-    // Each row's lamp on the board, and the card brought close: teal when the row is set right, amber when not.
-    public void ShowRight()
+    // Each row's lamp on the board, and the card brought close: teal once every decision on the
+    // row is made, amber while one is still a question mark. Whether it was right, only the
+    // attack shows.
+    public void ShowLamps()
     {
         foreach (var t in tokens)
-        {
-            if (t.lamp == null) continue;
-            bool ok = Right == null || Right(t.key);
-            Building.Glow(t.lamp, ok ? Theme.Teal : Theme.Amber, ok ? 1.8f : 1.5f);
-        }
-        if (focusLamp != null && selected != null) { bool ok = Right == null || Right(selected.key); Building.Glow(focusLamp, ok ? Theme.Teal : Theme.Amber, ok ? 1.8f : 1.5f); }
+            if (t.lamp != null) { bool ok = AllSet(t); Building.Glow(t.lamp, ok ? Theme.Teal : Theme.Amber, ok ? 1.8f : 1.5f); }
+        if (focusLamp != null && selected != null) { bool ok = AllSet(selected); Building.Glow(focusLamp, ok ? Theme.Teal : Theme.Amber, ok ? 1.8f : 1.5f); }
     }
+
+    bool AllSet(Token t) => t.fields.All(f => { int p = st.Pick(t.key, f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; });
 
     void Show(Switch sw)
     {
@@ -851,7 +850,7 @@ public class RoomRig : MonoBehaviour
         foreach (Transform c in roomRoot.GetComponentsInChildren<Transform>(true))
             if ((c.name == "Beam" || c.name == "Dust") && !c.IsChildOf(rig)) { c.gameObject.SetActive(false); hiddenForFocus.Add(c.gameObject); }
         FitFocus(W, H);
-        ShowRight();
+        ShowLamps();
     }
 
     // The camera faces the card squarely, as far back as fits the whole card with a margin for

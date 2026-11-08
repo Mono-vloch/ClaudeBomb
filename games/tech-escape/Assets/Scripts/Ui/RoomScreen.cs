@@ -45,7 +45,6 @@ public class RoomScreen
         if (app.world.HasInterior(index)) CameraFeed.Build(frame, $"CAM {index + 1:00}", "", 96, bottom: false); // the buttons sit where the lower brackets would
 
         Rig = RoomRig.Build(app.world, index, room, st, Changed);
-        Rig.Right = k => room.RowRight(st, app.session, k);
         Rig.Selected += t =>
         {
             if (t != null && Rig.FocusView(out var eye, out var look, out float fov)) app.world.ShowFocus(frame, eye, look, fov);
@@ -147,14 +146,22 @@ public class RoomScreen
             if (Mathf.Abs(bl.z + 3.588f) < 0.1f) boardView = Rig.ViewRect(bl.x - 0.38f, bl.y - 0.1f, bl.x + 0.38f, bl.y + 0.1f, bl.z);
         }
         const float K = Building.MonitorScale;
+        // The words stencilled on the wall (BACKUP, COMMS): the monitor keeps clear of them too.
+        var lettering = roomRoot.GetComponentsInChildren<Renderer>().Where(r => r.name == "Stencil" && r.enabled).Select(r =>
+        {
+            var lo = roomRoot.InverseTransformPoint(r.bounds.min); var hi = roomRoot.InverseTransformPoint(r.bounds.max);
+            return (local: Rect.MinMaxRect(Mathf.Min(lo.x, hi.x), Mathf.Min(lo.y, hi.y), Mathf.Max(lo.x, hi.x), Mathf.Max(lo.y, hi.y)), z: Mathf.Max(lo.z, hi.z));
+        }).ToList();
+        var stencils = lettering.Select(w => Rig.ViewRect(w.local.xMin, w.local.yMin, w.local.xMax, w.local.yMax, w.z)).ToList();
         bool Free(float tx, float ty)
         {
-            var mon = Rig.ViewRect(tx - 0.32f * K, ty - 0.35f * K, tx + 0.32f * K, ty + 0.58f * K, -3.44f); // the screen, and its bracket under it
-            mon = Rect.MinMaxRect(mon.xMin - 1f, mon.yMin - 1f, mon.xMax + 1f, mon.yMax + 1f);
+            var raw = Rig.ViewRect(tx - 0.32f * K, ty - 0.35f * K, tx + 0.32f * K, ty + 0.58f * K, -3.44f); // the screen, and its bracket under it
+            var mon = Rect.MinMaxRect(raw.xMin - 1f, raw.yMin - 1f, raw.xMax + 1f, raw.yMax + 1f);
             if (Rig.ConsoleView.HasValue && Rig.ConsoleView.Value.Overlaps(mon)) return false;
             if (boardView.HasValue && boardView.Value.Overlaps(mon)) return false;
             if (Rig.GridView.Overlaps(mon)) return false;
             if (Rig.HiddenOnWall(mon)) return false;
+            if (stencils.Any(sv => sv.Overlaps(raw))) return false; // the monitor itself, no margin: a spot that only grazed the words before still stands
             return !rackX.HasValue || Mathf.Abs(tx - rackX.Value) > 0.8f;
         }
         bool InFrame(float tx, float ty) => Rig.PointInFrame(new Vector3(tx - 0.3f * K, ty + 0.58f * K, -3.44f), 2f) && Rig.PointInFrame(new Vector3(tx + 0.3f * K, ty + 0.58f * K, -3.44f), 2f)
@@ -183,6 +190,7 @@ public class RoomScreen
                 Add(Rig.GridView);
                 if (boardView.HasValue) Add(boardView.Value);
                 foreach (var o in Rig.WallOccluders) Add(o);
+                foreach (var o in stencils) Add(o);
                 return area / Mathf.Max(1f, mon.width * mon.height);
             }
             float best = float.MaxValue;
@@ -194,9 +202,25 @@ public class RoomScreen
                 foreach (var (tx, ty) in tries) { if (!Free(tx, ty)) continue; float o = Overflow(tx, ty); if (o < least) { least = o; x = tx; y = ty; } }
             }
         }
+        // A bracket under it, so it hangs on the wall rather than in the air; where words are
+        // stencilled on the wall under it, it hangs from a rod to the ceiling instead, lifted so
+        // that its foot clears the words.
+        var under = Rig.ViewRect(x - 0.06f * K, y - 0.36f * K, x + 0.06f * K, y, -3.44f);
+        bool hang = stencils.Any(sv => sv.Overlaps(under));
+        if (hang)
+        {
+            float wordsTop = lettering.Where(w => w.local.xMax > x - 0.32f * K && w.local.xMin < x + 0.32f * K).Select(w => w.local.yMax).DefaultIfEmpty(y).Max();
+            y = Mathf.Max(y, wordsTop + 0.03f);
+        }
         var shell = app.world.Monitor(index, new Vector3(x, y, -3.44f), Quaternion.identity);
-        // A bracket under it, so it hangs on the wall rather than in the air.
-        Building.Box(shell, "Bracket", new Vector3(0.12f, 0.5f, 0.06f), new Vector3(0f, -0.1f, -0.1f), Building.Trim); // in the shell's own (scaled) space
+        if (hang)
+        {
+            const float Ceiling = 2.8f;
+            float from = 0.5f, len = Mathf.Max(0.2f, (Ceiling - (y + from * K)) / K); // in the shell's own (scaled) space
+            Building.Box(shell, "Bracket", new Vector3(0.06f, len, 0.05f), new Vector3(0f, from + len / 2f, -0.1f), Building.Trim);
+            if (DemoDriver.Wanted) Debug.Log($"[Monitor] {room.id}: hung from the ceiling, clear of the wall's lettering");
+        }
+        else Building.Box(shell, "Bracket", new Vector3(0.12f, 0.5f, 0.06f), new Vector3(0f, -0.1f, -0.1f), Building.Trim); // in the shell's own (scaled) space
         if (DemoDriver.Wanted)
         {
             var cam = app.world.Camera;
@@ -238,15 +262,15 @@ public class RoomScreen
     void Changed()
     {
         if (Rig == null) return;
-        // Each row's lamp: teal when it is set right (the room's own checks say), amber when not.
-        var right = Rig.RowKeys().Select(k => room.RowRight(st, app.session, k)).ToList();
-        app.world.ShowConfig(index, right);
-        Rig.ShowRight();
+        // Each row's lamp: teal once every decision on it is made, amber while one is open.
+        var decided = Rig.Decided();
+        app.world.ShowConfig(index, decided);
+        Rig.ShowLamps();
         // The progress at the top: a lamp per row on the prop, and one for the console and the pad.
         if (rowLamps != null)
         {
-            bool roomDone = (!room.fields.Any(f => f.once) || room.RowRight(st, app.session, "room")) && (!room.signable || st.signed);
-            var all = new List<bool>(right);
+            bool roomDone = room.fields.Where(f => f.once).All(f => { int p = st.Pick("room", f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; }) && (!room.signable || st.signed);
+            var all = new List<bool>(decided);
             // What should be on the board and is not yet: an amber lamp each, so the row never reads as done too early.
             foreach (var i in room.items) if (i.hidden && !i.decoy && !st.added.Contains(i.key)) all.Add(false);
             if (room.fields.Any(f => f.once) || room.signable) all.Add(roomDone);
@@ -255,7 +279,8 @@ public class RoomScreen
         if (room.number == 1 && st.added.Contains("shared") && root != null)
         {
             Rig.Pulse(Script.Mistake(room), false);
-            bool owned = st.Pick("shared", "owner") > 0, found = room.RowRight(st, app.session, "shared");
+            bool owned = st.Pick("shared", "owner") > 0;
+            bool found = room.fields.Where(f => !f.once).All(f => { int p = st.Pick("shared", f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; });
             Hud.SetObjective(objective, found ? "Lift the lockdown." : owned ? "Rate it. Then lift the lockdown." : "Set its owner. Then lift the lockdown.");
             if (found && !watched) { watched = true; app.luma.Cue(root, "watch-1", 40, 924); }
         }
