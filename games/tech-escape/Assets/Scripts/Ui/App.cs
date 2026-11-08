@@ -20,6 +20,9 @@ public class App : MonoBehaviour
     public Atmosphere atmosphere;
     public CameraRig rig;
     public Effects effects;
+    public GameMenu menu;
+    public bool rehearsed;          // the first attack on the room as handed over was a rehearsal: back in the room, fix it, run again
+    RoomState handed;               // the room as it was handed over this visit, to tell an untouched room
 
     const string PrefLevel = "tech_escape_level", PrefStars = "tech_escape_stars_", PrefRoom = "tech_escape_room_", PrefRecord = "tech_escape_record";
     Image page;
@@ -54,6 +57,7 @@ public class App : MonoBehaviour
         world.effects = effects;
         world.gameObject.SetActive(false);
         luma = gameObject.AddComponent<Luma>();
+        menu = gameObject.AddComponent<GameMenu>();
         Sfx.Init(gameObject);
         Sfx.luma = luma;
         LoadSession();
@@ -91,6 +95,7 @@ public class App : MonoBehaviour
     RectTransform Fresh()
     {
         FileSheet.Close();
+        menu?.Close();
         luma.Hush();
         onLeave?.Invoke();
         onLeave = null;
@@ -122,9 +127,28 @@ public class App : MonoBehaviour
     {
         room = Rooms.Get(number);
         lastAttack = null;
-        state = session.Of(room.id)?.Clone()
+        rehearsed = false;
+        var saved = session.Of(room.id);
+        state = saved?.Clone()
              ?? (room.broken.Count > 0 ? room.Preset(room.broken, room.brokenOrder) : room.ready.Count > 0 ? room.Preset(room.ready, room.readyOrder) : room.Blank());
+        // A rehearsal is only on a room with a planned mistake, as handed over, never run before.
+        handed = saved == null && room.broken.Count > 0 ? state.Clone() : null;
         ShowLesson();
+    }
+
+    // True while the room stands exactly as it was handed over (nothing touched): the first
+    // attack on it is a free rehearsal, not counted.
+    public bool Untouched
+    {
+        get
+        {
+            if (handed == null || rehearsed || state == null) return false;
+            if (state.added.Count != handed.added.Count || !state.added.SetEquals(handed.added) || state.signed != handed.signed) return false;
+            if (!state.order.SequenceEqual(handed.order)) return false;
+            if (state.picks.Count != handed.picks.Count) return false;
+            foreach (var kv in handed.picks) if (!state.picks.TryGetValue(kv.Key, out int v) || v != kv.Value) return false;
+            return true;
+        }
     }
 
     public void NextLevel()
@@ -146,6 +170,15 @@ public class App : MonoBehaviour
         }
         LevelsDone = Mathf.Max(LevelsDone, room.number);
         SaveSession();
+    }
+
+    // A fresh student, for the screenshot walk: no levels done, no stars, no rooms, no record.
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(PrefLevel); PlayerPrefs.DeleteKey(PrefRecord);
+        foreach (var rm in Rooms.All) { PlayerPrefs.DeleteKey(PrefRoom + rm.id); PlayerPrefs.DeleteKey(PrefStars + rm.number); }
+        PlayerPrefs.Save();
+        session = new Session();
     }
 
     // ---- the campaign's memory, on this machine -----------------------------------------

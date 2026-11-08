@@ -209,13 +209,13 @@ Again, Details.
 | 2.4 Blocks are logged, by the last rule | ANY → ANY down and at the bottom of the rack. |
 | 2.4 The service still works | WEB, STAFF and DATA levers up. |
 
-## Open questions
+## Open questions, answered (8 November 2026)
 
-1. **Short labels on the console.** "PUBLIC 3389 → ADMIN" instead of "Remote administration (3389)
-   from the public side to the admin portal" at rest, the full rule on tap and in the file. Clear
-   enough, or would you rather see the full names and accept more words?
-2. **The attacker on the monitor.** It walks to the room while the player works, and waits at the
-   door. It never punishes. Is that the right amount of pressure for a classroom?
-3. **Teach by trying in Tech Escape.** Running the attack on the room as handed over goes to a debrief
-   with no medal, as today, and "Again" brings the player back. Or should the first attack be a
-   free rehearsal, with no debrief, that only shows the door break?
+1. **Short labels on the console.** Plain words first, the port after: "Internet → Admin ·
+   Remote Desktop (3389)"; the full rule on tap (the card brought close) and in the file.
+2. **The attacker on the monitor.** It walks to the room's door while the player works, and
+   never attacks early.
+3. **Teach by trying.** The first attack on an unfixed room is a free rehearsal: no debrief,
+   not counted in the score or the platform report; the next run counts.
+
+The build that follows these answers is reported in [tech-escape-report.md](tech-escape-report.md).

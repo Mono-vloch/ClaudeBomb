@@ -4,24 +4,24 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The facility runs the attack: the corridor in lockdown, the camera flying in over
-// the entrance as the siren goes, then chasing the attacker from door to door; a door
-// that gives way is sparks, a shake, the alarm and THROUGH in scarlet, one that holds
-// a teal flash and HELD; the lines of what it tried fill the column on the right. The
-// exit opening, or what gave way, is the last moment. What got through goes to the record.
+// The facility runs the attack: the corridor in lockdown, the camera flying in over the
+// entrance as the siren goes, then chasing the attacker from door to door; a door that gives
+// way is sparks, a shake, the alarm and THROUGH in scarlet, one that holds a teal flash and
+// HELD. The HUD is the row of twelve door lamps, nothing else; LUMA says one line after the
+// first banner, whole, and the summary at the end. The first attack on a room as it was handed
+// over is a rehearsal: it shows the door break and counts for nothing; the next run counts.
 public class AttackScreen
 {
     public static bool Running { get; private set; }
+    public static bool Rehearsal { get; private set; }
 
     public readonly RectTransform root;
     readonly App app;
     readonly Attack attack;
-    readonly RectTransform frame, linesLayer, bannerLayer;
-    readonly TextMeshProUGUI summary, counts;
-    readonly Image[] lamps = new Image[12];
-    readonly Button results;
-    readonly Image column, sumBox;
-    float y;
+    readonly RectTransform frame, bannerLayer;
+    readonly Image[] lamps;
+    readonly Button next;
+    readonly bool rehearsal;
     int through, held;
 
     public AttackScreen(Transform parent, App app)
@@ -33,59 +33,39 @@ public class AttackScreen
         app.Paper(Color.clear);
 
         attack = room.attack(app.state, app.session);
-        app.Record(attack);
+        rehearsal = app.Untouched && attack.AnyThrough;
+        Rehearsal = rehearsal;
+        if (rehearsal) app.rehearsed = true; else app.Record(attack);
 
         frame = Ui.Node("Frame", root);
-        Ui.Place(frame, 40, 110, 1180, 930);
+        Ui.Place(frame, 0, 0, Ui.W, Ui.H);
         app.world.Build();
         for (int i = 0; i < 12; i++) app.world.SetDoor(i, i < app.LevelsDone ? Building.DoorState.Held : Building.DoorState.Locked);
         app.world.SetDoor(Facility.RoomIndex(room.room), Building.DoorState.Current);
         app.world.ShowOverview(frame);
+        app.atmosphere.MenuBlur(false);
         Sfx.Ambient(true);
 
-        // The HUD: the level and the room, the twelve doors as lamps, the counts.
-        var hud = Ui.Glass(root, "Hud", 40, 16, 1180, 84, true, Theme.Danger);
-        var eyebrow = Ui.Eyebrow(hud.transform, "THE FACILITY RUNS THE ATTACK", Theme.Danger);
-        eyebrow.font = Theme.Bold; eyebrow.fontSize = 16;
-        Ui.Place(eyebrow.rectTransform, 24, 12, 600, 18);
-        var phaseText = Ui.Text(hud.transform, $"Level {room.id}  ·  {room.room}", 24, Color.white, true);
-        Ui.Place(phaseText.rectTransform, 24, 34, 720, 40);
-        phaseText.enableWordWrapping = false; phaseText.overflowMode = TextOverflowModes.Ellipsis;
-        var doorsLabel = Ui.Eyebrow(hud.transform, "THE DOORS", Theme.Teal);
-        doorsLabel.fontSize = 16;
-        Ui.Place(doorsLabel.rectTransform, 800, 12, 200, 18);
-        for (int i = 0; i < 12; i++)
+        lamps = Hud.DoorLamps(root, (Ui.W - (12 * 28 + 28)) / 2f);
+        if (rehearsal)
         {
-            lamps[i] = Ui.Box(hud.transform, "Lamp", Color.white, false);
-            Ui.Place(lamps[i].rectTransform, 800 + i * 26, 34, 18, 18);
-            lamps[i].raycastTarget = false;
+            var tag = Ui.Glass(root, "Rehearsal", (Ui.W - 360) / 2f, 88, 360, 36, true, Theme.Amber);
+            var t = Ui.Eyebrow(tag.transform, "REHEARSAL  ·  NOT COUNTED", Theme.Amber);
+            t.font = Theme.Bold; t.enableWordWrapping = false;
+            Ui.Place(t.rectTransform, 20, 9, 330, 20);
         }
-        counts = Ui.Text(hud.transform, "THROUGH 0  ·  HELD 0", 16, Look.Chalk, true);
-        counts.characterSpacing = 3;
-        Ui.Place(counts.rectTransform, 800, 58, 360, 20);
+        GameMenu.Icon(root);
         Lamps();
 
-        // The lines, in glass on the right.
-        column = Ui.Glass(root, "Lines", 1240, 110, 640, 60);
-        var head = Ui.Eyebrow(column.transform, "WHAT IT TRIED", Theme.Teal);
-        head.font = Theme.Bold; head.fontSize = 16;
-        Ui.Place(head.rectTransform, 20, 14, 600, 18);
-        linesLayer = Ui.Node("Lines", column.transform);
-        Ui.Place(linesLayer, 20, 44, 600, 640);
-        sumBox = Ui.Glass(root, "Summary", 1240, 820, 640, 60);
-        sumBox.gameObject.SetActive(false);
-        summary = Ui.Text(sumBox.transform, "", 16, Look.Chalk, true, TextAlignmentOptions.MidlineLeft);
-        Ui.Place(summary.rectTransform, 20, 0, 600, 60);
-        app.luma.Line(root, 1240, 890, 640, app.luma.Say("live-" + room.number), true, true, 16);
-        results = Ui.Button(root, "See the debrief", app.ShowResults, Ui.ButtonStyle.Primary, 18);
-        Ui.Place(results.GetComponent<RectTransform>(), 1640, 1012, 240, 52);
-        results.gameObject.SetActive(false);
+        next = Ui.Button(root, rehearsal ? "Back to the room" : "Debrief", rehearsal ? app.ShowRoom : (System.Action)app.ShowResults, Ui.ButtonStyle.Accent, 22);
+        Ui.Place(next.GetComponent<RectTransform>(), Ui.W - 40 - 260, 996, 260, 64);
+        next.gameObject.SetActive(false);
         bannerLayer = Ui.Node("Banners", root);
         Ui.Stretch(bannerLayer);
 
         var runner = root.gameObject.AddComponent<Runner>();
         runner.StartCoroutine(Run());
-        app.onLeave += () => Running = false;
+        app.onLeave += () => { Running = false; Rehearsal = false; };
     }
 
     void Lamps()
@@ -93,22 +73,25 @@ public class AttackScreen
         for (int i = 0; i < 12; i++)
         {
             var s = app.world.StateOf(i);
-            lamps[i].color = s == Building.DoorState.Breached ? Look.Breached : s == Building.DoorState.Held || s == Building.DoorState.Open ? Theme.Teal : s == Building.DoorState.Current ? Theme.Amber : new Color(Look.Locked.r, Look.Locked.g, Look.Locked.b, 0.7f);
+            lamps[i].color = s == Building.DoorState.Breached ? Look.Breached : s == Building.DoorState.Held || s == Building.DoorState.Open ? Theme.Teal : s == Building.DoorState.Current ? Theme.Amber : new Color(1f, 1f, 1f, 0.18f);
         }
-        counts.text = $"THROUGH {through}  ·  HELD {held}";
     }
 
     IEnumerator Run()
     {
         Running = true;
+        var room = app.room;
         yield return new WaitForSeconds(0.3f);
         app.world.OpeningShot(frame, 2.4f);
         app.world.Alarm(2.2f);
         app.atmosphere.Pulse(Theme.Danger, 0.4f, 0.9f);
-        // The banner stays up until LUMA has finished her line (typed and spoken), so it is
-        // never gone while she is still mid-sentence; then its own 1.3 s.
-        yield return Moment("THE ATTACK BEGINS", "", Theme.Danger, 1.3f, true, Sfx.Mood.Siren, () => app.luma.Busy);
+        yield return Moment("THE ATTACK BEGINS", "", Theme.Danger, 1.0f, true, Sfx.Mood.Siren);
+        // LUMA's one line, after the first banner and whole; the next banner waits until she is done.
+        string cue = Luma.Lines.ContainsKey("watch-" + room.number) ? "watch-" + room.number : "live-" + room.number;
+        app.luma.Cue(root, cue, 40, 944, 820);
         yield return app.world.WalkTo(app.world.Entrance + Vector3.right * 1.5f, 0.8f);
+        float waited = 0f;
+        while (app.luma.Busy && waited < 12f) { waited += Time.unscaledDeltaTime; yield return null; }
         Transform last = app.world.AttackerTransform;
         foreach (var line in attack.lines)
         {
@@ -116,76 +99,57 @@ public class AttackScreen
             if (index >= 0) { yield return app.world.Visit(index, !line.held, 1.0f); last = app.world.DoorTransform(index); }
             else if (!line.held) { Sfx.Crash(); app.atmosphere.Pulse(Theme.Danger, 0.5f, 0.6f); app.world.Alarm(2f); }
             else Sfx.Clack();
-            Line(line.room, line.held ? "HELD" : "THROUGH", line.held ? "" : line.gap, line.held);
             if (line.held) held++; else through++;
             Lamps();
-            yield return Moment(line.held ? "HELD" : "THROUGH", line.room + "  ·  " + (line.held ? line.reached : line.gap), line.held ? Theme.Teal : Look.Breached, line.held ? 0.7f : 1.1f, !line.held, line.held ? Sfx.Mood.Beep : Sfx.Mood.Alarm);
+            yield return Moment(line.held ? "HELD" : "THROUGH", Labels.Of(line.held ? line.reached : line.gap), line.held ? Theme.Teal : Look.Breached, line.held ? 0.7f : 1.1f, !line.held, line.held ? Sfx.Mood.Beep : Sfx.Mood.Alarm);
             yield return new WaitForSeconds(0.15f);
         }
         bool finished = false;
-        if (app.room.Exit && !attack.AnyThrough)
+        if (room.Exit && !attack.AnyThrough)
         {
             app.world.SetExit(true);
             yield return app.world.WalkTo(app.world.ExitPoint, 1.4f);
             app.effects.Confetti(app.world.ExitPoint + Vector3.up * 1.6f, 60);
-            app.world.MomentAround(app.world.ExitTransform, 2.6f, () => finished = true);
-            yield return Moment("THE EXIT OPENS", "the whole chain held", Theme.Teal, 1.8f, true, Sfx.Mood.Fanfare);
+            app.world.MomentAround(app.world.ExitTransform, 2.6f, () => finished = true, hold: true);
+            yield return Moment("THE EXIT OPENS", "", Theme.Teal, 1.8f, true, Sfx.Mood.Fanfare);
         }
         else if (attack.AnyThrough)
         {
-            app.world.MomentAround(last, 2.4f, () => finished = true);
-            yield return Moment(through == 1 ? "ONE DOOR GAVE WAY" : $"{through} DOORS GAVE WAY", attack.summary, Look.Breached, 1.8f, true, Sfx.Mood.Alarm);
+            app.world.MomentAround(last, 2.4f, () => finished = true, hold: true);
+            yield return Moment(through == 1 ? "ONE DOOR GAVE WAY" : $"{through} DOORS GAVE WAY", "", Look.Breached, 1.8f, true, Sfx.Mood.Alarm);
         }
         else
         {
-            app.world.MomentAround(last, 2.4f, () => finished = true);
-            yield return Moment("NOTHING GOT THROUGH", attack.summary, Theme.Teal, 1.8f, true, Sfx.Mood.Fanfare);
+            app.world.MomentAround(last, 2.4f, () => finished = true, hold: true);
+            yield return Moment("NOTHING GOT THROUGH", "", Theme.Teal, 1.8f, true, Sfx.Mood.Fanfare);
         }
-        float waited = 0f;
+        waited = 0f;
         while (!finished && waited < 4f) { waited += Time.unscaledDeltaTime; yield return null; }
-        app.world.BackToOverview();
-        summary.text = attack.summary;
-        sumBox.gameObject.SetActive(true);
-        results.gameObject.SetActive(true);
+        // The end stays on the door (the camera's last turn holds): shut and teal when it held,
+        // hanging open and scarlet when not.
+        // The summary as LUMA's line, whole: the first sentence when the whole runs long.
+        string summary = Luma.Words(attack.summary) <= Luma.CueWords ? attack.summary : Luma.FirstSentence(attack.summary) ?? attack.summary;
+        app.luma.Text(root, summary, 40, 944, 820, stay: true);
+        next.gameObject.SetActive(true);
         Running = false;
-    }
-
-    void Line(string room, string verdict, string text, bool held)
-    {
-        if (y > 560) return; // the column is full; the debrief lists every line
-        // Dark like the rest of the play screen, the verdict's colour in the keyline and the word.
-        var card = Ui.Card(linesLayer, "Line", new Color(0.07f, 0.13f, 0.26f, 1f), held ? new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.6f) : Look.Breached);
-        Ui.Place(card.rectTransform, 0, y, 600, string.IsNullOrEmpty(text) ? 52 : 84);
-        var v = Ui.Text(card.transform, verdict, 16, held ? Theme.Teal : Look.Breached, true);
-        v.characterSpacing = 3;
-        Ui.Place(v.rectTransform, 16, 12, 130, 22);
-        var r = Ui.Text(card.transform, room, 16, Color.white, true);
-        Ui.Place(r.rectTransform, 150, 12, 430, 22);
-        var t = Ui.Text(card.transform, text, 16, Look.Chalk);
-        Ui.Place(t.rectTransform, 16, 42, 568, 36);
-        t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Ellipsis;
-        var g = Ui.Group(card); g.alpha = 0;
-        root.GetComponent<Runner>().StartCoroutine(Ui.Fade(g, 1f, 0.3f));
-        y += string.IsNullOrEmpty(text) ? 60 : 92;
-        Ui.Place(column.rectTransform, 1240, 110, 640, Mathf.Min(700f, 60f + y));
     }
 
     // A moment over the corridor, low in the frame so the attacker stays in view, in dark glass
     // with a keyline in its colour: big ones come in with an overshoot and a flash of the colour
     // over the world.
-    IEnumerator Moment(string text, string sub, Color colour, float seconds, bool big, Sfx.Mood mood, System.Func<bool> holdWhile = null)
+    IEnumerator Moment(string text, string sub, Color colour, float seconds, bool big, Sfx.Mood mood)
     {
         Image flash = null;
         if (big)
         {
             flash = Ui.Box(bannerLayer, "Flash", new Color(colour.r, colour.g, colour.b, 0f), false);
-            Ui.Place(flash.rectTransform, 40, 110, 1180, 930);
+            Ui.Stretch(flash.rectTransform);
             flash.raycastTarget = false;
         }
         var card = Ui.Box(bannerLayer, "Moment", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f));
-        float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : 92;
+        float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : string.IsNullOrEmpty(sub) ? 92 : 118;
         float w = big ? 820 : 640;
-        Ui.Place(card.rectTransform, 40 + (1180 - w) / 2, 935 - h / 2, w, h); // low in the frame: the attacker and the door stay in view above it
+        Ui.Place(card.rectTransform, (Ui.W - w) / 2, 800 - h / 2, w, h); // low in the frame, over LUMA's strip: the attacker and the door stay in view above it
         card.raycastTarget = false;
         var keyline = Ui.Box(card.transform, "Keyline", colour, false);
         Ui.Place(keyline.rectTransform, 0, 0, 6, h);
@@ -196,12 +160,12 @@ public class AttackScreen
         if (!string.IsNullOrEmpty(sub))
         {
             var st = Ui.Text(card.transform, sub, big ? 20 : 16, Look.Chalk, false, TextAlignmentOptions.Center);
-            Ui.Place(st.rectTransform, 20, h - (big ? 52 : 32), w - 40, 26);
+            Ui.Place(st.rectTransform, 20, h - (big ? 52 : 36), w - 40, 26);
             st.enableWordWrapping = false; st.overflowMode = TextOverflowModes.Ellipsis;
         }
         var group = Ui.Group(card);
         card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        card.rectTransform.anchoredPosition = new Vector2(630, -935);
+        card.rectTransform.anchoredPosition = new Vector2(Ui.W / 2, -800);
         Sfx.Sting(mood);
         yield return Ui.Animate(big ? 0.34f : 0.2f, k =>
         {
@@ -211,8 +175,6 @@ public class AttackScreen
             if (flash != null) flash.color = new Color(colour.r, colour.g, colour.b, 0.45f * Mathf.Max(0f, 1f - k * 2.5f));
         });
         if (flash != null) Object.Destroy(flash.gameObject);
-        float held = 0f;
-        while (holdWhile != null && holdWhile() && held < 30f) { held += Time.unscaledDeltaTime; yield return null; }
         yield return new WaitForSecondsRealtime(seconds);
         yield return Ui.Animate(0.22f, k => { group.alpha = 1 - k; card.rectTransform.localScale = Vector3.one * (1f - 0.08f * k); });
         Object.Destroy(card.gameObject);

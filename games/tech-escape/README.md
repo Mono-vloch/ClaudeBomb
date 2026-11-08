@@ -84,7 +84,8 @@ from the ladder on a briefing, so a tester or a class can go straight to one roo
 | The nineteen levels as data: items, decisions, the ready and broken rooms, warm-ups, the attack each room runs, the checks, the lines | `Scripts/Core/Rooms.cs` |
 | LUMA: the coach, her lines, portrait and voice | `Scripts/Ui/Luma.cs`, `Resources/Luma`, `Resources/LumaVoice`, `Editor/LumaVoiceTools.cs` |
 | The campaign, the session on disk, the step (watch, fix, your run), the record | `Scripts/Ui/App.cs` |
-| Screens | `Scripts/Ui/TitleScreen.cs`, `LessonScreen.cs` (the briefing; its warm-up question is turned off), `RoomScreen.cs` (the room's decisions), `AttackScreen.cs` (the attack), `ResultsScreen.cs` (the debrief) |
+| Screens | `Scripts/Ui/TitleScreen.cs` (the cover, Start and the facility map), `LessonScreen.cs` (the briefing as the night shift's transmission), `RoomScreen.cs` (the room: its rows as things on the prop, `World/RoomRig.cs`), `AttackScreen.cs` (the attack, with the rehearsal), `ResultsScreen.cs` (the debrief: the door, the podium, Details), `GameMenu.cs` (Esc), `Hud.cs` |
+| What the game-feel pass says: the objective lines, the transmissions, the short names on the plates | `Scripts/Core/Script.cs` |
 | The facility in three dimensions: the corridor, twelve rooms, the door lights, the attacker, the exit | `Scripts/World/Building.cs` |
 | The camera: overview, orbit, the room from the corridor side | `Scripts/World/SceneCamera.cs` |
 | Shapes and materials, made in code; the three shaders | `Scripts/World/MeshKit.cs`, `Look.cs`, `Resources/Shaders` |
@@ -103,8 +104,17 @@ Notes:
   is: shapes from `MeshKit.cs`, colours and three small shaders in `Look.cs`, a camera
   that keeps the facility in a given part of the stage so the cards sit next to it.
 - **LUMA's voice.** After changing any line she says, run **Tech Escape > Generate LUMA
-  Voice** (macOS `say`; a published trailer needs a licensed voice). The walk below is
-  silent.
+  Voice** (macOS `say`; a published trailer needs a licensed voice): the build stops when a
+  line has no recording. Since the game-feel pass she says one short cue when something
+  happens (`Luma.Lines`: her first sentence on entering a room, the attack's line, the
+  takeaway); her full lines and the curriculum are in the file. The walk below is silent.
+- **The game-feel pass (8 November 2026).** Every row of a room is a thing on the room's prop
+  (`World/RoomRig.cs`): a token with its short name on a dark plate and a switch per decision;
+  tap a token to bring it close, tap a switch to turn it, drag a module up or down a rack. The
+  corridor monitor on the wall shows the attacker coming (a second camera). The first attack
+  on an untouched room is a rehearsal and counts for nothing. The objective lines, the
+  transmissions and the short names are in `Core/Script.cs`; the data in `Rooms.cs`, the
+  checks and the report are as they were.
 - **Rooms and progress persist** in PlayerPrefs on the machine.
 
 ## Checking it without opening the Editor
@@ -116,10 +126,12 @@ $UNITY -batchmode -nographics -projectPath . -executeMethod Builder.BuildMac -lo
 "Builds/mac/Tech Escape.app/Contents/MacOS/Tech Escape" -cover /tmp/cover.png -screen-width 1600 -screen-height 1000 -screen-fullscreen 0
 ```
 
-The built app, started with `-screenshots <folder>`, walks through every screen (title,
-briefing, a room, the attack, the debrief, a room with rows to order) and saves a
-picture of each, then quits; `-cover` takes the platform's cover picture. The current set is in
-`Docs/screenshots`. Grep the build log for `error CS` and `Build:`.
+The built app, started with `-screenshots <folder>`, walks through every level (the briefing,
+the room as handed over, the room set right; 1.1, 1.3 and 2.4 played through the rehearsal,
+the attack and the debrief), saves a picture of each screen with the game-feel pass's counts
+in `counts.jsonl` (words, controls, LUMA's lines), then quits; `-levels 1,9` limits it to
+those levels; `-cover` takes the platform's cover picture. Grep the build log for `error CS`
+and `Build:`. The latest frames are in `Builds/look-audit/game-feel/`.
 
 ## Web version
 

@@ -20,6 +20,8 @@ public class SceneCamera : MonoBehaviour
     public Transform follow;      // Follow and Portrait: the attacker, a door
     public float pitch = 55f, yaw = 20f, fov = 30f;
     public float orbitPitch = 26f, orbitDistance = 15f, orbitSpeed = 3.5f;
+    public float orbitArc = 0f, orbitBase = 0f, orbitFov = 36f; // arc > 0: a sway of that many degrees about the base yaw instead of a full turn
+    public float minDistance = 4f;                              // Overview: how close the fit may bring the camera (inside a room, nearer than four metres)
     public event Action Framed;   // after every frame's placing: labels follow
     Vector3 insideEye, insideLook; float insideFov = 46f;
 
@@ -65,6 +67,7 @@ public class SceneCamera : MonoBehaviour
         mode = Mode.Orbit;
         this.frame = frame;
         subject = centre;
+        orbitArc = 0f; orbitFov = 36f;
     }
 
     // Inside a room: the camera stands at a point in it, at shoulder height, and looks at
@@ -138,11 +141,12 @@ public class SceneCamera : MonoBehaviour
             }
             case Mode.Orbit:
             {
-                orbitYaw += orbitSpeed * dt;
+                if (orbitArc > 0f) orbitYaw = orbitBase + Mathf.Sin(Time.unscaledTime * orbitSpeed * 0.12f) * orbitArc;
+                else orbitYaw += orbitSpeed * dt;
                 var dir = Quaternion.Euler(orbitPitch, orbitYaw, 0) * Vector3.back;
                 targetPos = subject + dir * orbitDistance;
                 targetRot = Quaternion.LookRotation(subject - targetPos);
-                targetFov = 36f;
+                targetFov = orbitFov;
                 anchor = subject;
                 break;
             }
@@ -228,7 +232,7 @@ public class SceneCamera : MonoBehaviour
                 minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x); minY = Mathf.Min(minY, y); maxY = Mathf.Max(maxY, y);
             }
             float scale = Mathf.Max((maxX - minX) / fr.width, (maxY - minY) / fr.height);
-            d = Mathf.Clamp(d * Mathf.Clamp(scale, 0.5f, 2f), 4f, 80f);
+            d = Mathf.Clamp(d * Mathf.Clamp(scale, 0.5f, 2f), minDistance, 80f);
         }
         return d;
     }
