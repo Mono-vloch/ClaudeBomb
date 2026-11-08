@@ -53,11 +53,12 @@ public class ArenaScreen
         turns = app.decide != null ? 10 : app.turns;
         firstErrand = app.decide == null && app.lesson != null && app.lesson.number == 1;
 
-        Market.MemoryCards = app.decide == null && (app.lesson == null || app.lesson.memory);
+        if (app.decide == null) Market.Parts.For(app.lesson, false); else Market.Parts.None();
         world = app.world;
         frame = Ui.Node("Frame", root);
         Ui.Place(frame, 0, 0, Ui.W, Ui.H);
-        world.Build(arena, false);
+        world.Build(arena, true); // dusk, the lamps lit: dinner time
+        world.FamilySpot(arena.agents[0]); // Mom at the door, at rest while the agent is out
         world.BatteriesFor(turns);
         if (Market.Real) { world.Highlight(arena.agents[0]); world.ShowStreet(frame); } else world.ShowMarket(frame);
         sim.Holding = () => world.Animating; // a real walk takes real time
@@ -357,7 +358,6 @@ public class ArenaScreen
         float fraction = turns > 0 ? (float)shown / turns : 0f;
         bool amber = turns - shown <= 5 && !sim.finished;
         clock.Set(fraction, amber);
-        world.SetClock(fraction, amber);
         foreach (var a in arena.agents)
         {
             var state = !a.alive ? Hud.Face.SentHome : sim.finished ? Hud.Face.Home : Hud.Face.Out;

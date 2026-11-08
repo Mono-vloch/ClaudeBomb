@@ -15,19 +15,22 @@ public partial class Market
     class Battery { public Transform root; public readonly List<Renderer> notches = new List<Renderer>(); public float shown = 1f; }
     readonly Dictionary<RobotModel, Battery> batteries = new Dictionary<RobotModel, Battery>();
 
-    public void BuildBattery(RobotModel bot, int notchCount)
+    // left: on the left hip (the garage's camera sees that side); plate: its name on the pack.
+    public void BuildBattery(RobotModel bot, int notchCount, bool left = false, bool plate = false)
     {
         if (bot == null) return;
         if (batteries.TryGetValue(bot, out var old)) { if (old.root != null) Destroy(old.root.gameObject); batteries.Remove(bot); }
         var rig = bot.Rig;
-        Transform parent = rig != null && rig.hipMount != null ? rig.hipMount : bot.body;
+        Transform parent = rig != null && (left ? rig.hipLeftMount : rig.hipMount) != null ? (left ? rig.hipLeftMount : rig.hipMount) : bot.body;
         var b = new Battery();
         b.root = new GameObject("Battery").transform;
         b.root.SetParent(parent, false);
-        if (rig == null) { b.root.localPosition = new Vector3(0.26f, 0.42f, 0f); b.root.localRotation = Quaternion.Euler(0f, 90f, 0f); }
+        if (rig == null) { b.root.localPosition = new Vector3(left ? -0.26f : 0.26f, 0.42f, 0f); b.root.localRotation = Quaternion.Euler(0f, left ? -90f : 90f, 0f); }
         var dark = new Color(0.12f, 0.13f, 0.17f);
-        Box(b.root, new Vector3(0.15f, 0.17f, 0.045f), new Vector3(0f, 0f, 0.03f), Metal, dark, "Pack");
+        float lower = plate ? 0.05f : 0f; // the pack runs longer under the ring for its plate
+        Box(b.root, new Vector3(0.2f, 0.17f + lower * 2f, 0.045f), new Vector3(0f, -lower, 0.03f), Metal, dark, "Pack");
         Box(b.root, new Vector3(0.1f, 0.012f, 0.03f), new Vector3(0f, 0.1f, 0.03f), Metal, new Color(0.05f, 0.05f, 0.07f), "Slot");
+        if (plate) PlateOn(b.root, "Battery", 0.34f, new Vector3(0f, -0.11f, 0.056f), Vector3.forward);
         var face = Disc(b.root, 0.07f, new Vector3(0f, -0.005f, 0.057f), Stone, Ink3D, "Face");
         face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
         int n = Mathf.Clamp(notchCount, 6, 60);
@@ -63,55 +66,6 @@ public partial class Market
     public void SetBattery(AgentState a, float fraction) { if (bots.TryGetValue(a, out var r)) SetBattery(r, fraction); }
     public void BatteriesFor(int turns) { foreach (var kv in bots) BuildBattery(kv.Value, turns); }
     public Transform BatteryOf(AgentState a) => a != null && bots.TryGetValue(a, out var r) && batteries.TryGetValue(r, out var b) ? b.root : null;
-
-    // ---- the clock on the square: dinner time ----
-
-    Transform clockRoot, hourHand, minuteHand;
-    Renderer clockFaceR;
-
-    void BuildClock()
-    {
-        clockRoot = new GameObject("Clock").transform;
-        clockRoot.SetParent(transform, false);
-        clockRoot.position = new Vector3(-Size * Pitch / 2f - 1.2f, 0f, Size * Pitch / 2f + 1.2f);
-        Box(clockRoot, new Vector3(0.14f, 4.4f, 0.14f), new Vector3(0f, 2.2f, 0f), Metal, new Color(0.25f, 0.26f, 0.3f), "Post");
-        var head = new GameObject("Head").transform; head.SetParent(clockRoot, false);
-        head.localPosition = new Vector3(0f, 4.6f, 0f);
-        head.gameObject.AddComponent<Billboard>().target = cam.transform;
-        var rim = Disc(head, 0.72f, new Vector3(0f, 0f, 0.02f), Metal, new Color(0.3f, 0.32f, 0.36f), "Rim");
-        var face = Disc(head, 0.64f, Vector3.zero, Stone, Ink3D, "Face");
-        clockFaceR = face.GetComponent<Renderer>();
-        for (int i = 0; i < 12; i++)
-        {
-            float a = i * 30f * Mathf.Deg2Rad;
-            var tick = Box(head, new Vector3(i % 3 == 0 ? 0.05f : 0.03f, i % 3 == 0 ? 0.12f : 0.07f, 0.01f), new Vector3(Mathf.Sin(a) * 0.54f, Mathf.Cos(a) * 0.54f, -0.012f), LampMat, Color.white, "Tick");
-            tick.transform.localRotation = Quaternion.Euler(0f, 0f, -i * 30f);
-        }
-        var hour = Box(head, new Vector3(0.06f, 0.36f, 0.015f), Vector3.zero, LampMat, Color.white, "Hour");
-        hour.GetComponent<MeshFilter>().sharedMesh = BoxMesh(new Vector3(0.06f, 0.36f, 0.015f));
-        hourHand = new GameObject("HourPivot").transform; hourHand.SetParent(head, false); hourHand.localPosition = new Vector3(0f, 0f, -0.02f);
-        hour.transform.SetParent(hourHand, false); hour.transform.localPosition = new Vector3(0f, 0.18f, 0f);
-        var minute = Box(head, new Vector3(0.04f, 0.52f, 0.015f), Vector3.zero, LampMat, Theme.Teal, "Minute");
-        minuteHand = new GameObject("MinutePivot").transform; minuteHand.SetParent(head, false); minuteHand.localPosition = new Vector3(0f, 0f, -0.03f);
-        minute.transform.SetParent(minuteHand, false); minute.transform.localPosition = new Vector3(0f, 0.26f, 0f);
-        Glow(minute.GetComponent<Renderer>(), Theme.Teal * 0.8f);
-        var lamp = new GameObject("Lamp").AddComponent<Light>();
-        lamp.transform.SetParent(head, false); lamp.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-        lamp.type = LightType.Point; lamp.color = new Color(1f, 0.95f, 0.85f); lamp.intensity = dusk ? 2.5f : 0f; lamp.range = 2.5f; lamp.shadows = LightShadows.None;
-        SetClock(0f, false);
-    }
-
-    // fraction: 0 at six o'clock, 1 at seven; amber in the last turns.
-    public void SetClock(float fraction, bool amber)
-    {
-        if (clockRoot == null) return;
-        fraction = Mathf.Clamp01(fraction);
-        if (minuteHand != null) minuteHand.localRotation = Quaternion.Euler(0f, 0f, -fraction * 360f);
-        if (hourHand != null) hourHand.localRotation = Quaternion.Euler(0f, 0f, -(180f + fraction * 30f));
-        if (clockFaceR != null) Tint(clockFaceR, amber ? new Color(0.32f, 0.2f, 0.05f) : Ink3D);
-        var minute = minuteHand != null ? minuteHand.GetComponentInChildren<Renderer>() : null;
-        if (minute != null) { Tint(minute, amber ? Theme.Amber : Theme.Teal); Glow(minute, (amber ? Theme.Amber : Theme.Teal) * 0.8f); }
-    }
 
     // ---- the house: the briefing's feed, the debrief's door ----
 
@@ -155,7 +109,12 @@ public partial class Market
 
     Transform podium; Vector3 podiumFront; Vector3 doorCamAt, doorCamLook;
 
-    public Transform Podium(int medal, Color colour, AgentState hero)
+    // Robot Racing's podium and ribbon medal (Circuit.Podium), built from this kit's materials:
+    // three steps numbered 1, 2, 3 when several agents ran (the next two on steps 2 and 3), one
+    // step when one did. The medal hangs on its ribbon over the front of the hero's step, its three
+    // stars along the ribbon. A number that is the lesson (1.5's cost per item) stands on the
+    // step's face beside it.
+    public Transform Podium(int medal, Color colour, AgentState hero, IList<AgentState> runnersUp = null, string onStep = null)
     {
         if (podium != null) Destroy(podium.gameObject);
         if (!bots.TryGetValue(hero, out var r)) return null;
@@ -166,62 +125,74 @@ public partial class Market
         podium.SetParent(transform, false);
         podium.position = Cell(hero.home) + inward * 0.9f + right * 0.3f;
         podium.rotation = Quaternion.LookRotation(-podiumFront);
-        var stone = Stone; var metal = Metal;
+        bool three = runnersUp != null && runnersUp.Count > 0;
         float[] heights = { 0.36f, 0.24f, 0.15f };
-        float[] widths = { 1.0f, 0.64f, 0.64f };
-        float[] xs = { 0f, -0.84f, 0.84f };
+        float[] widths = { 1.1f, 0.7f, 0.7f };
+        float[] xs = { 0f, -0.92f, 0.92f };
         var faceDark = new Color(0.1f, 0.14f, 0.26f);
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < (three ? 3 : 1); i++)
         {
             float w = widths[i], h = heights[i];
-            Box(podium, new Vector3(w, h, 1.0f), new Vector3(xs[i], h / 2f, 0f), stone, faceDark);
-            Box(podium, new Vector3(w, 0.02f, 1.0f), new Vector3(xs[i], h + 0.01f, 0f), metal, new Color(0.7f, 0.74f, 0.8f));
+            Box(podium, new Vector3(w, h, 1.1f), new Vector3(xs[i], h / 2f, 0f), Stone, faceDark);
+            Box(podium, new Vector3(w, 0.02f, 1.1f), new Vector3(xs[i], h + 0.01f, 0f), Metal, new Color(0.7f, 0.74f, 0.8f));
+            if (!three || (i == 0 && onStep != null)) continue;
             var num = new GameObject("Step").AddComponent<TextMeshPro>();
             num.transform.SetParent(podium, false);
-            num.transform.localPosition = new Vector3(xs[i], h * 0.5f, -0.51f);
+            num.transform.localPosition = new Vector3(xs[i] + (i == 0 ? 0.36f : 0f), h * 0.5f, -0.56f);
             num.font = Theme.Bold; num.fontSize = i == 0 ? 2.4f : 1.8f; num.color = new Color(0.8f, 0.84f, 0.9f); num.alignment = TextAlignmentOptions.Center;
             num.rectTransform.sizeDelta = new Vector2(0.4f, 0.3f);
             num.text = (i + 1).ToString();
         }
-        int step = medal > 0 ? 3 - medal : 0;
-        // The agent on its step, turned a little so the basket on its back shows; beside the
-        // podium when there is no medal.
-        if (medal > 0) r.Position = podium.position + podium.TransformDirection(new Vector3(xs[step], heights[step] + 0.005f, -0.12f));
-        else r.Position = podium.position + podium.TransformDirection(new Vector3(-1.5f, 0f, -0.3f));
-        r.root.rotation = Quaternion.LookRotation(-podiumFront) * Quaternion.Euler(0f, 145f, 0f);
-        r.Rest();
+        // The hero on step 1, turned a little so the basket on its back shows; the runners-up on 2 and 3.
+        void Stand(RobotModel bot, int step)
+        {
+            bot.Position = podium.position + podium.TransformDirection(new Vector3(xs[step], heights[step] + 0.005f, 0.05f));
+            bot.root.rotation = Quaternion.LookRotation(-podiumFront) * Quaternion.Euler(0f, 145f, 0f);
+            bot.Rest();
+        }
+        Stand(r, 0);
+        if (three)
+            for (int i = 0; i < runnersUp.Count && i < 2; i++)
+                if (bots.TryGetValue(runnersUp[i], out var other)) Stand(other, i + 1);
+        if (onStep != null)
+        {
+            var plate = PlateOn(podium, onStep, 0.7f, new Vector3(0.3f, heights[0] * 0.5f, -0.556f), Vector3.back);
+            plate.name = "Receipt";
+            plate.GetComponentInChildren<TextMeshPro>().color = Theme.Amber;
+        }
         if (medal > 0)
         {
-            // The medal: a ribbon post rising from the step behind the agent, the disc at its top, the stars in an arc over it.
+            // The medal: a ribbon from the step's edge, the disc at its end, the stars on the ribbon.
+            int step = 0;
             var m = new GameObject("Medal").transform;
             m.SetParent(podium, false);
-            m.localPosition = new Vector3(xs[step] + (step == 0 ? 0.47f : 0.3f), heights[step] + 0.02f, 0.25f);
+            m.localPosition = new Vector3(xs[step] - 0.08f, heights[step] + 0.02f, -0.56f);
             var ribbon = new Color(0.16f, 0.2f, 0.42f);
-            float rise = 0.85f;
+            float drop = heights[step] * 0.55f;
             foreach (float sx in new[] { -1f, 1f })
             {
-                var strip = Box(m, new Vector3(0.05f, rise * 1.05f, 0.012f), new Vector3(sx * 0.05f, rise / 2f, 0f), stone, ribbon);
-                strip.transform.localRotation = Quaternion.Euler(0f, 0f, -sx * 6f);
+                var strip = Box(m, new Vector3(0.05f, drop * 1.08f, 0.012f), new Vector3(sx * 0.06f, -drop / 2f, -0.012f), Stone, ribbon);
+                strip.transform.localRotation = Quaternion.Euler(0f, 0f, sx * 12f);
             }
-            float discY = rise + 0.12f;
-            var back = Disc(m, 0.15f, new Vector3(0f, discY, 0.01f), LampMat, colour * 0.72f);
-            var front = Disc(m, 0.125f, new Vector3(0f, discY, -0.005f), LampMat, colour);
-            Glow(front.GetComponent<Renderer>(), colour * 0.7f);
-            Star(m, 0.05f, new Vector3(0f, discY, -0.02f), colour * 1.25f);
+            float discY = -drop - 0.09f;
+            Disc(m, 0.115f, new Vector3(0f, discY, -0.02f), LampMat, colour * 0.72f);
+            var disc = Disc(m, 0.095f, new Vector3(0f, discY, -0.026f), LampMat, colour);
+            Glow(disc.GetComponent<Renderer>(), colour * 0.25f);
+            Star(m, 0.04f, new Vector3(0f, discY, -0.032f), colour * 1.25f);
             for (int i = 0; i < 3; i++)
             {
-                var star = Star(m, 0.045f, new Vector3((i - 1) * 0.14f, discY + 0.24f - Mathf.Abs(i - 1) * 0.04f, -0.02f), i < medal ? Theme.Amber : new Color(0.3f, 0.33f, 0.4f));
+                var star = Star(m, 0.03f, new Vector3((i - 1) * 0.055f, -drop * 0.45f - Mathf.Abs(i - 1) * 0.02f, -0.03f), i < medal ? Theme.Amber : new Color(0.3f, 0.33f, 0.4f));
                 star.transform.localScale = Vector3.zero;
                 star.name = "Star" + i;
             }
             var lamp = new GameObject("Medal lamp").AddComponent<Light>();
             lamp.transform.SetParent(m, false); lamp.transform.localPosition = new Vector3(0f, discY, -0.5f);
-            lamp.type = LightType.Point; lamp.color = colour; lamp.intensity = 2.2f; lamp.range = 1.6f; lamp.shadows = LightShadows.None;
-            m.localScale = new Vector3(1f, 0f, 1f); // it rises
+            lamp.type = LightType.Point; lamp.color = colour; lamp.intensity = 2f; lamp.range = 1.4f; lamp.shadows = LightShadows.None;
+            m.localScale = new Vector3(1f, 0f, 1f); // it drops into place
         }
         // The debrief's camera: the door behind, the agent on the podium with its basket, from a little to the left.
         var centre = podium.position + Vector3.up * 0.7f + right * 0.1f;
-        doorCamAt = centre + inward * 3.4f - right * 1.1f + Vector3.up * 0.75f;
+        doorCamAt = centre + inward * 3.6f - right * 1.1f + Vector3.up * 0.65f;
         doorCamLook = centre;
         return podium;
     }
@@ -232,14 +203,14 @@ public partial class Market
         if (podium == null || !bots.TryGetValue(hero, out var r)) return;
         var items = hero.eaten.Take(8).ToList();
         if (items.Count == 0) return;
-        var front = r.Position + podiumFront * 0.32f;
-        var across = Vector3.Cross(Vector3.up, podiumFront);
+        var across = -Vector3.Cross(Vector3.up, podiumFront); // the camera's right
+        var front = r.Position + podiumFront * 0.36f + across * 0.18f;
         for (int i = 0; i < items.Count; i++)
         {
             var piece = Piece(items[i], Vector3.zero);
             piece.SetParent(podium, true);
             piece.localScale = Vector3.one * 1.5f;
-            piece.position = front + across * ((i - (items.Count - 1) / 2f) * 0.13f) + Vector3.up * 0.002f;
+            piece.position = front + across * ((i - (items.Count - 1) / 2f) * 0.11f) + Vector3.up * 0.002f;
             piece.rotation = Quaternion.Euler(0f, i * 53f, 0f);
             if (!wanted(items[i]))
             {
@@ -282,15 +253,59 @@ public partial class Market
         ApplyFog();
     }
 
-    // A number that is the lesson stays in the world: the receipt by the basket.
-    public Transform Receipt(string text, AgentState hero)
+    // ---- the family's spot at the door ----
+
+    // Where the family stands at the door of the house behind an agent's home: in front of the
+    // nearest house of the square's ring, a doormat on the cobbles. A model at
+    // Resources/Market/Family (origin at its feet, facing +Z) is stood there when it exists.
+    Transform familySpot;
+    public Transform FamilySpot(AgentState a)
     {
-        if (!bots.TryGetValue(hero, out var r)) return null;
-        var right = Vector3.Cross(Vector3.up, -Inward(hero.home));
-        var plate = WorldPlate(text, r.Position - right * 0.85f + Vector3.up * 0.75f, 1.0f, Theme.Amber);
-        plate.name = "Receipt";
-        return plate;
+        if (familySpot != null) return familySpot;
+        if (!Real || ground == null) return null;
+        var inward = Inward(a.home);
+        var behind = Cell(a.home) - inward * 7.3f;
+        Transform best = null; float bestD = float.MaxValue;
+        var square = ground.Find("Square");
+        if (square == null) return null;
+        foreach (Transform h in square)
+        {
+            if (!h.name.StartsWith("House")) continue;
+            float d = (Flat(h.position) - Flat(behind)).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = h; }
+        }
+        if (best == null) return null;
+        var bounds = new Bounds(best.position, Vector3.zero);
+        foreach (var r in best.GetComponentsInChildren<Renderer>()) bounds.Encapsulate(r.bounds);
+        float half = Mathf.Abs(Vector3.Dot(bounds.extents, new Vector3(Mathf.Abs(inward.x), 0f, Mathf.Abs(inward.z))));
+        var at = Flat(bounds.center) + inward * (half + 0.45f);
+        familySpot = new GameObject("Family spot").transform;
+        familySpot.SetParent(transform, false);
+        familySpot.position = at;
+        familySpot.rotation = Quaternion.LookRotation(inward);
+        var mat = Box(familySpot, new Vector3(0.9f, 0.012f, 0.55f), new Vector3(0f, 0.006f, 0f), Stone, new Color(0.42f, 0.16f, 0.12f), "Doormat");
+        mat.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        var model = Kit("Family");
+        if (model != null)
+        {
+            // Mom (Higgsfield, Meshy 7), at rest on the doormat; a porch lamp over the door lights her at dusk.
+            var f = Instantiate(model, familySpot, false); f.name = "Family";
+            var porch = new GameObject("Porch lamp").AddComponent<Light>();
+            porch.transform.SetParent(familySpot, false);
+            porch.transform.localPosition = new Vector3(0.3f, 2.4f, 0.5f);
+            porch.type = LightType.Point; porch.color = new Color(1f, 0.82f, 0.56f); porch.intensity = dusk ? 1.8f : 0.6f; porch.range = 3.6f; porch.shadows = LightShadows.None;
+        }
+        return familySpot;
     }
+
+    // The agent is home: Mom waves once, then rests.
+    public void FamilyWave(float delay = 0f)
+    {
+        var mom = familySpot != null ? familySpot.GetComponentInChildren<MomRig>() : null;
+        if (mom != null) mom.Wave(delay);
+    }
+
+    static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
 
     // ---- the story's props ----
 

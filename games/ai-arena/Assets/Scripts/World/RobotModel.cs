@@ -120,39 +120,50 @@ public class RobotModel
         Think(0);
     }
 
-    // The kit robot's dials: the bulb's size is the brain, the glow at rest the effort, the
-    // turns it remembers ride behind it as glass cards, a notebook rides at its side.
+    // The kit robot's parts (the game-feel pass): what the screen shows of it (Market.Parts) is
+    // fitted on it as a thing: the lens on its eye, the brain's chip on its head, the notebook
+    // in its right hand; on the garage each carries its plate. The bulb on the antenna is its
+    // thinking light: its glow at rest is the effort.
     void WearKit(AgentConfig c)
     {
-        float b = c.model == 0 ? 0.05f : c.model == 1 ? 0.072f : 0.1f;
-        rig.bulb.localScale = Vector3.one * b;
-        rig.bulb.localPosition = new Vector3(0f, 0.15f + b / 2f, 0f);
+        rig.bulb.localScale = Vector3.one * 0.06f;
+        rig.bulb.localPosition = new Vector3(0f, 0.15f + 0.03f, 0f);
         foreach (var g in carried) Object.Destroy(g);
         carried.Clear();
-        var book = rig.memory != null ? rig.memory.Find("Notebook") : null;
-        if (book != null) book.gameObject.SetActive(c.memory == MemoryModes.Notebook);
-        if (c.memory != MemoryModes.Notebook && rig.memory != null && Market.MemoryCards)
+        FittedBook = null;
+        var kitBook = rig.memory != null ? rig.memory.Find("Notebook") : null;
+        if (kitBook != null) kitBook.gameObject.SetActive(false);
+        var parts = Market.Parts.sight || Market.Parts.memory || Market.Parts.brain;
+        if (Market.Parts.sight && rig.faceMount != null)
         {
-            int turns = MemoryModes.Turns(c.memory);
-            var card = Look.Glass(new Color(Mathf.Lerp(colour.r, 1f, 0.35f), Mathf.Lerp(colour.g, 1f, 0.35f), Mathf.Lerp(colour.b, 1f, 0.35f), 0.32f));
-            for (int i = 0; i < Mathf.Min(turns, 5); i++)
-            {
-                var g = GameObject.CreatePrimitive(PrimitiveType.Cube); // a hologram of a remembered turn: an effect, not the world
-                Object.Destroy(g.GetComponent<Collider>());
-                g.name = "turn";
-                g.transform.SetParent(rig.memory, false);
-                // Small cards fanned behind its head on its left: the turns it carries along.
-                g.transform.localPosition = new Vector3(-0.2f - i * 0.025f, -0.1f + i * 0.05f, -0.16f - i * 0.03f);
-                g.transform.localRotation = Quaternion.Euler(10f, -35f, -8f + i * 4f);
-                g.transform.localScale = new Vector3(0.11f, 0.075f, 0.004f);
-                var r = g.GetComponent<Renderer>();
-                r.sharedMaterial = card; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                carried.Add(g);
-            }
+            var lens = new GameObject("Lens").transform;
+            lens.SetParent(rig.faceMount, false);
+            lens.localPosition = new Vector3(-0.05f, 0.15f, 0.06f); // over its left eye, on the visor
+            lens.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            Market.LensShape(lens, c.vision, new Vector3(0f, 0f, -0.012f));
+            carried.Add(lens.gameObject);
         }
+        if (Market.Parts.brain && rig.headMount != null)
+        {
+            var chip = Market.ChipShape(rig.headMount, Mathf.Clamp(c.model, 0, 2), Market.Parts.plates);
+            chip.localPosition = new Vector3(0f, -0.01f, 0.03f);
+            chip.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            carried.Add(chip.gameObject);
+        }
+        if (Market.Parts.memory && c.memory != MemoryModes.None && rig.handMount != null)
+        {
+            var book = Market.BookShape(rig.handMount, c.memory, Market.Parts.plates);
+            book.localPosition = new Vector3(0.07f, -0.19f, 0.07f);
+            book.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            FittedBook = book;
+            carried.Add(book.gameObject);
+        }
+        foreach (var g in carried) foreach (var r in g.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         glow = c.effort == 0 ? 0f : c.effort == 1 ? 0.3f : 0.7f;
         Think(0);
     }
+
+    public Transform FittedBook { get; private set; }
 
     public Vector3 Position { get => root.position; set => root.position = value; }
     public Vector3 Head => rig != null ? rig.HeadTop + Vector3.up * 0.3f : root.position + Vector3.up * 1.12f * Scale;

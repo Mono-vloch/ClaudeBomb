@@ -50,7 +50,7 @@ public class SetupScreen
 
         frame = Ui.Node("Frame", root);
         Ui.Place(frame, 0, 0, Ui.W, Ui.H);
-        Market.MemoryCards = l == null || l.memory;
+        Market.Parts.For(l, true);
         stage = new Arena(app.brief, app.configs, app.budget, 9);
         a = stage.agents[selected];
         // Nothing between the camera and the table: the cells in front of the house are cleared.
@@ -58,7 +58,8 @@ public class SetupScreen
         var step = new Vector2Int(Mathf.RoundToInt(inward.x), -Mathf.RoundToInt(inward.z));
         var side = new Vector2Int(step.y, step.x);
         for (int d = 0; d <= 2; d++) for (int s = -1; s <= 2; s++) { var p = a.home + step * d + side * s; if (Arena.InBounds(p)) stage.RemoveItem(p); }
-        world.Build(stage, false);
+        world.Build(stage, true); // the whole errand at dusk, the lamps lit
+        world.DoorLamp(a, 1.1f);
         bool free = l == null;
         world.BuildGarage(a, free || l.vision, free || l.memory, free || l.model, free || l.effort);
         world.ShowGarage(frame);

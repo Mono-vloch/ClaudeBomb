@@ -66,11 +66,15 @@ by `glb_maps.py` (the realism pass's tool) into geometry-only GLBs and URP maps
 | Half-timbered cottage | `fef875db-db20-4eec-ae46-9005fed78194` | `f30384e5-356d-488e-a471-7d33e346e2af` (Tripo H3.1, PBR, detailed) | 0.25 + 18 | 8,965 | 6.8 m tall |
 | Stone fountain | `70ee41bd-4078-4afb-8910-5392895a1a49` | `5463d592-05b0-4cc8-8a60-1084a734a71d` (Tripo H3.1, PBR, detailed) | 0.25 + 18 | 9,187 | 3.4 m across, the landmark in the north-west corner |
 | Wooden produce crate | `62fe3231-93d0-419e-b72a-e2c1a3a92d37` | `24760041-1012-4e81-ae56-ab5c0ba0c5fb` (Tripo H3.1, PBR, standard geometry) | 0.25 + 12 | 4,866 | 0.6 m; heaped with the item on every counter; tinted grey, two of them are what a stall becomes when the agent cannot see it |
+| Mom, the family at the door (added 8 November 2026, the game-feel pass) | `f7c6567a-e4ec-4dbb-b8c4-58132fe2f23f` | `a2c8e5b3-390e-486a-9621-4c1b9e3c673e` (Meshy 7, textured, PBR, rigged at 1.65 m, one clip: Wave_One_Hand, 4.1 s) | 47.5 | 15,558 | made in the owner's account; split by `glb_maps.py` into `Assets/Models/Hero/Mom/` (1K base and normal maps; no metal in her, so one smoothness and no mask), built by **AI Arena > Build family** (`Editor/MarketKit.Family.cs`) into `Resources/Market/Family`: 1.65 m, pivot at her feet, facing +Z, one URP Lit material. She stands on the doormat at the door of the house behind the agent's home (`Market.FamilySpot`), at rest on the clip's first frame while the agent is out, and waves once when it comes home (`MomRig`, on the debriefs); a porch lamp over the door lights her at dusk |
 
 **Higgsfield spend for this game: 181.75 credits** (planned 175.5, cap 220): seven design
 images (1.75), the robot (38), five clips at 8 (40, one of them the idle's retry), five
 props with detailed geometry at 18 (90: two stalls, two houses, the fountain) and the crate
 with standard geometry (12). The job-by-job ledger is in `Docs/realism-report.md`.
+
+**Added in the game-feel pass: 47.5 credits** for Mom (the 3D job above, as recorded by the
+owner; her design image is listed by its job id). **In all: 229.25 credits.**
 
 ## Made in the project
 

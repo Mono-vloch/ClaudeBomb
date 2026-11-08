@@ -84,12 +84,13 @@ public class ResultsScreen
         }
         app.world.DoorLamp(hero);
         Color colour = bestMedal == 3 ? Gold : bestMedal == 2 ? Silver : bestMedal == 1 ? Bronze : Theme.Faint;
-        app.world.Podium(bestMedal, colour, hero);
+        string onStep = lesson != null && lesson.number == Ladder.ModelLevel && hero.score > 0 ? $"${hero.CostUsd / hero.score:0.0000} an item" : null; // the number that is the lesson
+        app.world.Podium(bestMedal, colour, hero, ranked.Skip(1).Take(2).ToList(), onStep);
         app.world.TipOut(hero, id => arena.brief.IsSafe(Items.Get(id)));
+        app.world.FamilySpot(hero);
+        app.world.FamilyWave(0.9f); // the agent is home
         app.world.ShowDoorView(frame);
         app.atmosphere.MenuBlur(false);
-        if (lesson != null && lesson.number == Ladder.ModelLevel && hero.score > 0)
-            app.world.Receipt($"${hero.CostUsd / hero.score:0.0000} an item", hero); // the number that is the lesson stays in the world
         GameMenu.Icon(root);
         app.StartCoroutine(Reveal(bestMedal));
         if (lesson != null && Luma.Lines.ContainsKey("take-" + lesson.number)) app.StartCoroutine(SayLater("take-" + lesson.number, 2.4f));

@@ -139,7 +139,7 @@ public class App : MonoBehaviour
 
     RectTransform Fresh()
     {
-        Market.MemoryCards = false; // a screen that shows the agent's memory turns it on
+        Market.Parts.None(); // a screen that shows the agent's parts says which
         FileSheet.Close();
         SettingsSheet.Close();
         menu?.Close();

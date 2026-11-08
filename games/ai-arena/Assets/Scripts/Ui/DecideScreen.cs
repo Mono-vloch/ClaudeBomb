@@ -33,7 +33,8 @@ public class DecideScreen
         var step = new Vector2Int(Mathf.RoundToInt(inward.x), -Mathf.RoundToInt(inward.z));
         var side = new Vector2Int(step.y, step.x);
         for (int d = 0; d <= 2; d++) for (int s = -1; s <= 2; s++) { var p = a.home + step * d + side * s; if (Arena.InBounds(p)) stage.RemoveItem(p); }
-        app.world.Build(stage, false);
+        app.world.Build(stage, true);
+        app.world.DoorLamp(a, 1.1f);
         app.world.BuildKitchen(a, Decide.Tasks.Select(t => t.message).ToArray(), choices);
         app.world.ShowGarage(frame);
         app.world.NotePlaced += OnPlaced;

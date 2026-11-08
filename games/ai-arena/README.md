@@ -78,16 +78,20 @@ menu icon and at most three small controls besides the main action.
    the rule for an empty view stay in the player's own words: tap the note to write the list, word
    for word (`Core/NoteText.cs` keeps the note and the table in step). Coins go into the battery on
    its hip, whose ring of notches shows how many turns of the errand the money buys. From 1.3 the
-   parts are on the table and fitted with a tap: lenses (sight), cards or a notebook (memory), bulbs
-   (the brain), the dimmer at the antenna (effort). The phone holds the family's message. "Send".
+   parts this errand opens stand on a shelf at the back of the table, each a thing with its name
+   plate on it, and are fitted with a tap: lenses on a rack ("Sight", worn on its eye), notebooks
+   ("3 turns", "10 turns", "Notebook", carried in its hand), chips ("Haiku", "Sonnet", "Opus", worn
+   on its head), the effort dial ("Effort"). Parts an errand does not open are not shown, and no
+   plate floats: every one sits on its object. The phone holds the family's message. "Send".
    Errand 1.6 is the kitchen table instead: five notes in a pile, dropped on the agent, the rule box
    or the bin.
-4. **The round.** The street behind the agent. The clock on the square and at the top runs toward
-   dinner, amber in the last five turns; the family's window at the top right has a face per agent;
+4. **The round.** The street behind the agent, at dusk with the lamps lit (the whole errand is at
+   dusk). The clock at the top runs toward dinner, amber in the last five turns; the family's window at the top right has a face per agent;
    the battery drains; the agent's thought is a bubble (Claude's first sentence, coordinates taken
    out; the whole of it on a tap). Camera cycles the street, the agent's eye and the market from
    above; Call home is the off switch. Banners for the moments (sent home, out of tokens, all home).
-5. **Debrief.** The agent home at dusk on its podium step with its basket, the medal rising, LUMA's
+5. **Debrief.** The agent home at dusk on its podium with its basket tipped out (one step for one
+   agent; steps 2 and 3 when several ran), Robot Racing's ribbon medal over the step's front, LUMA's
    one line, Next, Again and Details (the checks, the agents' figures and costs, the lists, the stars
    in all, the takeaway and the question; the capstone's if-then plans). The platform is told the
    result in the curriculum's form (`1.3:complete`, `:partial` or `:incomplete`, with the checks).
@@ -153,6 +157,10 @@ Notes:
   story, the catalogue and the debrief. Change a shape, run AI Arena > Bake Sprites.
   Adding an item: one line in `Items.cs`, one entry in the baker's catalogue, one
   case in `ItemModels.cs`.
+- **The family at the door.** A model at `Assets/Resources/Market/Family.prefab` (origin at its feet,
+  facing +Z, about 1.6 m tall) is stood on the doormat in front of the house behind the agent's
+  home, on the briefing, the story and the debriefs (`Market.FamilySpot`). Until it exists the
+  doormat marks the spot.
 - **Any errand can be started directly** from the title screen's strip or by clicking
   another step of the ladder on a lesson screen: for a class on one idea, or to test
   one without playing the five before it.

@@ -230,6 +230,82 @@ public partial class Market
         return go;
     }
 
+    // ---- the parts the player fits, each a real thing with its plate on it ----
+
+    // Which of the agent's parts the screen shows on it, and whether they carry their plates:
+    // the garage shows the parts the errand opens with their plates, the round the same parts
+    // without; every other screen none.
+    public static class Parts
+    {
+        public static bool sight, memory, brain, plates;
+        public static void None() { sight = memory = brain = plates = false; }
+        public static void For(Lesson l, bool withPlates)
+        {
+            bool free = l == null;
+            sight = free || l.vision; memory = free || l.memory; brain = free || l.model; plates = withPlates;
+        }
+    }
+
+    public static readonly Color[] ChipTints = { new Color(0.45f, 0.95f, 0.85f), new Color(0.95f, 0.92f, 0.85f), new Color(1f, 0.78f, 0.3f) };
+    public static readonly string[] ChipNames = { "Haiku", "Sonnet", "Opus" };
+    public static readonly string[] BookNames = { "", "3 turns", "10 turns", "Notebook" };
+
+    // A plate fixed flat on a face of a thing: its text toward the side `facing` points to, in
+    // the parent's space. Not turned to the camera: it sits on the object.
+    public static Transform PlateOn(Transform parent, string text, float size, Vector3 at, Vector3 facing, float pad = 0.04f, float minW = 0.06f)
+    {
+        var plate = DarkPlate(parent, text, size, out _, minW);
+        plate.name = "Plate " + text;
+        var fit = plate.GetComponent<PlateFit>(); fit.pad = pad; FitPlate(plate);
+        plate.localPosition = at;
+        plate.localRotation = Quaternion.LookRotation(-facing, Vector3.up);
+        return plate;
+    }
+
+    public static float LensRadius(int vision) => vision == 1 ? 0.04f : vision == 2 ? 0.058f : 0.078f;
+
+    // A lens: a steel ring round blue glass, facing -Z.
+    public static void LensShape(Transform parent, int vision, Vector3 at)
+    {
+        float r = LensRadius(vision);
+        Ring(parent, r, 0.016f, at, Metal, new Color(0.82f, 0.86f, 0.92f), "Rim");
+        // The glass: a thin drum (proper front and back faces), pale blue.
+        var glass = Cylinder(parent, r - 0.012f, 0.006f, at + new Vector3(0f, 0f, 0.002f), Look.Glass(new Color(0.6f, 0.88f, 1f, 0.9f)), null, "Glass");
+        glass.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+    }
+
+    // The brain: a chip standing on its edge, its face toward -Z, the model's colour along its
+    // top, gold pins at its foot, its name on a plate on its face.
+    public static Transform ChipShape(Transform parent, int model, bool plate)
+    {
+        var root = new GameObject("Chip " + ChipNames[model]).transform;
+        root.SetParent(parent, false);
+        const float w = 0.22f, h = 0.12f, d = 0.014f;
+        Box(root, new Vector3(w, h, d), new Vector3(0f, h / 2f, 0f), Stone, new Color(0.07f, 0.2f, 0.15f), "Board");
+        var stripe = Box(root, new Vector3(w, 0.014f, d + 0.002f), new Vector3(0f, h - 0.012f, 0f), LampMat, ChipTints[model], "Stripe");
+        Glow(stripe.GetComponent<Renderer>(), ChipTints[model] * 0.7f);
+        for (int i = 0; i < 7; i++)
+            Box(root, new Vector3(0.009f, 0.014f, 0.004f), new Vector3(-w / 2f + 0.022f + i * (w - 0.044f) / 6f, -0.006f, 0f), LampMat, new Color(1f, 0.82f, 0.4f), "Pin");
+        if (plate) PlateOn(root, ChipNames[model], 0.4f, new Vector3(0f, h * 0.42f, -d / 2f - 0.003f), Vector3.back);
+        return root;
+    }
+
+    // Memory: a notebook standing up, its cover toward -Z; thin for three turns, thick for ten,
+    // the notebook it writes in itself in ink blue. Its name on the cover.
+    public static Transform BookShape(Transform parent, int mode, bool plate)
+    {
+        var root = new GameObject("Book " + BookNames[Mathf.Clamp(mode, 0, 3)]).transform;
+        root.SetParent(parent, false);
+        const float w = 0.2f, h = 0.22f;
+        float t = mode == MemoryModes.Long ? 0.05f : mode == MemoryModes.Notebook ? 0.035f : 0.022f;
+        var cover = mode == MemoryModes.Notebook ? new Color(0.12f, 0.2f, 0.42f) : mode == MemoryModes.Long ? new Color(0.1f, 0.36f, 0.34f) : new Color(0.16f, 0.5f, 0.46f);
+        Box(root, new Vector3(w, h, t), new Vector3(0f, h / 2f, 0f), Stone, cover, "Cover");
+        Box(root, new Vector3(w - 0.012f, h - 0.012f, t + 0.002f), new Vector3(0.006f, h / 2f, 0f), Stone, new Color(0.95f, 0.93f, 0.86f), "Pages");
+        Box(root, new Vector3(w, h, 0.004f), new Vector3(0f, h / 2f, -t / 2f - 0.002f), Stone, cover, "Front");
+        if (plate) PlateOn(root, BookNames[Mathf.Clamp(mode, 0, 3)], 0.34f, new Vector3(0f, h * 0.55f, -t / 2f - 0.006f), Vector3.back);
+        return root;
+    }
+
     // ---- the dark plate: every label in the world ----
 
     // A slab of the kit's stone tinted ink, white text, and a teal halo behind its edge when it
@@ -315,12 +391,12 @@ public partial class Market
     {
         beckonLight = new GameObject("Beckon").AddComponent<Light>();
         beckonLight.transform.SetParent(t, false); beckonLight.transform.localPosition = Vector3.up * 0.35f;
-        beckonLight.type = LightType.Point; beckonLight.color = Theme.Teal; beckonLight.range = 1.4f; beckonLight.shadows = LightShadows.None;
+        beckonLight.type = LightType.Point; beckonLight.color = Color.Lerp(Theme.Teal, Color.white, 0.65f); beckonLight.range = 0.7f; beckonLight.shadows = LightShadows.None;
         while (t != null)
         {
             float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
             t.localScale = Vector3.one * (1f + 0.06f * k);
-            beckonLight.intensity = 1.2f + 2.2f * k;
+            beckonLight.intensity = 0.3f + 0.7f * k;
             yield return null;
         }
     }

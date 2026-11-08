@@ -34,6 +34,7 @@ public class LessonScreen
         app.world.Build(arena, true);
         app.world.PlaceAtDoor(hero, false, 0.45f);
         app.world.DoorLamp(hero);
+        app.world.FamilySpot(hero);
         app.world.ShowHouse(frame, hero, 5.0f, 38f);
         CameraFeed.Build(frame, "HOME CAM  /  THE DOOR", "THE FAMILY'S HOUSE  /  DINNER TIME");
         app.atmosphere.MenuBlur(false);

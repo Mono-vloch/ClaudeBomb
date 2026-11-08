@@ -22,7 +22,7 @@ public partial class Market
 
     class GItem
     {
-        public string id;            // produce: the item; parts: "lens0".."lens2", "mem1".."mem3", "bulb0".."bulb2"; "coin", "phone", "note", "battery", "dimmer", "fitmem", "decide3"
+        public string id;            // produce: the item; parts: "lens0".."lens2", "mem1".."mem3", "chip0".."chip2"; "coin", "phone", "note", "battery", "dial", "fitmem", "decide3"
         public Transform root;
         public NoteText.Zone zone;
         public Vector3 slot;         // table-local home
@@ -32,12 +32,13 @@ public partial class Market
         public Coroutine flying;
         public Vector3 pickOffset;   // where it was held, in the world
         public float lift = 0.04f;
+        public float pickHeight;     // where on it the pointer takes it, over its root (0: the default)
     }
 
     class Garage
     {
         public AgentState agent; public RobotModel bot; public AgentConfig config;
-        public Transform root, table, basket, crate, coins, phone, note, trays, battery, lens, bulbName, dimmer, box, bin, pile, topNote, batteryName;
+        public Transform root, table, basket, crate, coins, phone, note, trays, battery, dimmer, box, bin, pile, topNote;
         public Vector3 P, T, tx, tz, inward, camAt, camLook;
         public float top = 0.78f;
         public readonly List<GItem> items = new List<GItem>();
@@ -58,7 +59,7 @@ public partial class Market
     public Action PhoneTapped, NoteTapped;
     public Action<int, int> NotePlaced;            // errand 1.6: the task, the choice (-1: back to the pile)
 
-    const float TableLen = 2.0f, TableDepth = 0.9f;
+    const float TableLen = 2.0f, TableDepth = 1.0f;
 
     // ---- building ----
 
@@ -78,13 +79,14 @@ public partial class Market
         g.root = new GameObject("Garage").transform;
         g.root.SetParent(transform, false);
         BuildTable();
+        bool racks = sight || memory || brain || effort;
         // The basket, off its back and on the table, at the agent's end.
         var kitBasket = Kit("Agent")?.transform.Find("Basket");
         if (kitBasket != null)
         {
             g.basket = Instantiate(kitBasket.gameObject, g.table, false).transform;
             g.basket.name = "Basket";
-            g.basket.localPosition = new Vector3(-0.78f, g.top + 0.11f, -0.06f);
+            g.basket.localPosition = racks ? new Vector3(-0.8f, g.top + 0.11f, -0.2f) : new Vector3(-0.78f, g.top + 0.11f, -0.06f);
             g.basket.localRotation = Quaternion.Euler(0f, 20f, 0f);
             var goods = g.basket.Find("Goods"); if (goods != null) foreach (Transform c in goods) Destroy(c.gameObject);
         }
@@ -92,37 +94,30 @@ public partial class Market
         {
             g.basket = Cylinder(g.table, 0.16f, 0.2f, new Vector3(-0.78f, g.top + 0.1f, -0.06f), Stone, new Color(0.85f, 0.7f, 0.45f), "Basket").transform;
         }
-        // The "No" crate at the far end.
+        // The "No" crate at the far end; the coins in their box in front of it. With the parts'
+        // racks along the back the crate comes forward.
         g.crate = new GameObject("Crate").transform; g.crate.SetParent(g.table, false);
-        g.crate.localPosition = new Vector3(0.82f, g.top, 0.16f);
+        g.crate.localPosition = racks ? new Vector3(0.82f, g.top, -0.04f) : new Vector3(0.82f, g.top, 0.16f);
         var crateTint = new Color(0.8f, 0.5f, 0.45f);
         Box(g.crate, new Vector3(0.36f, 0.02f, 0.36f), new Vector3(0f, 0.01f, 0f), CrateMat, crateTint);
         Box(g.crate, new Vector3(0.36f, 0.13f, 0.02f), new Vector3(0f, 0.065f, -0.17f), CrateMat, crateTint);
         Box(g.crate, new Vector3(0.36f, 0.13f, 0.02f), new Vector3(0f, 0.065f, 0.17f), CrateMat, crateTint);
         Box(g.crate, new Vector3(0.02f, 0.13f, 0.36f), new Vector3(-0.17f, 0.065f, 0f), CrateMat, crateTint);
         Box(g.crate, new Vector3(0.02f, 0.13f, 0.36f), new Vector3(0.17f, 0.065f, 0f), CrateMat, crateTint);
-        var noPlate = DarkPlate(g.crate, "No", 0.9f, out var noText, 0.2f);
-        noPlate.localPosition = new Vector3(0f, 0.36f, 0.17f); noText.color = Theme.DangerText;
-        noPlate.gameObject.AddComponent<Billboard>().target = cam.transform;
-        // The coins, the phone, the trays.
+        var noPlate = PlateOn(g.crate, "No", 0.6f, new Vector3(0f, 0.066f, -0.183f), Vector3.back);
+        noPlate.GetComponentInChildren<TextMeshPro>().color = Theme.DangerText;
+        // The coins, in a low wooden box with its plate on the front.
         g.coins = new GameObject("Coins").transform; g.coins.SetParent(g.table, false);
-        g.coins.localPosition = new Vector3(0.86f, g.top, -0.3f);
-        var coinPlate = DarkPlate(g.coins, "Coins", 0.5f, out _, 0.2f);
-        coinPlate.localPosition = new Vector3(0f, 0.02f, -0.14f); coinPlate.localRotation = Quaternion.Euler(60f, 0f, 0f);
-        coinPlate.name = "Name";
+        g.coins.localPosition = racks ? new Vector3(0.58f, g.top + 0.04f, -0.38f) : new Vector3(0.58f, g.top + 0.04f, -0.34f);
+        Box(g.coins, new Vector3(0.24f, 0.04f, 0.2f), new Vector3(0f, -0.02f, 0f), KitMaterial("Square", "bench"), new Color(0.6f, 0.5f, 0.38f), "Box");
+        PlateOn(g.coins, "Coins", 0.42f, new Vector3(0f, -0.02f, -0.102f), Vector3.back);
+        TableLantern();
         BuildPhone();
         BuildTrays();
         BuildNote();
-        BuildBattery(bot, g.turns);
+        BuildBattery(bot, g.turns, left: true, plate: true);
         g.battery = batteries.TryGetValue(bot, out var bt) ? bt.root : null;
-        if (g.battery != null)
-        {
-            var bi = new GItem { id = "battery", root = g.battery, reach = 60f }; g.items.Add(bi);
-            g.batteryName = DarkPlate(g.root, "Battery", 0.45f, out _, 0.2f);
-            g.batteryName.name = "Name Battery";
-            g.batteryName.gameObject.AddComponent<Billboard>().target = cam.transform;
-            g.batteryName.gameObject.AddComponent<Follow>().Bind(g.battery, new Vector3(0f, -0.02f, 0.2f));
-        }
+        if (g.battery != null) g.items.Add(new GItem { id = "battery", root = g.battery, reach = 60f });
         // The produce: the errand's things and their look-alikes.
         foreach (var id in Produce(a))
         {
@@ -130,7 +125,7 @@ public partial class Market
             piece.SetParent(g.table, false);
             piece.name = "Produce " + id;
             float s = piece.localScale.x;
-            piece.localScale = Vector3.one * Mathf.Max(s, 1f) * (sight || memory || brain ? 1.3f : 1.7f);
+            piece.localScale = Vector3.one * Mathf.Max(s, 1f) * (racks ? 1.3f : 1.7f);
             g.items.Add(new GItem { id = id, root = piece, draggable = true, reach = 48f });
         }
         UpdateVision();
@@ -147,8 +142,8 @@ public partial class Market
         // The agent stands beside the table's near end, whole, the table across the right of the frame.
         g.P = H + g.inward * 1.0f;
         g.T = g.P + g.inward * 0.25f + g.tx * 1.7f;
-        g.camAt = g.P + g.inward * 3.3f + g.tx * 1.45f + Vector3.up * 1.5f;
-        g.camLook = g.P + g.inward * 0.35f + g.tx * 1.2f + Vector3.up * 0.62f;
+        g.camAt = g.P + g.inward * 3.2f + g.tx * 1.4f + Vector3.up * 1.9f;
+        g.camLook = g.P + g.inward * 0.3f + g.tx * 1.25f + Vector3.up * 0.58f;
     }
 
     void BuildTable()
@@ -167,10 +162,31 @@ public partial class Market
                 Box(g.table, new Vector3(0.07f, g.top - 0.05f, 0.07f), new Vector3(sx * (TableLen / 2f - 0.1f), (g.top - 0.05f) / 2f, sz * (TableDepth / 2f - 0.1f)), woodMat, dark, "Leg");
     }
 
+    // A lantern lit on the table's back corner: the errand is at dusk.
+    void TableLantern()
+    {
+        var lanternKit = Kit("StallA")?.transform.Find("Lantern");
+        if (lanternKit != null)
+        {
+            var lantern = Instantiate(lanternKit.gameObject, g.table, false).transform;
+            lantern.name = "Lantern";
+            lantern.gameObject.SetActive(true);
+            lantern.localPosition = new Vector3(-0.93f, g.top + 0.17f, 0.42f);
+            lantern.localRotation = Quaternion.identity;
+            foreach (var l in lantern.GetComponentsInChildren<Light>(true)) { l.enabled = true; l.range = 3.2f; l.intensity = 1.5f; }
+        }
+        else
+        {
+            var l = new GameObject("Table lamp").AddComponent<Light>();
+            l.transform.SetParent(g.table, false); l.transform.localPosition = new Vector3(-0.5f, g.top + 1.2f, 0.2f);
+            l.type = LightType.Point; l.color = new Color(1f, 0.82f, 0.55f); l.intensity = 2.5f; l.range = 3.2f; l.shadows = LightShadows.None;
+        }
+    }
+
     void BuildPhone()
     {
         g.phone = new GameObject("Phone").transform; g.phone.SetParent(g.table, false);
-        g.phone.localPosition = new Vector3(-0.42f, g.top, -0.32f);
+        g.phone.localPosition = new Vector3(-0.48f, g.top, -0.38f);
         g.phone.localRotation = Quaternion.Euler(0f, -18f, 0f);
         Box(g.phone, new Vector3(0.08f, 0.01f, 0.16f), new Vector3(0f, 0.005f, 0f), Metal, new Color(0.08f, 0.08f, 0.11f), "Body");
         var screen = Box(g.phone, new Vector3(0.07f, 0.002f, 0.145f), new Vector3(0f, 0.011f, 0f), LampMat, new Color(0.75f, 0.88f, 1f), "Screen");
@@ -182,127 +198,68 @@ public partial class Market
         g.items.Add(new GItem { id = "phone", root = g.phone, reach = 55f });
     }
 
-    // The parts an errand has opened, each on its tray at the back of the table with its name.
+    // The parts an errand has opened, along the back of the table, each a thing with its plate
+    // on it: three lenses on a rack (its plate "Sight"), three notebooks standing (each with its
+    // name on its cover), three chips standing in a slotted block (each with its name), the effort
+    // dial in its box. A part fitted on the agent leaves the table and wears its plate there.
     void BuildTrays()
     {
         g.trays = new GameObject("Trays").transform; g.trays.SetParent(g.table, false);
-        float z = 0.3f;
+        const float z = 0.37f, up = 0.12f;
+        var wood = KitMaterial("Square", "bench"); var woodTint = new Color(0.62f, 0.5f, 0.36f);
+        Box(g.trays, new Vector3(TableLen - 0.08f, up, 0.24f), new Vector3(0f, g.top + up / 2f, z), wood, new Color(0.5f, 0.4f, 0.3f), "Shelf");
         if (g.sight)
         {
-            float[] xs = { -0.85f, -0.67f, -0.49f };
+            var rack = new GameObject("Lens rack").transform; rack.SetParent(g.trays, false);
+            rack.localPosition = new Vector3(-0.68f, g.top + up, z);
+            Box(rack, new Vector3(0.46f, 0.04f, 0.12f), new Vector3(0f, 0.02f, 0f), wood, woodTint, "Board");
+            PlateOn(rack, "Sight", 0.42f, new Vector3(0f, 0.02f, -0.062f), Vector3.back);
+            float[] xs = { -0.15f, 0f, 0.16f };
             for (int i = 0; i < 3; i++)
             {
                 var lensRoot = new GameObject("Lens " + (i + 1)).transform; lensRoot.SetParent(g.trays, false);
-                lensRoot.localPosition = new Vector3(xs[i], g.top, z);
+                lensRoot.localPosition = rack.localPosition + new Vector3(xs[i], 0.04f, 0f);
                 Box(lensRoot, new Vector3(0.012f, 0.05f, 0.012f), new Vector3(0f, 0.025f, 0f), Metal, null, "Post");
                 LensShape(lensRoot, i + 1, new Vector3(0f, 0.05f + LensRadius(i + 1), 0f));
                 g.items.Add(new GItem { id = "lens" + i, root = lensRoot, index = i + 1, reach = 50f, draggable = true, slot = lensRoot.localPosition });
             }
-            var plate = DarkPlate(g.trays, "Sight", 0.5f, out _, 0.2f);
-            plate.localPosition = new Vector3(-0.67f, g.top + 0.3f, z + 0.12f); plate.name = "Name Sight";
-            plate.gameObject.AddComponent<Billboard>().target = cam.transform;
         }
         if (g.memory)
         {
-            float[] xs = { -0.22f, 0f, 0.22f };
+            float[] xs = { -0.37f, -0.155f, 0.06f };
+            int[] modes = { MemoryModes.Short, MemoryModes.Long, MemoryModes.Notebook };
             for (int i = 0; i < 3; i++)
             {
-                int mode = i == 0 ? MemoryModes.Short : i == 1 ? MemoryModes.Long : MemoryModes.Notebook;
-                var memRoot = new GameObject("Memory " + mode).transform; memRoot.SetParent(g.trays, false);
-                memRoot.localPosition = new Vector3(xs[i], g.top, z);
-                MemoryShape(memRoot, mode);
-                g.items.Add(new GItem { id = "mem" + mode, root = memRoot, index = mode, reach = 50f, draggable = true, slot = memRoot.localPosition });
+                var book = BookShape(g.trays, modes[i], true);
+                book.localPosition = new Vector3(xs[i], g.top + up, z + 0.02f);
+                g.items.Add(new GItem { id = "mem" + modes[i], root = book, index = modes[i], reach = 55f, draggable = true, slot = book.localPosition, lift = 0.1f });
             }
-            var plate = DarkPlate(g.trays, "Memory", 0.5f, out _, 0.2f);
-            plate.localPosition = new Vector3(0f, g.top + 0.3f, z + 0.12f); plate.name = "Name Memory";
-            plate.gameObject.AddComponent<Billboard>().target = cam.transform;
         }
         if (g.brain)
         {
-            float[] xs = { 0.42f, 0.6f, 0.8f };
+            var block = new GameObject("Chip block").transform; block.SetParent(g.trays, false);
+            block.localPosition = new Vector3(0.43f, g.top + up, z);
+            Box(block, new Vector3(0.72f, 0.035f, 0.08f), new Vector3(0f, 0.0175f, 0f), Metal, new Color(0.22f, 0.24f, 0.28f), "Block");
+            float[] xs = { -0.235f, 0f, 0.235f };
             for (int i = 0; i < 3; i++)
             {
-                var bulbRoot = new GameObject("Bulb " + i).transform; bulbRoot.SetParent(g.trays, false);
-                bulbRoot.localPosition = new Vector3(xs[i], g.top, z);
-                BulbShape(bulbRoot, i);
-                g.items.Add(new GItem { id = "bulb" + i, root = bulbRoot, index = i, reach = 50f, draggable = true, slot = bulbRoot.localPosition });
-            }
-            var plate = DarkPlate(g.trays, "Brain", 0.5f, out _, 0.2f);
-            plate.localPosition = new Vector3(0.6f, g.top + 0.3f, z + 0.12f); plate.name = "Name Brain";
-            plate.gameObject.AddComponent<Billboard>().target = cam.transform;
-            // The fitted bulb's name, over the antenna.
-            var rig = g.bot.Rig;
-            if (rig != null && rig.antenna != null)
-            {
-                g.bulbName = DarkPlate(rig.antenna, "", 0.45f, out _, 0.16f);
-                g.bulbName.localPosition = new Vector3(-0.17f, 0.2f, 0f);
-                g.bulbName.gameObject.AddComponent<Billboard>().target = cam.transform;
+                var chip = ChipShape(g.trays, i, true);
+                chip.localPosition = block.localPosition + new Vector3(xs[i], 0.03f, 0f);
+                g.items.Add(new GItem { id = "chip" + i, root = chip, index = i, reach = 55f, draggable = true, slot = chip.localPosition, lift = 0.1f });
             }
         }
         if (g.effort)
         {
-            var rig = g.bot.Rig;
-            if (rig != null && rig.antenna != null)
-            {
-                g.dimmer = new GameObject("Dimmer").transform; g.dimmer.SetParent(rig.antenna, false);
-                g.dimmer.localPosition = new Vector3(0.035f, 0.05f, 0f);
-                Cylinder(g.dimmer, 0.016f, 0.022f, Vector3.zero, Metal, null, "Knob");
-                for (int i = 0; i < 3; i++)
-                    Box(g.dimmer, new Vector3(0.006f, 0.006f, 0.006f), new Vector3(0.012f * (i - 1), 0.016f, -0.012f), LampMat, Color.white, "Mark" + i);
-                var plate = DarkPlate(g.dimmer, "Effort", 0.5f, out _, 0.16f);
-                plate.localPosition = new Vector3(0.15f, 0.04f, 0f); plate.name = "Name Effort";
-                plate.gameObject.AddComponent<Billboard>().target = cam.transform;
-                g.items.Add(new GItem { id = "dimmer", root = g.dimmer, reach = 48f });
-            }
+            g.dimmer = new GameObject("Effort dial").transform; g.dimmer.SetParent(g.trays, false);
+            g.dimmer.localPosition = new Vector3(0.87f, g.top + up, z);
+            Box(g.dimmer, new Vector3(0.2f, 0.07f, 0.12f), new Vector3(0f, 0.035f, 0f), Metal, new Color(0.18f, 0.2f, 0.24f), "Box");
+            PlateOn(g.dimmer, "Effort", 0.36f, new Vector3(0f, 0.035f, -0.062f), Vector3.back);
+            var knob = Cylinder(g.dimmer, 0.04f, 0.03f, new Vector3(0f, 0.085f, 0.01f), Metal, new Color(0.75f, 0.78f, 0.82f), "Knob").transform;
+            Box(knob, new Vector3(0.008f, 0.01f, 0.036f), new Vector3(0f, 0.016f, -0.016f), LampMat, Color.white, "Pointer");
+            for (int i = 0; i < 3; i++)
+                Box(g.dimmer, new Vector3(0.016f, 0.008f, 0.016f), new Vector3(-0.065f + i * 0.065f, 0.072f, -0.042f), LampMat, Color.white, "Mark" + i);
+            g.items.Add(new GItem { id = "dial", root = g.dimmer, reach = 55f });
         }
-        if (g.memory)
-        {
-            var rig = g.bot.Rig;
-            if (rig != null && rig.memory != null) g.items.Add(new GItem { id = "fitmem", root = rig.memory, reach = 44f });
-        }
-    }
-
-    static float LensRadius(int vision) => vision == 1 ? 0.04f : vision == 2 ? 0.058f : 0.078f;
-
-    void LensShape(Transform parent, int vision, Vector3 at)
-    {
-        float r = LensRadius(vision);
-        Ring(parent, r, 0.016f, at, Metal, new Color(0.82f, 0.86f, 0.92f), "Rim");
-        var glass = Disc(parent, r - 0.013f, at + new Vector3(0f, 0f, 0.003f), LampMat, new Color(0.7f, 0.95f, 1f), "Glass");
-        Glow(glass.GetComponent<Renderer>(), new Color(0.15f, 0.45f, 0.6f));
-    }
-
-    void MemoryShape(Transform parent, int mode)
-    {
-        if (mode == MemoryModes.Notebook)
-        {
-            Box(parent, new Vector3(0.1f, 0.022f, 0.13f), new Vector3(0f, 0.011f, 0f), PaperMat, null, "Cover");
-            Box(parent, new Vector3(0.094f, 0.016f, 0.124f), new Vector3(0f, 0.011f, -0.004f), Stone, new Color(0.95f, 0.93f, 0.85f), "Pages");
-            return;
-        }
-        int n = MemoryModes.Turns(mode);
-        var tint = new Color(0.62f, 0.9f, 0.86f);
-        for (int i = 0; i < n; i++)
-            Box(parent, new Vector3(0.1f, 0.004f, 0.07f), new Vector3((i % 2 == 0 ? -1 : 1) * 0.004f, 0.004f + i * 0.007f, 0f), Stone, tint, "Card");
-    }
-
-    static readonly Color[] BulbTints = { new Color(0.45f, 0.95f, 0.85f), new Color(1f, 0.95f, 0.85f), new Color(1f, 0.78f, 0.3f) };
-    static readonly string[] BulbNames = { "HAIKU", "SONNET", "OPUS" };
-
-    void BulbShape(Transform parent, int model)
-    {
-        float s = model == 0 ? 0.06f : model == 1 ? 0.085f : 0.115f;
-        Box(parent, new Vector3(0.012f, 0.05f, 0.012f), new Vector3(0f, 0.025f, 0f), Metal, null, "Post");
-        var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        Destroy(ball.GetComponent<Collider>());
-        ball.name = "Bulb";
-        ball.transform.SetParent(parent, false);
-        ball.transform.localPosition = new Vector3(0f, 0.05f + s / 2f, 0f);
-        ball.transform.localScale = Vector3.one * s;
-        var r = ball.GetComponent<MeshRenderer>();
-        r.sharedMaterial = LampMat;
-        Tint(r, BulbTints[model]);
-        Glow(r, BulbTints[model] * 0.8f);
     }
 
     // The note on its chest: the list's first sentence, on the dark plate.
@@ -310,7 +267,7 @@ public partial class Market
     {
         var rig = g.bot.Rig;
         Transform parent = rig != null && rig.noteMount != null ? rig.noteMount : g.bot.body;
-        g.note = DarkPlate(parent, "", 0.5f, out g.noteText, 0.24f, 0.34f);
+        g.note = DarkPlate(parent, "", 0.46f, out g.noteText, 0.22f, 0.27f);
         g.note.name = "Note";
         g.noteText.name = "Note text";
         g.noteText.alignment = TextAlignmentOptions.Left;
@@ -356,7 +313,7 @@ public partial class Market
         if (g.noteText != null)
         {
             string first = NoteText.Sentences(noteText).FirstOrDefault() ?? "";
-            if (first.Length > 44) { int cut = first.LastIndexOf(' ', 42); first = first.Substring(0, cut > 20 ? cut : 42) + "…"; }
+            if (first.Length > 34) { int cut = first.LastIndexOf(' ', 32); first = first.Substring(0, cut > 16 ? cut : 32) + "…"; }
             g.noteText.text = string.IsNullOrWhiteSpace(first) ? "…" : first;
             FitPlate(g.note);
         }
@@ -391,24 +348,21 @@ public partial class Market
         var c = g.config;
         foreach (var it in g.items)
         {
-            bool tray = it.id.StartsWith("lens") || it.id.StartsWith("mem") || it.id.StartsWith("bulb");
+            bool tray = it.id.StartsWith("lens") || it.id.StartsWith("mem") || it.id.StartsWith("chip");
             if (!tray) continue;
             bool fitted = it.id.StartsWith("lens") ? it.index == c.vision : it.id.StartsWith("mem") ? it.index == c.memory : it.index == c.model;
             it.root.gameObject.SetActive(!fitted);
             if (!fitted && held != it) { StopFly(it); it.root.localPosition = it.slot; }
         }
-        var rig = g.bot.Rig;
-        if (g.sight)
-        {
-            if (g.lens != null) Destroy(g.lens.gameObject);
-            Transform parent = rig != null && rig.faceMount != null ? rig.faceMount : g.bot.body;
-            g.lens = new GameObject("Lens").transform; g.lens.SetParent(parent, false);
-            g.lens.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            LensShape(g.lens, c.vision, new Vector3(0f, 0f, -0.012f));
-        }
-        if (g.bulbName != null) { SetPlateText(g.bulbName, BulbNames[Mathf.Clamp(c.model, 0, 2)]); }
-        if (rig != null && rig.bulbRenderer != null && g.brain) Tint(rig.bulbRenderer, BulbTints[Mathf.Clamp(c.model, 0, 2)]);
+        g.bot.Wear(c);
+        var fit = g.items.FirstOrDefault(i => i.id == "fitmem");
+        if (fit != null) g.items.Remove(fit);
+        if (g.memory && g.bot.FittedBook != null) g.items.Add(new GItem { id = "fitmem", root = g.bot.FittedBook, reach = 55f });
+        UpdateVision();
         if (g.dimmer != null)
+        {
+            var knob = g.dimmer.Find("Knob");
+            if (knob != null) knob.localRotation = Quaternion.Euler(0f, -60f + 60f * c.effort, 0f);
             for (int i = 0; i < 3; i++)
             {
                 var mark = g.dimmer.Find("Mark" + i);
@@ -418,6 +372,7 @@ public partial class Market
                 Tint(r, on ? Color.white : new Color(0.3f, 0.3f, 0.34f));
                 Glow(r, on ? Look.Lamp * (0.6f + 0.7f * i) : Color.black);
             }
+        }
     }
 
     // Every piece to its place: the table slot, the basket, the crate; flying when asked.
@@ -425,11 +380,12 @@ public partial class Market
     {
         var produce = g.items.Where(i => i.draggable && Items.Get(i.id) != null).ToList();
         int n = produce.Count;
-        bool trays = g.sight || g.memory || g.brain;
-        int rows = trays ? (n <= 6 ? 1 : 2) : n <= 5 ? 1 : n <= 10 ? 2 : 3;
+        bool trays = g.sight || g.memory || g.brain || g.effort;
+        int rows = trays ? (n <= 5 ? 1 : n <= 10 ? 2 : 3) : n <= 5 ? 1 : n <= 10 ? 2 : 3;
         int cols = Mathf.CeilToInt(n / (float)rows);
-        float step = Mathf.Min(0.24f, 1.2f / Mathf.Max(1, cols)), x0 = -0.03f - (cols - 1) * step / 2f;
-        float[] zs = trays ? (rows == 1 ? new[] { -0.22f } : new[] { -0.3f, -0.1f })
+        float span = trays ? 0.78f : 1.2f;
+        float step = Mathf.Min(trays ? 0.18f : 0.24f, span / Mathf.Max(1, cols)), x0 = (trays ? -0.02f : -0.03f) - (cols - 1) * step / 2f;
+        float[] zs = trays ? (rows == 1 ? new[] { -0.26f } : rows == 2 ? new[] { -0.36f, -0.16f } : new[] { -0.4f, -0.22f, -0.04f })
                            : rows == 1 ? new[] { -0.06f } : rows == 2 ? new[] { -0.2f, 0.08f } : new[] { -0.26f, 0f, 0.26f };
         int onTable = 0, inBasket = 0, inCrate = 0;
         for (int i = 0; i < n; i++)
@@ -514,7 +470,7 @@ public partial class Market
         this.frame = frame;
         view = View.Market;
         Canvas.ForceUpdateCanvases();
-        if (g != null) cam.Fixed(frame, g.camAt, g.camLook, 40f, false, 0.5f);
+        if (g != null) cam.Fixed(frame, g.camAt, g.camLook, 35f, false, 0.4f);
         cam.Snap();
         ApplyFog();
     }
@@ -541,9 +497,7 @@ public partial class Market
         if (g == null) return;
         if (g.root != null) Destroy(g.root.gameObject);
         if (g.note != null) Destroy(g.note.gameObject);
-        if (g.lens != null) Destroy(g.lens.gameObject);
-        if (g.bulbName != null) Destroy(g.bulbName.gameObject);
-        if (g.dimmer != null) Destroy(g.dimmer.gameObject);
+
         held = null; pointerDown = false;
         Beckon(null);
         g = null;
@@ -596,38 +550,36 @@ public partial class Market
         g.root = new GameObject("Kitchen").transform;
         g.root.SetParent(transform, false);
         BuildTable();
-        // The agent's name at its feet, the rule box on the table, the bin on the ground.
-        var agentPlate = DarkPlate(g.root, "Agent", 0.9f, out _, 0.3f);
-        agentPlate.position = g.P + g.inward * 0.45f + Vector3.up * 0.14f; agentPlate.name = "Name Agent";
-        agentPlate.gameObject.AddComponent<Billboard>().target = cam.transform;
-        g.box = new GameObject("Rule box").transform; g.box.SetParent(g.table, false);
-        g.box.localPosition = new Vector3(0.72f, g.top, 0.1f);
-        Box(g.box, new Vector3(0.32f, 0.18f, 0.22f), new Vector3(0f, 0.09f, 0f), CrateMat, new Color(0.85f, 0.75f, 0.55f), "Box");
-        Box(g.box, new Vector3(0.2f, 0.006f, 0.03f), new Vector3(0f, 0.182f, 0f), Stone, Ink3D, "Slot");
-        var rulePlate = DarkPlate(g.box, "Automation", 0.8f, out _, 0.26f);
-        rulePlate.localPosition = new Vector3(0f, 0.32f, 0f); rulePlate.name = "Name Rule";
-        rulePlate.gameObject.AddComponent<Billboard>().target = cam.transform;
+        TableLantern();
+        // Three places, each with its plate on it: the agent (on its chest), the automation's box
+        // on the table, the bin on the ground.
+        PinNote(a, "Agent");
+        g.box = new GameObject("Automation box").transform; g.box.SetParent(g.table, false);
+        g.box.localPosition = new Vector3(0.7f, g.top, 0.1f);
+        Box(g.box, new Vector3(0.42f, 0.18f, 0.22f), new Vector3(0f, 0.09f, 0f), CrateMat, new Color(0.85f, 0.75f, 0.55f), "Box");
+        Box(g.box, new Vector3(0.24f, 0.006f, 0.03f), new Vector3(0f, 0.182f, 0f), Stone, Ink3D, "Slot");
+        PlateOn(g.box, "Automation", 0.36f, new Vector3(0f, 0.09f, -0.113f), Vector3.back);
         g.bin = new GameObject("Bin").transform; g.bin.SetParent(g.root, false);
         g.bin.position = g.T + g.tx * 0.45f + g.inward * 0.5f;
+        g.bin.rotation = g.table.rotation;
         Cylinder(g.bin, 0.2f, 0.5f, new Vector3(0f, 0.25f, 0f), Metal, new Color(0.3f, 0.32f, 0.36f), "Drum");
         Cylinder(g.bin, 0.17f, 0.02f, new Vector3(0f, 0.49f, 0f), Stone, Ink3D, "Mouth");
-        var binPlate = DarkPlate(g.bin, "Neither", 0.9f, out _, 0.26f);
-        binPlate.localPosition = new Vector3(0f, 0.72f, 0f); binPlate.name = "Name Neither";
-        binPlate.gameObject.AddComponent<Billboard>().target = cam.transform;
+        PlateOn(g.bin, "Neither", 0.42f, new Vector3(0f, 0.3f, -0.206f), Vector3.back);
         // The pile, and a note per task.
         g.pile = new GameObject("Pile").transform; g.pile.SetParent(g.table, false);
         g.pile.localPosition = new Vector3(-0.15f, g.top, -0.05f);
         for (int i = 0; i < messages.Length; i++)
         {
             var noteRoot = new GameObject("Task note " + (i + 1)).transform; noteRoot.SetParent(g.root, false);
-            Box(noteRoot, new Vector3(0.24f, 0.006f, 0.17f), new Vector3(0f, 0.003f, 0f), Stone, new Color(0.96f, 0.94f, 0.86f), "Paper");
+            Box(noteRoot, new Vector3(0.3f, 0.006f, 0.21f), new Vector3(0f, 0.003f, 0f), Stone, new Color(0.96f, 0.94f, 0.86f), "Paper");
             Box(noteRoot, new Vector3(0.16f, 0.002f, 0.004f), new Vector3(0f, 0.0065f, -0.03f), Stone, new Color(0.45f, 0.5f, 0.6f), "Line");
             Box(noteRoot, new Vector3(0.12f, 0.002f, 0.004f), new Vector3(-0.02f, 0.0065f, 0.01f), Stone, new Color(0.45f, 0.5f, 0.6f), "Line");
             g.items.Add(new GItem { id = "decide" + i, root = noteRoot, index = i, reach = 60f, draggable = true, lift = 0.02f });
         }
-        g.topNote = DarkPlate(g.root, "", 0.48f, out g.noteText, 0.5f, 0.8f);
+        // The top note's message on a card standing in a wooden holder on the pile.
+        g.topNote = DarkPlate(g.root, "", 0.34f, out g.noteText, 0.4f, 0.5f);
         g.topNote.name = "Top note";
-        g.topNote.gameObject.AddComponent<Billboard>().target = cam.transform;
+        Box(g.topNote, new Vector3(0.36f, 0.035f, 0.05f), Vector3.zero, KitMaterial("Square", "bench"), new Color(0.6f, 0.5f, 0.38f), "Holder");
         RefreshKitchen();
     }
 
@@ -663,12 +615,20 @@ public partial class Market
         }
         if (top >= 0)
         {
+            var topItem = g.items.First(x => x.id == "decide" + top);
             g.topNote.gameObject.SetActive(true);
             g.noteText.text = g.messages[top];
             FitPlate(g.topNote);
-            g.topNote.position = g.pile.position + Vector3.up * (0.006f * inPile + 0.26f);
+            float cardH = g.topNote.Find("Slab").localScale.y;
+            g.topNote.SetParent(topItem.root, false);
+            g.topNote.localRotation = Quaternion.identity;
+            g.topNote.localPosition = new Vector3(0f, 0.04f + cardH / 2f, 0.04f);
+            var holder = g.topNote.Find("Holder");
+            if (holder != null) holder.localPosition = new Vector3(0f, -cardH / 2f + 0.005f, 0.01f);
+            topItem.pickHeight = 0.04f + cardH / 2f; topItem.reach = 110f;
+            foreach (var it in g.items.Where(x => x.id.StartsWith("decide") && x != topItem)) { it.pickHeight = 0f; it.reach = 60f; }
         }
-        else g.topNote.gameObject.SetActive(false);
+        else { g.topNote.SetParent(g.root, false); g.topNote.gameObject.SetActive(false); }
     }
 
     // Keeps a label over a moving thing (the battery rides the agent's hip).
@@ -725,7 +685,7 @@ public partial class Market
         foreach (var it in g.items)
         {
             if (it.root == null || !it.root.gameObject.activeInHierarchy) continue;
-            var s = cam.ToScreen(it.root.position + Vector3.up * (it.id == "battery" ? 0.08f : it.id == "fitmem" ? 0f : 0.04f));
+            var s = cam.ToScreen(it.root.position + Vector3.up * (it.pickHeight > 0f ? it.pickHeight : it.id == "battery" ? 0.0f : it.id == "fitmem" ? 0.1f : it.id.StartsWith("mem") || it.id.StartsWith("chip") ? 0.07f : 0.04f));
             if (s.z < 0) continue;
             float d = Vector2.Distance(new Vector2(s.x, s.y), screen);
             if (d < it.reach && d < bestD) { bestD = d; best = it; }
@@ -758,9 +718,9 @@ public partial class Market
         else if (it.id == "battery") CoinTapped?.Invoke(-1);
         else if (it.id.StartsWith("lens")) { Sfx.Tick(); PartTapped?.Invoke(Part.Vision, it.index); }
         else if (it.id.StartsWith("mem")) { Sfx.Tick(); PartTapped?.Invoke(Part.Memory, it.index); }
-        else if (it.id.StartsWith("bulb")) { Sfx.Tick(); PartTapped?.Invoke(Part.Model, it.index); }
+        else if (it.id.StartsWith("chip")) { Sfx.Tick(); PartTapped?.Invoke(Part.Model, it.index); }
         else if (it.id == "fitmem") { if (c.memory != MemoryModes.None) { Sfx.Tick(); PartTapped?.Invoke(Part.Memory, MemoryModes.None); } }
-        else if (it.id == "dimmer") { Sfx.Tick(); PartTapped?.Invoke(Part.Effort, (c.effort + 1) % 3); }
+        else if (it.id == "dial") { Sfx.Tick(); PartTapped?.Invoke(Part.Effort, (c.effort + 1) % 3); }
         else if (it.id == "phone") { Sfx.Tick(); PhoneTapped?.Invoke(); }
         else if (it.id == "note") { Sfx.Tick(); NoteTapped?.Invoke(); }
     }
@@ -791,7 +751,7 @@ public partial class Market
             if (toAgent < 220f) CoinTapped?.Invoke(1);
             else { Sfx.Tick(); Fly(it, g.coins.TransformPoint(it.slot), 0.3f); }
         }
-        else if (it.id.StartsWith("lens") || it.id.StartsWith("mem") || it.id.StartsWith("bulb"))
+        else if (it.id.StartsWith("lens") || it.id.StartsWith("mem") || it.id.StartsWith("chip"))
         {
             if (toAgent < 240f)
             {

@@ -73,6 +73,7 @@ public class StoryScreen
         world.Build(arena, true);
         world.PlaceAtDoor(hero, false, Market.Pitch * 3f); // out of the shot for now
         world.DoorLamp(hero, 2.2f);
+        world.FamilySpot(hero);
         var phone = world.StoryPhone(hero);
         world.ShowHouse(frame, hero, 4.4f, 36f);
         yield return new WaitForSecondsRealtime(0.9f);

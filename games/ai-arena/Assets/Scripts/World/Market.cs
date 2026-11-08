@@ -56,7 +56,6 @@ public partial class Market : MonoBehaviour
     public static GameObject Kit(string name) => Resources.Load<GameObject>("Market/" + name);
     public static bool Real { get { if (!kitChecked) { kitChecked = true; kitSquare = Kit("Square"); } return kitSquare != null; } }
     public static float Pitch => Real ? KitPitch : 1f;
-    public static bool MemoryCards;              // the remembered turns ride behind the agent's head only in the garage and the round
 
     public static Vector3 Cell(Vector2Int p) => new Vector3(p.x - (Size - 1) / 2f, 0, (Size - 1) / 2f - p.y) * Pitch;
     public static Bounds Square => Real ? new Bounds(new Vector3(0, 1.0f, 0), new Vector3(Size * KitPitch + 1f, 2.2f, Size * KitPitch + 1f))
@@ -78,7 +77,6 @@ public partial class Market : MonoBehaviour
         if (effects == null) { effects = new GameObject("Effects").AddComponent<Effects>(); effects.transform.SetParent(transform.parent, false); }
         BuildGround();
         BuildLight();
-        if (Real) BuildClock();
         stallsRoot = new GameObject("Stalls").transform; stallsRoot.SetParent(transform, false);
         botsRoot = new GameObject("Robots").transform; botsRoot.SetParent(transform, false);
         foreach (var a in arena.agents) { BuildHouse(a); bots[a] = new RobotModel(botsRoot, a, dusk); }
@@ -242,7 +240,7 @@ public partial class Market : MonoBehaviour
         StopAllCoroutines();
         ClearGarage();
         batteries.Clear();
-        podium = null; clockRoot = null; hourHand = minuteHand = null; clockFaceR = null;
+        podium = null; familySpot = null;
         wandering = null;
         thinking = false;
         Highlighted = null;
@@ -482,17 +480,6 @@ public partial class Market : MonoBehaviour
         var u = s.unknown;
         MeshKit.Part(u, "crate", MeshKit.Box, Look.Mat(Look.Unknown), new Vector3(0, 0.26f, 0), new Vector3(0.66f, 0.52f, 0.62f));
         MeshKit.Part(u, "lid", MeshKit.Box, Look.Mat(Look.UnknownDark), new Vector3(0, 0.54f, 0), new Vector3(0.72f, 0.06f, 0.68f));
-        var mark = new GameObject("?");
-        mark.transform.SetParent(u, false);
-        mark.transform.localPosition = new Vector3(0, 0.98f, 0);
-        var text = mark.AddComponent<TextMeshPro>();
-        text.font = Theme.Bold;
-        text.text = "?";
-        text.fontSize = 6;
-        text.color = Look.GreyDark;
-        text.alignment = TextAlignmentOptions.Center;
-        text.rectTransform.sizeDelta = new Vector2(1, 1);
-        mark.AddComponent<Billboard>().target = cam.transform;
         u.gameObject.SetActive(false);
 
         stalls[cell] = s;
@@ -521,17 +508,6 @@ public partial class Market : MonoBehaviour
         }
         var crates = Instantiate(Kit("Unknown"), s.unknown, false);
         crates.transform.localRotation = Quaternion.Euler(0f, yaw + 8f, 0f);
-        var mark = new GameObject("?");
-        mark.transform.SetParent(s.unknown, false);
-        mark.transform.localPosition = new Vector3(0, 1.75f, 0);
-        var text = mark.AddComponent<TextMeshPro>();
-        text.font = Theme.Bold;
-        text.text = "?";
-        text.fontSize = 10;
-        text.color = Look.GreyDark;
-        text.alignment = TextAlignmentOptions.Center;
-        text.rectTransform.sizeDelta = new Vector2(2, 2);
-        mark.AddComponent<Billboard>().target = cam.transform;
         s.unknown.gameObject.SetActive(false);
     }
 

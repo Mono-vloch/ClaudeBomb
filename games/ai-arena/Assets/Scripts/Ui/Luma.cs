@@ -57,7 +57,7 @@ public class Luma : MonoBehaviour
                 ["arrive-3"] = "Now you choose how far the agent sees.",
                 ["arrive-4"] = "Now you choose what the agent remembers.",
                 ["arrive-5"] = "Now you choose the agent's brain and how hard it thinks.",
-                ["arrive-7"] = "Everything is open and there is no help this time.",
+                ["arrive-7"] = "Every dial costs tokens on every turn.",
             };
             foreach (var l in Ladder.All)
             {
