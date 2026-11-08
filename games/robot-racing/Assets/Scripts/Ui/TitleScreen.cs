@@ -46,13 +46,13 @@ public class TitleScreen
         var tag = Ui.Text(root, "You set the points. It teaches itself to race.", 40, Theme.Teal, true);
         Ui.Place(tag.rectTransform, 120, 350, 1000, 56);
         int done = app.LevelsDone, next = Mathf.Min(done + 1, Ladder.Count);
-        if (done == 0) app.luma.Cue(root, "title", 120, 436, 820, stay: true);
-        else app.luma.Line(root, 120, 436, 820, $"Welcome back. Next: {Ladder.Get(next).title.Replace("Capstone: ", "").ToLowerInvariant()}", true, true, 17, type: false);
+        // LUMA says nothing here: she speaks when something happens in the world (her title
+        // line is in the file).
 
         var start = Ui.Button(root, done == 0 ? "Start" : $"Continue: round {next}", () => app.StartLevel(next), Ui.ButtonStyle.Accent, 24);
-        Ui.Place(start.GetComponent<RectTransform>(), 120, 580, 360, 72);
+        Ui.Place(start.GetComponent<RectTransform>(), 120, 456, 360, 72);
         var levels = Ui.Button(root, "Levels", () => Calendar(app), Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(levels.GetComponent<RectTransform>(), 500, 592, 120, 48);
+        Ui.Place(levels.GetComponent<RectTransform>(), 500, 468, 120, 48);
     }
 
     // The season's calendar: a card per round, its circuit, its stars; tap one to go there.

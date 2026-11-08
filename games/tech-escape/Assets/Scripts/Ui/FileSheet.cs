@@ -42,6 +42,10 @@ public static class FileSheet
             sections.Add(("THE IDEA", l.learn));
             sections.Add(("YOU FIX", l.fixes));
             if (!string.IsNullOrEmpty(l.mistake)) sections.Add(("FIX IT  ·  " + l.mistake.ToUpperInvariant(), l.why));
+            // LUMA's lines for the room and the attack, which she no longer says on those screens.
+            var lines = Luma.Lines;
+            var said = new[] { "enter-", "live-", "watch-" }.Select(p => p + l.number).Where(lines.ContainsKey).Select(Luma.Spoken).Distinct().ToList();
+            if (said.Count > 0) sections.Add(("LUMA", string.Join("\n", said.Select(s => "\u201C" + s + "\u201D"))));
         }
         sections.AddRange(extra);
         string record = app.session.record.Count == 0 ? "Nothing yet: the record starts in tier 2, one line per room."

@@ -81,8 +81,7 @@ public class StoryScreen
         {
             world.PhoneScreen(phone, true);
             Sfx.Chime();
-            app.luma.Cue(root, "shot-1");
-            yield return Hold(2.4f);
+            yield return Hold(3.2f); // the shots tell the story; her lines are in the file
         }
 
         // 2. The agent at the door, its note pinned on.
@@ -94,8 +93,7 @@ public class StoryScreen
             world.PlaceAtDoor(hero, false, 0.5f);
             note = world.PinNote(hero, "Get fruit.");
             world.ShowHouse(frame, hero, 2.9f, 34f, onAgent: true);
-            app.luma.Cue(root, "shot-2");
-            yield return Hold(2.4f);
+            yield return Hold(3.2f);
         }
 
         // 3. It walks into the market, and looks around: no phone.
@@ -104,7 +102,6 @@ public class StoryScreen
             Current = 3;
             if (note != null) UnityEngine.Object.Destroy(note.gameObject);
             if (phone != null) UnityEngine.Object.Destroy(phone.gameObject);
-            app.luma.Cue(root, "shot-3");
             var walk = app.StartCoroutine(world.WalkInto(hero, 2, frame));
             float t = 0f; next = false;
             while (!skip && !next && t < 6.5f) { t += Time.unscaledDeltaTime; yield return null; }
@@ -119,7 +116,6 @@ public class StoryScreen
             var inward = Market.Inward(hero.home);
             var step = new Vector2Int(Mathf.RoundToInt(inward.x), -Mathf.RoundToInt(inward.z));
             var cell = hero.pos + step;
-            app.luma.Cue(root, "shot-4", stay: true);
             if (Arena.InBounds(cell))
             {
                 arena.RemoveItem(cell);

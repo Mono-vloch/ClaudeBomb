@@ -69,16 +69,25 @@ public partial class Circuit
             top = Theme.Hex("#1D3363"); horizon = Theme.Hex("#D9967A"); bottom = Theme.Hex("#252D3A"); fog = Theme.Hex("#56607E");
             RenderSettings.fogDensity = 0.04f;
         }
+        // The edge of the world: the grass runs on far past the field (the outer ring in
+        // BuildTrackKit) and linear fog in the sky's horizon colour swallows it, starting past
+        // the farthest the cameras look at the track (the largest track reaches 9 units from
+        // its centre), so the play area keeps its light. Below the horizon the dome is the same
+        // haze, so the fogged grass meets the sky with no line. The fog modes are kept in builds
+        // by ProjectSettings/GraphicsSettings (fog stripping: custom, linear).
+        var haze = Color.Lerp(horizon, fog, 0.35f);
         RenderSettings.fog = true;
-        RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogColor = fog;
-        camera.backgroundColor = fog;
+        RenderSettings.fogMode = FogMode.Linear;
+        RenderSettings.fogStartDistance = FogStart;
+        RenderSettings.fogEndDistance = FogEnd;
+        RenderSettings.fogColor = haze;
+        camera.backgroundColor = haze;
         Look.SetSky(top, horizon);
         var sky = Instantiate(Piece("Sky"), transform, false);
         sky.transform.localScale = Vector3.one * 300f;
         var dome = sky.GetComponentInChildren<Renderer>();
         var mat = new Material(dome.sharedMaterial);
-        mat.SetColor("_Top", top); mat.SetColor("_Horizon", Color.Lerp(horizon, fog, 0.35f)); mat.SetColor("_Bottom", bottom);
+        mat.SetColor("_Top", top); mat.SetColor("_Horizon", haze); mat.SetColor("_Bottom", haze);
         dome.sharedMaterial = mat;
     }
 
@@ -92,8 +101,11 @@ public partial class Circuit
         kit.localScale = Vector3.one * M;
         kerbs.Clear();
 
-        // The grass: one big field, its UVs in units of 4 m.
-        Holder("Ground", GroundMesh(90f, 4f));
+        // The grass: one big field, its UVs in units of 4 m, and round it a ring of the same
+        // grass out to where the fog has long closed in, so no camera sees where it ends. The
+        // ring is its own renderer, so the field's lamps light the field as before.
+        Holder("Ground", GroundMesh(FieldSize, 4f));
+        Holder("Ground", RingMesh(FieldSize, RingSize, 4f)).name = "Ground ring";
         // The road: every road cell's square, in one mesh, UVs in metres over 3.2 m.
         Holder("Road", RoadMesh(t));
 
@@ -317,6 +329,32 @@ public partial class Circuit
         // Wound so the face points up.
         if (Vector3.Cross(b - a, c - a).y >= 0f) tris.AddRange(new[] { i, i + 1, i + 2, i, i + 2, i + 3 });
         else tris.AddRange(new[] { i, i + 2, i + 1, i, i + 3, i + 2 });
+    }
+
+    const float FieldSize = 90f, RingSize = 280f; // the field and the ring round it, across, in world units
+    const float FogStart = 30f, FogEnd = 75f;     // past every track (9 units from the centre at most) and its cameras
+
+    // The ring of grass round the field: the square RingSize across with the field's square
+    // cut out, in tiles of about 10 units so the fog, worked out at the corners, stays smooth.
+    Mesh RingMesh(float inner, float outer, float repeatM)
+    {
+        var v = new List<Vector3>(); var uv = new List<Vector2>(); var tris = new List<int>();
+        var c = Bounds.center; float hi = inner / 2f, ho = outer / 2f;
+        var cuts = new List<float>();
+        for (float a = -ho; a < -hi - 0.01f; a += 10f) cuts.Add(a);
+        for (float a = -hi; a <= hi + 0.01f; a += 10f) cuts.Add(a); // the field is 90 across: nine tens
+        for (float a = hi + 5f; a < ho - 0.01f; a += 10f) cuts.Add(a);
+        cuts.Add(ho);
+        Vector2 U(float x, float z) => new Vector2(x / M / repeatM, z / M / repeatM);
+        for (int i = 0; i + 1 < cuts.Count; i++)
+            for (int j = 0; j + 1 < cuts.Count; j++)
+            {
+                float a0 = cuts[i], a1 = cuts[i + 1], b0 = cuts[j], b1 = cuts[j + 1];
+                if (a0 >= -hi && a1 <= hi && b0 >= -hi && b1 <= hi) continue; // the field's own square
+                float x0 = c.x + a0, x1 = c.x + a1, z0 = c.z + b0, z1 = c.z + b1;
+                Quad(v, uv, tris, new Vector3(x0, -0.01f, z0), new Vector3(x0, -0.01f, z1), new Vector3(x1, -0.01f, z1), new Vector3(x1, -0.01f, z0), U(x0, z0), U(x0, z1), U(x1, z1), U(x1, z0));
+            }
+        return Finish(v, uv, tris, "ground ring");
     }
 
     Mesh GroundMesh(float size, float repeatM)

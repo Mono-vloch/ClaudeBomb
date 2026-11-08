@@ -21,7 +21,7 @@ public class RoomScreen
     readonly int index;
     readonly TextMeshProUGUI objective;
     public RoomRig Rig { get; private set; }
-    bool close, watched;
+    bool close;
     UnityEngine.UI.Image[] rowLamps;
 
     public RoomScreen(Transform parent, App app)
@@ -242,13 +242,9 @@ public class RoomScreen
     {
         yield return new WaitForSecondsRealtime(app.rehearsed ? 0.8f : 3.2f);
         if (root == null) yield break;
-        if (app.rehearsed)
-        {
-            // Back from the rehearsal: what the attack took, and the thing to fix pulsing.
-            app.luma.Cue(root, "live-" + room.number, 40, 924);
-            Rig.Pulse(Script.Mistake(room), true);
-        }
-        else app.luma.Cue(root, "enter-" + room.number, 40, 924);
+        // Back from the rehearsal: the thing to fix pulsing. LUMA says nothing in the room: she
+        // speaks when something happens in the world (the attack), and her room lines are in the file.
+        if (app.rehearsed) Rig.Pulse(Script.Mistake(room), true);
     }
 
     void ToggleCamera()
@@ -258,7 +254,7 @@ public class RoomScreen
         else app.world.ShowRoomFeed(frame, index);
     }
 
-    // Something was set: the board of lamps follows, the objective moves on, LUMA reacts once.
+    // Something was set: the board of lamps follows, the objective moves on.
     void Changed()
     {
         if (Rig == null) return;
@@ -282,7 +278,6 @@ public class RoomScreen
             bool owned = st.Pick("shared", "owner") > 0;
             bool found = room.fields.Where(f => !f.once).All(f => { int p = st.Pick("shared", f.key); return p >= 0 && p < f.options.Length && f.options[p] != "?"; });
             Hud.SetObjective(objective, found ? "Lift the lockdown." : owned ? "Rate it. Then lift the lockdown." : "Set its owner. Then lift the lockdown.");
-            if (found && !watched) { watched = true; app.luma.Cue(root, "watch-1", 40, 924); }
         }
         else if (app.rehearsed && Rig.Decided().All(d => d) && Script.Mistake(room).All(k => st.Pick(k, room.fields.FirstOrDefault(f => !f.once)?.key ?? "") >= 0)) Rig.Pulse(Script.Mistake(room), false);
     }

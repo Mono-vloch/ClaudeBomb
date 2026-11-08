@@ -115,18 +115,15 @@ public class SetupScreen
             {
                 yield return Hud.Arrival(root, arrival);
                 if (root == null) yield break;
-                if (Luma.Lines.ContainsKey("arrive-" + l.number)) { app.luma.Cue(root, "arrive-" + l.number); yield return new WaitForSecondsRealtime(3.2f); }
-                // The chips the first time they are on the table: LUMA names them, small to large.
-                if (root != null && Luma.Lines.ContainsKey("chips-" + l.number)) { app.luma.Cue(root, "chips-" + l.number); yield return new WaitForSecondsRealtime(3.4f); }
+                // The part arrives on its own; what LUMA would say about it is in the file.
             }
             if (root == null) yield break;
-            if (l.broken != null && Luma.Lines.ContainsKey("fix-" + l.number)) app.luma.Cue(root, "fix-" + l.number);
-            else if (l.number == 1) world.Beckon(world.PhoneTransform);
+            // A broken list is the puzzle: nothing is said, the list is on the agent to read.
+            if (l.broken == null && l.number == 1) world.Beckon(world.PhoneTransform);
         }
         else if (failed)
         {
-            if (Luma.Lines.ContainsKey("again-" + l.number)) app.luma.Cue(root, "again-" + l.number);
-            world.Beckon(Hint());
+            world.Beckon(Hint()); // the thing to change glows; why is in the file
         }
     }
 
@@ -145,8 +142,7 @@ public class SetupScreen
     {
         if (said.Contains(id) || root == null) return;
         said.Add(id);
-        world.Beckon(null);
-        app.luma.Cue(root, id);
+        world.Beckon(null); // her tour lines are in the file; the garage is played, not explained
     }
 
     // ---- what the player does ----

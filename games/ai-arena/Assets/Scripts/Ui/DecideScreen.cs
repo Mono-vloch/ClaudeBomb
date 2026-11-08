@@ -44,7 +44,7 @@ public class DecideScreen
         GameMenu.Icon(root);
         run = Hud.Main(root, "Run them", () => app.StartDecide(choices));
         run.interactable = false;
-        app.luma.Cue(root, "decide");
+        // LUMA speaks only when something happens in the world; this line is in the file.
         var runner = root.gameObject.AddComponent<Runner>();
         runner.screen = this;
     }

@@ -39,10 +39,11 @@ Students may arrive not knowing what an agent is, so the game starts with the st
 (six animated beats, told by LUMA), then teaches one idea per errand and opens one more
 dial each time. The errands follow tier 1 of the curriculum (`Docs/curriculum/ai-arena.md`):
 each is a question and gives two
-training runs before the students' own. LUMA opens every errand, gives a tour of the
-garage on the first one, reads out the first turn of the first errand as one loop, speaks
-up during a run the first time something worth naming happens, and reads the recap on the
-debrief. Her words are the ones Maaloomatiia's courses use for an agent: a new colleague
+training runs before the students' own. Since the polish pass LUMA speaks only when something
+happens in the world: an agent sent home (caught breaking the rule) or out of tokens during the
+round, and her one line on each debrief, the medal moment. Her other lines (the title's, the
+story's, the garage tour, the arrivals, the first turn, the off switch, the first buy) are in each
+errand's file, under "LUMA, on the way". Her words are the ones Maaloomatiia's courses use for an agent: a new colleague
 with a narrow job, with a job description, a brain, what it sees, a notebook, a budget,
 and a manager who keeps the accountability.
 
@@ -69,8 +70,9 @@ menu icon and at most three small controls besides the main action.
 
 1. **Title.** The player's own agent in the evening square: tap it to paint it the next colour, tap
    its name tag to rename it. The errand map (seven stops and their stars) is the only ladder; Start
-   or Continue. The first Start plays **the story**: four short 3D shots with one LUMA sentence each
-   (the phone lights up, the note on the agent, it walks into the market, the tomato), skippable.
+   or Continue. The first Start plays **the story**: four short 3D shots, wordless (the phone
+   lights up, the note on the agent, it walks into the market, the tomato), skippable; the story's
+   words are in the file.
 2. **Briefing.** A transmission: the family's house at dusk in the home camera's feed, the message
    typed in under its sender, two short lines of the errand's story, "Pack the agent".
 3. **The garage: packing the agent.** The agent at a market table by its house. Drag produce into
@@ -89,7 +91,10 @@ menu icon and at most three small controls besides the main action.
    dusk). The clock at the top runs toward dinner, amber in the last five turns; the family's window at the top right has a face per agent;
    the battery drains; the agent's thought is a bubble (Claude's first sentence, coordinates taken
    out; the whole of it on a tap). Camera cycles the street, the agent's eye and the market from
-   above; Call home is the off switch. Banners for the moments (sent home, out of tokens, all home).
+   above; Call home is the off switch. Banners for the moments (sent home, out of tokens, all home);
+   the last one, at the family's door, stands beside Mom, never over her. Past the ring of houses
+   two more houses close each open corner street, and a fog that starts beyond them, whatever the
+   camera, sinks the street into the night sky: no camera sees the ground run out.
 5. **Debrief.** The agent home at dusk on its podium with its basket tipped out (one step for one
    agent; steps 2 and 3 when several ran), Robot Racing's ribbon medal over the step's front, LUMA's
    one line, Next, Again and Details (the checks, the agents' figures and costs, the lists, the stars

@@ -233,7 +233,9 @@ public static class Hud
 
     // Dark glass, the words in the moment's colour, in with an overshoot; a big one flashes
     // the frame first and may carry one short line underneath.
-    public static IEnumerator Moment(Transform layer, string text, string sub, Color colour, float seconds, bool big, float width = Ui.W)
+    // place: where the card's centre goes (x, y from the top-left) and its widest (z); zero for
+    // the middle of the screen, as usual.
+    public static IEnumerator Moment(Transform layer, string text, string sub, Color colour, float seconds, bool big, float width = Ui.W, Vector3 place = default)
     {
         Image flash = null;
         if (big)
@@ -245,7 +247,9 @@ public static class Hud
         var card = Ui.Box(layer, "Moment", new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f));
         float h = big ? (string.IsNullOrEmpty(sub) ? 150 : 180) : 92;
         float w = big ? 780 : 620;
-        Ui.Place(card.rectTransform, (width - w) / 2, 330 - h / 2, w, h);
+        if (place.z > 0f) w = Mathf.Min(w, place.z);
+        float cx = place.z > 0f ? place.x : width / 2, cy = place.z > 0f ? place.y : 330;
+        Ui.Place(card.rectTransform, cx - w / 2, cy - h / 2, w, h);
         card.raycastTarget = false;
         var keyline = Ui.Box(card.transform, "Keyline", colour, false);
         Ui.Place(keyline.rectTransform, 0, 0, 6, h);
@@ -261,7 +265,7 @@ public static class Hud
         }
         var group = Ui.Group(card);
         card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        card.rectTransform.anchoredPosition = new Vector2(width / 2, -330);
+        card.rectTransform.anchoredPosition = new Vector2(cx, -cy);
         if (big) Sfx.Sting(colour == Theme.Danger ? Sfx.Mood.Alarm : text == "AGENTS OUT" ? Sfx.Mood.Go : text.Length <= 1 ? Sfx.Mood.Beep : colour == Theme.Amber ? Sfx.Mood.Alarm : Sfx.Mood.Fanfare); else Sfx.Tick();
         yield return Ui.Animate(big ? 0.34f : 0.2f, k =>
         {

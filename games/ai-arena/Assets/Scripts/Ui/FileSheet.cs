@@ -50,6 +50,14 @@ public static class FileSheet
         }
         sections.Add(("HOW TO PLAY", Garage));
         sections.Add(("THE STORY", string.Join("\n\n", Enumerable.Range(1, 6).Select(i => Luma.Lines["story-" + i]))));
+        // LUMA's lines that the screens no longer say, word for word, unless the file has them already.
+        var everything = string.Join("\n", sections.Select(s => s.body ?? ""));
+        var onTheWay = Luma.OnTheWay(l).Where(s => !everything.Contains(s)).Distinct().ToList();
+        if (onTheWay.Count > 0)
+        {
+            int at = sections.FindIndex(s => s.head == "LUMA");
+            sections.Insert(at >= 0 ? at + 1 : 0, ("LUMA, ON THE WAY", string.Join("\n", onTheWay)));
+        }
 
         open = Ui.Node("File", screen);
         Ui.Stretch(open);

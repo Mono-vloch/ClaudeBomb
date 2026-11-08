@@ -267,6 +267,7 @@ public partial class Market : MonoBehaviour
         {
             var square = Instantiate(kitSquare, ground, false);
             square.name = "Square";
+            CloseTheStreets(square.transform);
             lamps = square.GetComponentsInChildren<Light>(true);
             foreach (var l in lamps) l.enabled = dusk;
             return;
@@ -377,13 +378,60 @@ public partial class Market : MonoBehaviour
         camera.clearFlags = RenderSettings.skybox != null ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
         camera.backgroundColor = RenderSettings.fogColor;
         RenderSettings.fog = true;
-        RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogDensity = FogFor(cam.mode);
+        RenderSettings.fogMode = FogMode.Linear;
+        EdgeFog();
         DynamicGI.UpdateEnvironment();
     }
 
-    float FogFor(MarketCamera.Mode m) => dusk ? (m == MarketCamera.Mode.Overview ? 0.012f : 0.034f)
-                                              : (m == MarketCamera.Mode.Overview || m == MarketCamera.Mode.Orbit ? 0.0055f : 0.013f);
+    // The fog lies only past the houses. It starts beyond the houses that close the corner
+    // streets, measured from wherever the camera stands, so the market itself is never hazed
+    // (as it looked before), and the street beyond them sinks into the night sky's own colour:
+    // no camera sees the ground run out. It needs the linear fog variants in the build
+    // (ProjectSettings/GraphicsSettings: fog stripping custom, linear kept).
+    const float FogClear = 34f, FogDepth = 16f; // clear up to the closing houses' fronts; full night 16 m on
+    void EdgeFog()
+    {
+        if (cam == null) return;
+        float d = Vector3.Distance(cam.transform.position, transform.position);
+        RenderSettings.fogStartDistance = d + FogClear;
+        RenderSettings.fogEndDistance = d + FogClear + FogDepth;
+    }
+
+    // The ring of houses leaves its four corners open as streets: at the end of each, two of the
+    // kit's houses, side by side across it and facing the square, close the view.
+    const float StreetEnd = 34f; // metres from the centre to their fronts
+    void CloseTheStreets(Transform square)
+    {
+        var kinds = new[] { Kit("Hero/HouseA"), Kit("Hero/HouseB") };
+        if (kinds[0] == null || kinds[1] == null) return;
+        int k = 0;
+        foreach (var (sx, sz) in new[] { (1f, 1f), (1f, -1f), (-1f, -1f), (-1f, 1f) })
+        {
+            var outward = new Vector3(sx, 0f, sz).normalized;
+            var across = new Vector3(-outward.z, 0f, outward.x);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                var house = Instantiate(kinds[k++ % 2], square, false);
+                house.name = "StreetEnd";
+                house.transform.localRotation = Quaternion.identity;
+                house.transform.localPosition = Vector3.zero;
+                var b = BoundsOf(house); // unturned: its width along X, its depth along Z
+                float width = b.size.x, depth = b.size.z;
+                house.transform.localRotation = Quaternion.LookRotation(-outward); // its front toward the square
+                house.transform.localPosition = outward * (StreetEnd + depth / 2f) + across * side * (width / 2f + 0.3f);
+                foreach (var r in house.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+    }
+
+    static Bounds BoundsOf(GameObject go)
+    {
+        var rs = go.GetComponentsInChildren<Renderer>();
+        if (rs.Length == 0) return new Bounds(go.transform.position, Vector3.zero);
+        var b = rs[0].bounds;
+        foreach (var r in rs) b.Encapsulate(r.bounds);
+        return b;
+    }
 
     // A robot's house: just off the square, behind its home cell, facing in.
     void BuildHouse(AgentState a)
@@ -922,8 +970,8 @@ public partial class Market : MonoBehaviour
     {
         float pulse = thinking ? (Mathf.Sin(Time.time * 7f) + 1) / 2 : 0;
         foreach (var kv in bots) kv.Value.Think(kv.Key.Active ? pulse : 0);
-        // The haze: thick enough at street level for the houses to recede, thin from above.
-        if (Real && cam != null) RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, FogFor(cam.mode), 1f - Mathf.Exp(-3f * Time.unscaledDeltaTime));
+        // The fog past the houses follows the camera.
+        if (Real) EdgeFog();
 
         if (g != null) UpdateGarage();
         // A click on a robot chooses it, unless a card or a button took the click.

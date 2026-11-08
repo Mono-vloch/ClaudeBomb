@@ -11,6 +11,9 @@ public static class Look
     // The night
     public static readonly Color NightTop = Theme.Ink, NightHorizon = Theme.Hex("#1E3A5F"), NightBottom = Theme.Hex("#0B1536");
     public static readonly Color Haze = Theme.Hex("#1E3A5F"), Moon = Theme.Hex("#5E78A8");
+    // The night outside the building from above: the darkened ground under the moon, the fog it
+    // fades into and the camera's background are all this one colour, so no edge shows.
+    public static readonly Color NightOutside = Theme.Hex("#1B2331");
     public static readonly Color Ground = Theme.Hex("#161D2E");
 
     // The corridor and the rooms

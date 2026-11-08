@@ -48,6 +48,7 @@ public static class FileSheet
             }
             if (l.ready != null) sections.Add(("WATCH THE PRO", l.ready.why));
             if (l.broken != null) sections.Add(("FIX THE BROKEN BOT  ·  " + l.broken.name.ToUpperInvariant(), l.broken.why));
+            sections.Add(("LUMA", LumaLines(l)));
         }
         sections.AddRange(extra);
         if (l != null)
@@ -89,6 +90,28 @@ public static class FileSheet
         }
         content.sizeDelta = new Vector2(0, y + 10);
         Sfx.Tick();
+    }
+
+    // LUMA speaks only when something happens in the world (the first crash, the first
+    // finish, the medal); the lines she no longer says on the screens are kept here, word
+    // for word: the title's, the pit lane's, the training's, the race's and the questions'.
+    static string LumaLines(Lesson l)
+    {
+        var lines = Luma.Lines;
+        var said = new List<string>();
+        void Add(string id) { if (lines.ContainsKey(id)) { var s = Luma.Spoken(id); if (!said.Contains(s)) said.Add(s); } }
+        if (l.number == 1) Add("title");
+        Add(l.number == 6 ? "cue-dark" : "pit-" + l.number);
+        Add("why-" + l.number);
+        Add("fix-" + l.number);
+        if (l.number == 1) Add("cue-zero");
+        Add("cue-settled");
+        Add("guess-never");
+        Add("cue-race");
+        if (l.realRun) Add("cue-real");
+        Add("cue-right");
+        Add("cue-wrong");
+        return string.Join("\n", said);
     }
 
     public static void Close()

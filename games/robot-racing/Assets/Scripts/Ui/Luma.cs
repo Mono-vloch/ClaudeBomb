@@ -6,8 +6,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // LUMA, the coach: the same character as in Claude Bomb and AI Arena. She says one short
-// thing when something happens (the first attempt, the first finish, the race) and the
-// takeaway on the debrief, and her full lines live in the file. Her fixed lines are recorded,
+// thing only when something happens in the world (the first crash, the first finish) and
+// the takeaway on the debrief, with the medal; every other line of hers lives in the file. Her fixed lines are recorded,
 // one file per line id in Resources/LumaVoice (Robot Racing > Generate LUMA Voice); lines built
 // on the fly are text only.
 public class Luma : MonoBehaviour

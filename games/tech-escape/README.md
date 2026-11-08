@@ -109,9 +109,18 @@ Notes:
   that keeps the facility in a given part of the stage so the cards sit next to it.
 - **LUMA's voice.** After changing any line she says, run **Tech Escape > Generate LUMA
   Voice** (macOS `say`; a published trailer needs a licensed voice): the build stops when a
-  line has no recording. Since the game-feel pass she says one short cue when something
-  happens (`Luma.Lines`: her first sentence on entering a room, the attack's line, the
-  takeaway); her full lines and the curriculum are in the file. The walk below is silent.
+  line has no recording. Since the polish pass (8 November 2026) she speaks only when
+  something happens in the world: at the attack's end, what was taken or the door that held
+  (the attack's summary), and on the debrief the level's motto. Nothing on the title, in the
+  room or as the attack starts; the lines she used to say there (`Luma.Lines`: `enter-`,
+  `live-`, `watch-`) are in the file under "LUMA", word for word, with her full lines and the
+  curriculum. The walk below is silent.
+- **The world's edge.** The ground outside the building is darkened to night (its colour at
+  35 %) and fades into a fog of the same dark colour (`Look.NightOutside`, also the camera's
+  background from above): one linear fog, set every frame to start just past the building's
+  farthest corner from the camera (`Building.EdgeFog`), so nothing inside is fogged. Only the linear fog variant is built
+  (Graphics settings, Fog Modes: Custom, Linear), since fog switched on by script is stripped
+  from builds otherwise.
 - **The game-feel pass (8 November 2026).** Every row of a room is a card on the room's prop
   (`World/RoomRig.cs`), its short name on a dark plate, a knob per decision and a lamp: teal
   once every decision on the row is made, amber while one is still a question mark; whether it

@@ -235,7 +235,7 @@ public class QuizScreen
         if (right) Sfx.Chime(); else Sfx.Ruin();
         // A question with no right answer (which knob helped: the runs decide) is neither.
         bool graded = q.rulebook ? currentRight >= 0 : q.answer >= 0;
-        if (graded) app.luma.Cue(root, right ? "cue-right" : "cue-wrong");
+        // No "Right." from LUMA: the sign or part flashes teal or red, with a chime or a thud.
         if (!right && graded && IsParts(q)) app.world.FlashPart(PartTargets[Mathf.Clamp(q.answer, 0, 4)], true);
         if (!right && graded && !IsParts(q) && currentRight >= 0 && currentRight < signs.Count) Lift(signs[currentRight]);
         at++;

@@ -5,8 +5,12 @@ public static class Coach
 {
     public const string FreeLive = "Click a card to see the square that agent can see. Everything outside it does not exist for the agent.";
 
-    public static string Scored(AgentState a, ItemKind item) =>
-        $"{a.Name} bought {Items.Named(item.id)}: it saw it, matched it to the list, and moved. See, decide, act, text home. That is the loop, and it runs again next turn.";
+    const string Loop = "it saw it, matched it to the list, and moved. See, decide, act, text home. That is the loop, and it runs again next turn.";
+
+    public static string Scored(AgentState a, ItemKind item) => $"{a.Name} bought {Items.Named(item.id)}: {Loop}";
+
+    // The same line in the file, where there is no agent's name to put in it.
+    public static string ScoredInFile => $"The agent bought {Items.Named("apple")}: {Loop}";
 
     public static string Eliminated(AgentState a) =>
         $"{a.Name} is coming home early: it bought {Items.Named(a.ateItem)}, and that ruins dinner. {Verdicts.WhyEliminated(a)} Nobody could step in. The list was the only guardrail.";

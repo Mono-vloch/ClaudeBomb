@@ -2877,3 +2877,117 @@ see-through). Two medals read "flat, like a sticker" on the step's face (AI Aren
 Robot Racing's, on the new single step, read as "a real reward moment". The places that still
 lose are each game's densest decision screen: Tech Escape's card, AI Arena's 1.5 garage, and
 Robot Racing's briefing. Nothing was fixed after this run; these findings are for the next round.
+
+---
+
+# Phase 7f: the last polish (LUMA on events, the world's edge, HOME clear of Mom)
+
+8 November 2026, on `game-feel-pass` (recreated from `main` for this pass). Each game was
+changed, built (Mac and web, no compile errors) and walked in full under the screen lock; one
+player test per game followed. Nothing was fixed after the player tests.
+
+## LUMA speaks when something happens
+
+On play screens she now speaks only at a world event; at most one line on a briefing and one
+on a debrief (the takeaway, as the medal arrives). Her title lines are gone too: they described
+the screen. Every cut line is kept word for word in that level's file, in a new "LUMA" section
+(Robot Racing `FileSheet.LumaLines`, AI Arena `Luma.OnTheWay` as "LUMA, on the way", Tech Escape
+its `enter-`, `live-` and `watch-` lines); only the title's "Welcome back. Next: ..." is not
+copied, since it names the next level and nothing else. No line was recorded again.
+
+| Game | Kept on play screens | Cut from play screens |
+|---|---|---|
+| Robot Racing | the first crash ("Nobody is steering.", which used to open every training and now waits for the crash); the first finish ("One finish proves nothing: watch whether the curve stays up.", with the guess line after it on levels with a guess) | every pit-lane line (arrival, `cue-dark`, the broken robot's why and fix), "That is learning, not luck.", "Every move earns zero.", "It never finished. The tank ran dry.", the race's two cues, and the answers' "Right." / "Not quite." (the tapped sign or part already flashes teal or red with a chime or a thud) |
+| AI Arena | an agent sent home (the first sentence of `Coach.Eliminated`, "Nadia is coming home early: it bought a cherry, and that ruins dinner."); an agent out of tokens ("Nadia ran out of tokens on turn N."), kept because the agent stops and dims under OUT OF TOKENS | the four story shots' lines (the shots are now wordless, 3.2 s each), every garage line, 1.6's decide line, the first turn, the rounds, the off switch, the first buy ("Nadia bought an apple..."). The agents coming home had no line and have none |
+| Tech Escape | the attack's end, theft or held door ("The attacker took the one thing nobody had written down.", "The register held: nothing unlisted to take.", "Blocked, and the block is in the log." ...), the rehearsal's end included | the room's `enter-` and `live-` lines, the drive's `watch-1`, the attack's opening cue ("Watch which door it goes through.") |
+
+Briefings: none of the three had a LUMA line on the briefing, and none has now. The walks'
+`counts.jsonl` confirm it on every screen: LUMA's line on a play screen only at those events,
+one line on each debrief, never two at once. Robot Racing's title came down from 40 words to 29.
+
+## The edge of the world
+
+In all three games the fog the code already set never reached a build: Graphics settings
+stripped the fog shader variants ("Automatic", and no scene saves fog). Each
+`ProjectSettings/GraphicsSettings.asset` now keeps the linear fog variant (custom stripping).
+
+- **Robot Racing**: linear fog from 30 to 75 units in the sky dome's horizon colour (the largest
+  track reaches 9 units from the centre, so the play area is clear), the dome's lower half and
+  the camera background in the same colour, and a ring of the field's grass out to 280 units.
+  The field and its lamps are untouched. Web 33 MB on disk (31 before: the fog variants).
+- **AI Arena**: linear fog in the dusk sky's navy, starting 34 m beyond the camera's distance
+  from the square's centre and full 16 m later, so nothing inside the ring of houses hazes; two
+  of the kit's houses close each of the four open corner streets, 34 m out. The gap past Mom's
+  house went from grey to the sky's navy. Web 36 MB.
+- **Tech Escape**: only the overhead shots see outside. The kit's ground outside is darkened and
+  matte (the pale plane was the moon's sheen at a grazing angle) and fades into linear fog of
+  the same colour (`Look.NightOutside`, also the overview's background), set each frame from
+  just past the building's farthest corner (`Building.EdgeFog`), so no room is fogged. Web 41 MB.
+
+## AI Arena: HOME clear of Mom
+
+`ClearOfMom()` projects Mom's bounds, her wave included, and places the HOME card on the side of
+her with more room, narrowed to fit (above or below if neither side fits). On 1.1 and 1.5 it
+stands to her right, clear.
+
+## Walks
+
+`games/<id>/Builds/look-audit/game-feel/polish/` in each game: every level (Robot Racing 13, 78
+files; AI Arena 7, 52 files; Tech Escape 19, 131 files). AI Arena's fog was tightened after its
+full walk: 1.1 and 1.5 were walked again on the final build (`polish-fog/`). Every screen keeps
+the brief's limits as before; the flags are the ones that belong (2.3's training Details,
+Tech Escape's level select), and Tech Escape's close-up cards stay at 32 to 72 words as in round
+4. Not seen in a frame: Tech Escape's attack opening shot (the walk does not stop there), and
+AI Arena's five other errands on the final fog values.
+
+## The player test, once per game
+
+Fresh agents, level 1.1's frames in order, the brief's question.
+
+**Robot Racing** (`polish/`, 16 frames): "A teal robot race car... nobody drives it. You give it
+points... and watch it teach itself, crashing at first and later finishing laps... quizzed on how
+a robot learns from points, and the car gets a medal on a podium." Playing: the pit lane (the
+flag), the training ("Nobody is steering." under it), FIRST FINISH ("feels like a reward"), the
+race, the race over, the podium. Form or instructions: the seven questions in a row ("nothing
+happens in the world between them"; in 1 to 5 it could not see the choices: the glowing car and
+parts were not read as answers), the briefing's text panel, and the set pit lane's numbers
+("bare numbers stacked in the air"). Broken, as it saw it: the questions' prompt running past
+its plate; the gantry post and a lamp post hiding the answers' first letters on question 7 and
+the "-" of "-0.2"; the menu icon on the title's clock; the side sensors' teal wedges under the
+car; teal letters cut behind a board at the debrief; the finish banner letting the car show
+through; LUMA's "the curve" with no curve on screen.
+
+**AI Arena** (`polish-fog/`, 14 frames): "You run a little robot errand-runner... Mom wants apples
+and nothing else. You pack the robot... send it into a night market, and watch... At the end you
+get a medal." Playing: the title, the story's walk into the market, the agent out, the street,
+the agent's eye ("a nice touch"), the walk home ("feels like playing"), the medal ("feels like a
+reward"). Form or instructions: the briefing ("a rules lecture" in a navy panel), the garage
+("a checklist made of props"; the list already says "Buy apples.", so it could not tell what it
+chose), Mom's message on the phone ("the third time"); from the street on, "watching a replay".
+The wordless story shots 1 and 4 it could not read. Broken, as it saw it: AGENT OUT over the
+thought bubble; yellow-green discs at the agent's feet; the "Buy apples." card over the battery
+and the apple on the basket's rim; the salmon sight square in the agent's eye; the apples
+reading as tomatoes; the agent a speck on the overhead; "4 on the list in the basket" small and
+awkward. HOME over Mom is no longer among them.
+
+**Tech Escape** (`polish/`, 18 frames): "A night-shift security agent at the Harbor Permits Office
+during an intruder lockdown... make sure the Risk Room's board lists everything... A practice
+break-in shows you what's missing: an unlisted shared drive. You add it to the board, the real
+attack bounces off, and you earn a medal." Playing on fourteen of eighteen; the search is "the
+best moment". Form or instructions: the briefing, the card brought close ("a database record,
+not an object you handle"; the knob changes nothing in the room; nothing says what "Sensitivity"
+or "If gone" mean), and the objective strip as step-by-step instructions. It also read the flow
+as letting the lockdown lift with four fields still "?" (the lamps turn teal only once all five
+are set, so the walk set the other four between those two frames). Broken, as it saw it: the
+corridor monitor frame small and soft; the grey shape near the ceiling (the ceiling camera); the
+clock over the cork board; the card cutting three panels and its yellow square; "Dana" too small;
+panels past the board's edge; the twelve dots with only one changing; "RISK RO..." cut at the
+edge; the medal flat on the crate.
+
+## Where the three stand
+
+LUMA now waits for something to happen, the edge of the world no longer shows, and HOME clears
+Mom; no player test mentioned LUMA's lines as a problem, the horizon, or HOME over Mom. What all
+three player tests still name is what earlier rounds named: the briefing as a reading panel, and
+each game's densest decision screen as a form (Robot Racing's questions and point values, AI
+Arena's garage table, Tech Escape's card). Those are the next round's, if there is one.

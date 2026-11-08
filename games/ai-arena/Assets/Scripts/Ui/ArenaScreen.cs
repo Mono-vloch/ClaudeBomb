@@ -35,8 +35,8 @@ public class ArenaScreen
     int viewIndex;
     readonly int turns;
     readonly HashSet<AgentState> announced = new HashSet<AgentState>();
-    readonly Queue<(string text, string sub, Color colour, float seconds, bool big)> banners = new Queue<(string, string, Color, float, bool)>();
-    bool showing, saidScore, saidOut, saidOff, saidTokens;
+    readonly Queue<(string text, string sub, Color colour, float seconds, bool big, Vector3 place)> banners = new Queue<(string, string, Color, float, bool, Vector3)>();
+    bool showing, saidOut, saidTokens;
     readonly bool firstErrand;
     public bool Started { get; private set; }
     public string CurrentBanner { get; private set; } = "";
@@ -146,7 +146,7 @@ public class ArenaScreen
 
     // ---- moments ----
 
-    public void Announce(string text, string sub, Color colour, float seconds, bool big) => banners.Enqueue((text, sub, colour, seconds, big));
+    public void Announce(string text, string sub, Color colour, float seconds, bool big, Vector3 place = default) => banners.Enqueue((text, sub, colour, seconds, big, place));
 
     IEnumerator Countdown()
     {
@@ -167,9 +167,9 @@ public class ArenaScreen
         {
             if (banners.Count > 0)
             {
-                var (text, sub, colour, seconds, big) = banners.Dequeue();
+                var (text, sub, colour, seconds, big, place) = banners.Dequeue();
                 showing = true; CurrentBanner = text;
-                yield return Hud.Moment(bannerLayer, text, sub, colour, seconds, big);
+                yield return Hud.Moment(bannerLayer, text, sub, colour, seconds, big, place: place);
                 showing = false; CurrentBanner = "";
             }
             else yield return null;
@@ -203,25 +203,13 @@ public class ArenaScreen
     // LUMA, one short thing when something happens, in the words of the lesson.
     void Watch()
     {
-        if (app.decide != null)
-        {
-            if (sim.turn == 1 && app.decide.RunNumber == 1) app.luma.Cue(root, "round-6");
-            return;
-        }
-        var l = app.lesson;
-        if (sim.turn == 1)
-        {
-            if (l == null || l.number == 1) app.luma.Cue(root, "cue-nobody");
-            else if (Luma.Lines.ContainsKey("round-" + l.number)) app.luma.Cue(root, "round-" + l.number);
-            return;
-        }
+        // Only on what happens in the world: an agent sent home, an agent out of tokens. Her
+        // lines about the errand itself (the first turn, the off switch, the first buy) are in the file.
+        if (app.decide != null || sim.turn <= 1) return;
         var dead = sim.lastMoves.FirstOrDefault(m => m.ate != null && !m.agent.alive);
         if (dead != null && !saidOut) { saidOut = true; follower.StartCoroutine(CueLater(Luma.FirstSentence(Coach.Eliminated(dead.agent)), 2.6f)); return; }
         var broke = arena.agents.FirstOrDefault(a => a.outOfTokens);
         if (broke != null && !saidTokens) { saidTokens = true; follower.StartCoroutine(CueLater(Luma.FirstSentence(Coach.OutOfTokens(broke, sim.turn)), 2.4f)); return; }
-        if (l != null && l.number == 1 && !saidOff && !CalledHome && sim.turn >= sim.totalTurns / 2) { saidOff = true; app.luma.Cue(root, "cue-off"); return; }
-        var scored = sim.lastMoves.FirstOrDefault(m => m.ate != null && m.agent.alive);
-        if (scored != null && !saidScore && (l == null || l.number == 1)) { saidScore = true; var line = Luma.FirstSentence(Coach.Scored(scored.agent, scored.ate)); if (line != null) app.luma.Text(root, line); }
     }
 
     IEnumerator CueLater(string text, float seconds)
@@ -258,10 +246,31 @@ public class ArenaScreen
         int bought = arena.agents.Where(a => a.alive).Sum(a => a.score);
         string sub = bought > 0 ? $"{bought} on the list in the basket" : "";
         const float Stay = 100000f;
-        if (CalledHome) Announce("CALLED HOME", sub, Theme.Amber, Stay, true);
-        else if (home == all) { Sfx.Sting(Sfx.Mood.Fanfare); world.Celebrate(null); Announce(all > 1 ? "ALL HOME" : "HOME", sub, Theme.Teal, Stay, true); }
-        else if (home == 0) Announce(all > 1 ? "NOBODY CAME HOME" : "SENT HOME", "", Theme.Danger, Stay, true);
-        else Announce($"{home} OF {all} HOME", sub, Theme.Amber, Stay, true);
+        var place = ClearOfMom();
+        if (CalledHome) Announce("CALLED HOME", sub, Theme.Amber, Stay, true, place);
+        else if (home == all) { Sfx.Sting(Sfx.Mood.Fanfare); world.Celebrate(null); Announce(all > 1 ? "ALL HOME" : "HOME", sub, Theme.Teal, Stay, true, place); }
+        else if (home == 0) Announce(all > 1 ? "NOBODY CAME HOME" : "SENT HOME", "", Theme.Danger, Stay, true, place);
+        else Announce($"{home} OF {all} HOME", sub, Theme.Amber, Stay, true, place);
+    }
+
+    // The round's result stays up at the family's door: beside Mom, never over her (she is
+    // waving the agent home). Beside her on the wider side, as wide as fits; else above or below
+    // her; zero (the middle, as usual) when she is not in view or the middle is clear of her.
+    Vector3 ClearOfMom()
+    {
+        var size = bannerLayer.rect.size;
+        var mom = world.FamilyOnScreen(size);
+        if (mom.width <= 0f) return default;
+        const float H = 180f, Gap = 28f, Margin = 40f, Top = 190f, Bottom = 150f; // clear of the objective, the clock and the buttons
+        mom = Rect.MinMaxRect(mom.xMin - Gap, mom.yMin - Gap, mom.xMax + Gap, mom.yMax + Gap);
+        if (!new Rect(size.x / 2 - 390f, 330f - H / 2, 780f, H).Overlaps(mom)) return default;
+        float left = mom.xMin - Margin, right = size.x - Margin - mom.xMax;
+        if (Mathf.Max(left, right) >= 460f)
+            return right >= left ? new Vector3(mom.xMax + right / 2f, 330f, Mathf.Min(780f, right))
+                                 : new Vector3(Margin + left / 2f, 330f, Mathf.Min(780f, left));
+        if (mom.yMin - Top >= H) return new Vector3(size.x / 2, Top + (mom.yMin - Top) / 2f, 780f);
+        if (size.y - Bottom - mom.yMax >= H) return new Vector3(size.x / 2, mom.yMax + (size.y - Bottom - mom.yMax) / 2f, 780f);
+        return default;
     }
 
     // ---- the chosen agent ----

@@ -135,15 +135,10 @@ public class PitScreen
             PlayerPrefs.SetInt(seen, 1); PlayerPrefs.Save();
             string arrival = Arrival(l);
             if (arrival != null) yield return Moment(arrival, Theme.Teal);
-            if (l.number == 6) app.luma.Cue(root, "cue-dark");
-            else if (Luma.Lines.ContainsKey("pit-" + l.number)) app.luma.Cue(root, "pit-" + l.number);
         }
-        else if (failed)
-        {
-            if (Luma.Lines.ContainsKey("why-" + l.number)) { app.luma.Cue(root, "why-" + l.number); yield return new WaitForSecondsRealtime(3.5f); if (root == null) yield break; }
-            if (Luma.Lines.ContainsKey("fix-" + l.number)) app.luma.Cue(root, "fix-" + l.number);
-            app.world.Beckon(Hint(l), true);
-        }
+        // LUMA says nothing on the pit lane: her arrival and "why it failed" lines are in the
+        // file; the world lights the thing to change.
+        else if (failed) app.world.Beckon(Hint(l), true);
         if (l.flag && !l.points && s.finish <= 0) app.world.Beckon("finish", true);
     }
 

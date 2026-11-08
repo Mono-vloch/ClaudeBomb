@@ -433,6 +433,31 @@ public partial class Market
         lamp.type = LightType.Point; lamp.color = new Color(1f, 0.9f, 0.76f); lamp.intensity = 1.5f; lamp.range = 2.8f; lamp.shadows = LightShadows.None;
     }
 
+    // Where Mom is on screen, in canvas units from the top-left of a canvas of the given size
+    // (her wave included); empty when she is not in view. A banner that must not cover her reads it.
+    public Rect FamilyOnScreen(Vector2 size)
+    {
+        var mom = familySpot != null ? familySpot.Find("Family") : null;
+        var c = cam != null ? cam.GetComponent<Camera>() : null;
+        if (mom == null || c == null) return Rect.zero;
+        var rs = mom.GetComponentsInChildren<Renderer>();
+        if (rs.Length == 0) return Rect.zero;
+        var b = rs[0].bounds;
+        foreach (var r in rs) b.Encapsulate(r.bounds);
+        b.Expand(new Vector3(0.5f, 0.35f, 0.5f)); // the waving arm swings out past the bounds of the pose
+        float x0 = float.MaxValue, y0 = float.MaxValue, x1 = float.MinValue, y1 = float.MinValue;
+        for (int i = 0; i < 8; i++)
+        {
+            var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+            var s = c.WorldToScreenPoint(corner);
+            if (s.z <= 0f) continue;
+            float x = s.x / Screen.width * size.x, y = (1f - s.y / Screen.height) * size.y;
+            x0 = Mathf.Min(x0, x); x1 = Mathf.Max(x1, x); y0 = Mathf.Min(y0, y); y1 = Mathf.Max(y1, y);
+        }
+        if (x0 > x1 || x1 < 0f || x0 > size.x) return Rect.zero;
+        return Rect.MinMaxRect(Mathf.Max(0f, x0), Mathf.Max(0f, y0), Mathf.Min(size.x, x1), Mathf.Min(size.y, y1));
+    }
+
     // The agent is home: Mom waves once, then rests.
     public void FamilyWave(float delay = 0f)
     {

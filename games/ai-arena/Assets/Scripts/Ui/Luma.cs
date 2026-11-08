@@ -6,8 +6,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // LUMA, the coach: the same character as in Claude Bomb and Robot Racing. She says one short
-// thing when something happens (the first turn, the first buy, an agent sent home) and the
-// takeaway on the debrief; her full lines live in the file. Her fixed lines are recorded, one
+// thing only when something happens in the world (an agent sent home or out of tokens) and the
+// takeaway on the debrief; her other lines live in the file (OnTheWay). Her fixed lines are recorded, one
 // file per line id in Resources/LumaVoice (AI Arena > Generate LUMA Voice); lines built on the
 // fly, with an agent's name in them, are text only.
 public class Luma : MonoBehaviour
@@ -75,6 +75,23 @@ public class Luma : MonoBehaviour
             }
             return lines;
         }
+    }
+
+    // Her lines the screens no longer say (she speaks only when something happens in the world:
+    // an agent sent home or out of tokens, the agents home, the medal): kept for the errand's file.
+    public static List<string> OnTheWay(Lesson l)
+    {
+        var ids = new List<string> { "title", "tour-1", "tour-2", "tour-3", "tour-4" };
+        if (l == null || l.number == 1) ids.AddRange(new[] { "cue-nobody", "cue-off" });
+        if (l != null)
+        {
+            if (l.decide) ids.Add("decide");
+            foreach (var p in new[] { "arrive-", "chips-", "round-" }) ids.Add(p + l.number);
+        }
+        var lines = Lines;
+        var said = ids.Where(lines.ContainsKey).Select(id => lines[id]).ToList();
+        if (l == null || l.number == 1) said.Add(Coach.ScoredInFile);
+        return said;
     }
 
     public static int Words(string text) => string.IsNullOrWhiteSpace(text) ? 0 : text.Split(' ').Count(w => w.Any(char.IsLetterOrDigit));

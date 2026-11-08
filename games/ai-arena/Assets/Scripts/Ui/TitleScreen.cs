@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using Maaloomatiia.Games;
 
 // The cover: the player's agent close in the evening square, the others strolling behind it;
-// on the left the wordmark, the pitch, LUMA's one line, the errand map (the seven stops and
+// on the left the wordmark, the pitch, the errand map (the seven stops and
 // their stars: the only ladder in the game) and Start. The agent's name and colour are set
 // here, once: tap the agent to paint it, tap its name tag to rename it. Sound, the voice, free
 // play, the story and the games menu live in the menu. A small amber lamp by the menu shows
@@ -58,7 +58,7 @@ public class TitleScreen
         var tagline = Ui.Text(root, "You write the list. It shops alone.", 40, Theme.Teal, true);
         Ui.Place(tagline.rectTransform, 120, 350, 1000, 56);
         int done = app.LevelsDone, next = Mathf.Min(done + 1, Ladder.Count);
-        app.luma.Cue(root, "title", 120, 436, 820, stay: true);
+        // LUMA speaks only when something happens in the world; her title line is in the file.
 
         // The errand map: the seven stops, their stars; any of them starts from a tap.
         const float first = 150, step = 112, trackY = 620;

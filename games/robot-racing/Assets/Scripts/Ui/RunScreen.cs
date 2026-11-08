@@ -36,7 +36,7 @@ public class RunScreen
     RectTransform bookContent;
     TextMeshProUGUI readingsText;
     int pace;              // 0 every attempt, 1 montage, 2 max
-    bool paused, showing, skipping, overview, saidFirst, saidSettled, saidLoophole, saidGuess;
+    bool paused, showing, skipping, overview, saidFirst, saidCrash, saidSettled, saidLoophole, saidGuess;
     int attemptAt, stepAt;  // where the replay is
     float stepTimer, attemptTimer, sheetTimer;
     const float RaceStep = 0.1f;   // seconds per move in the race
@@ -125,7 +125,7 @@ public class RunScreen
         saidGuess = false;
         ObjectiveForRun();
         attemptAt = 0; stepAt = 0; stepTimer = attemptTimer = 0f;
-        saidFirst = saidSettled = saidLoophole = skipping = false;
+        saidFirst = saidCrash = saidSettled = saidLoophole = skipping = false;
         Pose(0, 0, 0f);
     }
 
@@ -140,7 +140,6 @@ public class RunScreen
         paused = true;
         yield return new WaitForSecondsRealtime(0.4f);
         yield return Moment("ATTEMPT 1", "", Theme.Teal, 0.7f, false);
-        app.luma.Cue(root, "cue-nobody");
         paused = false;
         while (true)
         {
@@ -214,10 +213,12 @@ public class RunScreen
     {
         var r = a.result;
         if (watched) { if (r.finished) app.world.FinishFlash(); else app.world.Crash(true); }
+        // LUMA speaks on the world's events only: the first crash, the first finish.
+        if (watched && !r.finished && !saidCrash && !saidFirst) { saidCrash = true; app.luma.Cue(root, "cue-nobody"); }
         app.world.AddGhost(a.path, r.finished);
         if (CurveInWorld) app.world.CurveDraw(replay.attempts.Take(attemptAt + 1).Select(x => x.result.points).ToList(), training.s.finish);
         if (r.finished && !saidFirst) { saidFirst = true; Announce("FIRST FINISH", "", Theme.Amber, 1.2f, true); follower.StartCoroutine(CueThen("cue-first", GuessCue(a.index))); }
-        if (replay.Settled > 0 && a.index >= replay.Settled && !saidSettled) { saidSettled = true; Announce("SETTLED", "", Theme.Teal, 1.2f, true); app.luma.Cue(root, "cue-settled"); }
+        if (replay.Settled > 0 && a.index >= replay.Settled && !saidSettled) { saidSettled = true; Announce("SETTLED", "", Theme.Teal, 1.2f, true); }
         if (!saidLoophole && r.points > training.s.finish * 0.6f && !r.finished && training.s.speedBonus > 0) { saidLoophole = true; Announce("REWARD HACKED", "", Theme.Danger, 1.6f, true); }
         attemptAt++; stepAt = 0; stepTimer = 0f;
     }
@@ -247,8 +248,6 @@ public class RunScreen
 
     void EndTraining()
     {
-        if (training.firstFinish < 0 && app.lesson != null && app.lesson.number == 1) app.luma.Cue(root, "cue-zero");
-        else if (training.firstFinish < 0 && !saidGuess && app.session != null && app.session.guess >= 0) { saidGuess = true; app.luma.Cue(root, "guess-never"); }
         StartRace();
     }
 
@@ -302,7 +301,6 @@ public class RunScreen
         lapText.text = $"LAP 1/{lapsWanted}";
         yield return app.world.StartLights(0.7f);
         Announce("GO", "", Theme.Teal, 0.6f, true);
-        app.luma.Cue(root, "cue-race");
         paused = false;
     }
 
@@ -362,7 +360,6 @@ public class RunScreen
         app.world.LapBoard("LAP 1/1");
         if (Circuit.HasKit) app.world.ShowFollow(frame); else app.world.ShowOverview(frame);
         Announce("THE REAL RUN", "", Theme.Danger, 1.6f, true);
-        app.luma.Cue(root, "cue-real");
     }
 
     void Finish()

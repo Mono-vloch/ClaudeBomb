@@ -175,11 +175,16 @@ public partial class Building : MonoBehaviour
     public void MomentAround(Transform subject, float seconds, System.Action done, bool slow = true, bool hold = false) => rig.FinishMoment(subject, seconds, done, slow, hold);
     public void BackToOverview() { rig.Release(); Mood(View.Overview); cam.Overview(frame, Bounds); cam.pitch = 48; cam.yaw = 28; }
 
-    // ---- The light and the air, per view (Claude Bomb's recipe: a key with shadows, fog that
-    // sinks the far walls into the night, the facility's own lamps for the rest) ----
+    // ---- The light and the air, per view (Claude Bomb's recipe: a key with shadows, the
+    // facility's own lamps for the rest). The fog only hides the world outside the building: it
+    // starts just past the building's farthest corner from the camera (see EdgeFog), so nothing
+    // inside is ever fogged and the ground outside fades into the night before its edge. ----
+
+    View mood;
 
     public void Mood(View view)
     {
+        mood = view;
         foreach (var c in ceilings) if (c != null) c.SetActive(view != View.Overview);
         if (ring != null) ring.SetActive(view == View.Overview);
         foreach (var l in stripLights) if (l != null) l.enabled = view != View.Room;
@@ -192,7 +197,7 @@ public partial class Building : MonoBehaviour
                 key.transform.rotation = Quaternion.Euler(58f, 151f, 0f);
                 key.color = new Color(0.82f, 0.88f, 1f); key.intensity = 0.75f; key.shadowStrength = 0.9f;
                 RenderSettings.ambientSkyColor = Theme.Hex("#1E2C46"); RenderSettings.ambientEquatorColor = Theme.Hex("#161F33"); RenderSettings.ambientGroundColor = Theme.Hex("#0B1020");
-                RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogDensity = 0.05f; RenderSettings.fogColor = Theme.Hex("#091021");
+                RenderSettings.fogColor = Theme.Hex("#091021");
                 if (urp != null) urp.shadowDistance = 12f;
                 break;
             case View.Corridor:
@@ -200,7 +205,7 @@ public partial class Building : MonoBehaviour
                 key.transform.rotation = Quaternion.Euler(68f, 70f, 0f);
                 key.color = new Color(0.66f, 0.75f, 0.95f); key.intensity = 1.05f; key.shadowStrength = 0.9f;
                 RenderSettings.ambientSkyColor = Theme.Hex("#223152"); RenderSettings.ambientEquatorColor = Theme.Hex("#1A243C"); RenderSettings.ambientGroundColor = Theme.Hex("#0D1426");
-                RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogDensity = 0.04f; RenderSettings.fogColor = Theme.Hex("#091021");
+                RenderSettings.fogColor = Theme.Hex("#091021");
                 if (urp != null) urp.shadowDistance = 25f;
                 break;
             default:
@@ -208,12 +213,15 @@ public partial class Building : MonoBehaviour
                 key.transform.rotation = Quaternion.Euler(50, -60, 0);
                 key.color = Look.Moon; key.intensity = 1.2f; key.shadowStrength = 0.7f;
                 RenderSettings.ambientSkyColor = Theme.Hex("#3C5A8C"); RenderSettings.ambientEquatorColor = Theme.Hex("#46527A"); RenderSettings.ambientGroundColor = Theme.Hex("#1A2238");
-                RenderSettings.fogMode = FogMode.Linear; RenderSettings.fogStartDistance = 50f; RenderSettings.fogEndDistance = 160f; RenderSettings.fogColor = Look.Haze;
+                RenderSettings.fogColor = Look.NightOutside;
                 if (urp != null) urp.shadowDistance = 60f;
                 break;
         }
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.Linear; // the one fog mode the build keeps (Graphics settings, Fog Modes: Custom, Linear)
+        EdgeFog();
         var camera = cam != null ? cam.GetComponent<Camera>() : null;
-        if (camera != null) camera.backgroundColor = view == View.Overview ? Look.NightHorizon : Theme.Hex("#091021");
+        if (camera != null) camera.backgroundColor = view == View.Overview ? Look.NightOutside : Theme.Hex("#091021");
     }
 
     void BuildLight()
@@ -250,7 +258,18 @@ public partial class Building : MonoBehaviour
         float len = Length;
         if (Real)
         {
-            Corridor(Place("Ground", new Vector3(len / 2 - 2, 0, 0), Quaternion.identity));
+            // The ground outside, darkened to night: from above it reads as the dark around the
+            // building, not as a bare plane, and it fades into the fog of the same colour.
+            var ground = Corridor(Place("Ground", new Vector3(len / 2 - 2, 0, 0), Quaternion.identity));
+            foreach (var r in ground.GetComponentsInChildren<Renderer>())
+            {
+                var night = new MaterialPropertyBlock();
+                r.GetPropertyBlock(night);
+                var c = r.sharedMaterial.GetColor(BaseColor) * 0.35f; c.a = 1f;
+                night.SetColor(BaseColor, c);
+                night.SetFloat("_Smoothness", 0f); // matte: the moon's sheen at a grazing angle read as a pale plane
+                r.SetPropertyBlock(night);
+            }
             Corridor(Place("CorridorEntrance", new Vector3(-Back + 1.45f, 0, 0), Quaternion.identity));
             for (int i = 0; i < 6; i++) Corridor(Place(i % 3 == 0 ? "CorridorBay" : i % 3 == 1 ? "CorridorBayB" : "CorridorBayC", new Vector3(i * Pitch, 0, 0), Quaternion.identity));
             var end = Corridor(Place("CorridorEnd", new Vector3(len - 2, 0, 0), Quaternion.identity));
@@ -590,8 +609,28 @@ public partial class Building : MonoBehaviour
     public void Alarm(float seconds) => alarmUntil = Mathf.Max(alarmUntil, Time.unscaledTime + seconds);
     public bool AlarmOn => Time.unscaledTime < alarmUntil;
 
+    // The fog's start just past the building's farthest corner from the camera (never less than
+    // the building's own diagonal, so a camera inside it, or the corridor monitor's, never reaches
+    // it), and its end 16 m further: the ground outside is night before its edge can show.
+    void EdgeFog()
+    {
+        if (cam == null) return;
+        var eye = cam.transform.position;
+        var b = Bounds;
+        Vector3 min = b.min - new Vector3(1.5f, 0f, 3f), max = b.max + new Vector3(1.5f, 0.6f, 3f);
+        float far = (max - min).magnitude;
+        for (int i = 0; i < 8; i++)
+        {
+            var corner = transform.TransformPoint(new Vector3((i & 1) == 0 ? min.x : max.x, (i & 2) == 0 ? min.y : max.y, (i & 4) == 0 ? min.z : max.z));
+            far = Mathf.Max(far, Vector3.Distance(eye, corner));
+        }
+        RenderSettings.fogStartDistance = far + 0.5f;
+        RenderSettings.fogEndDistance = far + 16f;
+    }
+
     void Update()
     {
+        EdgeFog();
         bool on = AlarmOn;
         float k = on ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 14f) : 0f;
         for (int i = 0; i < 12; i++)

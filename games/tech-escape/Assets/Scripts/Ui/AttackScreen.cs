@@ -7,8 +7,8 @@ using UnityEngine.UI;
 // The facility runs the attack: the corridor in lockdown, the camera flying in over the
 // entrance as the siren goes, then chasing the attacker from door to door; a door that gives
 // way is sparks, a shake, the alarm and THROUGH in scarlet, one that holds a teal flash and
-// HELD. The HUD is the row of twelve door lamps, nothing else; LUMA says one line after the
-// first banner, whole, and the summary at the end. The first attack on a room as it was handed
+// HELD. The HUD is the row of twelve door lamps, nothing else; LUMA says one line, at the end:
+// what was taken, or the door that held. The first attack on a room as it was handed
 // over is a rehearsal: it shows the door break and counts for nothing; the next run counts.
 public class AttackScreen
 {
@@ -86,12 +86,8 @@ public class AttackScreen
         app.world.Alarm(2.2f);
         app.atmosphere.Pulse(Theme.Danger, 0.4f, 0.9f);
         yield return Moment("THE ATTACK BEGINS", "", Theme.Danger, 1.0f, true, Sfx.Mood.Siren);
-        // LUMA's one line, after the first banner and whole; the next banner waits until she is done.
-        string cue = Luma.Lines.ContainsKey("watch-" + room.number) ? "watch-" + room.number : "live-" + room.number;
-        app.luma.Cue(root, cue, 40, 944, 820);
         yield return app.world.WalkTo(app.world.Entrance + Vector3.right * 1.5f, 0.8f);
         float waited = 0f;
-        while (app.luma.Busy && waited < 12f) { waited += Time.unscaledDeltaTime; yield return null; }
         Transform last = app.world.AttackerTransform;
         int lastDoor = -1, lastBroken = -1;
         Building.Payoff = "";

@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using Maaloomatiia.Games;
 
 // The cover: the facility at night from the corridor camera, the door lights on, the attacker
-// pacing; beside it the wordmark, the pitch, LUMA's one line, one big Start and a small Levels.
+// pacing; beside it the wordmark, the pitch, one big Start and a small Levels.
 // Levels opens the facility map: the twelve rooms as cards, each with its levels and the stars
 // they earned. The one ladder in the game.
 public class TitleScreen
@@ -52,13 +52,12 @@ public class TitleScreen
         var tag = Ui.Text(content, "Fix the room. Then the facility runs the attack.", 36, Theme.Teal, true);
         Ui.Place(tag.rectTransform, 120, 336, 900, 90);
         int done = app.LevelsDone, next = Mathf.Min(done + 1, Rooms.Count);
-        if (done == 0) app.luma.Cue(content, "title", 120, 436, 820, stay: true);
-        else app.luma.Text(content, $"Welcome back. Next: {Rooms.Get(next).title.Replace("Capstone: ", "").ToLowerInvariant()}", 120, 436, 820, stay: true);
+        // LUMA says nothing here: she speaks when something happens in the world, not to describe a screen.
 
         var start = Ui.Button(content, done == 0 ? "Start" : $"Continue: level {Rooms.Get(next).id}", () => app.StartLevel(next), Ui.ButtonStyle.Accent, 24);
-        Ui.Place(start.GetComponent<RectTransform>(), 120, 580, 360, 72);
+        Ui.Place(start.GetComponent<RectTransform>(), 120, 460, 360, 72);
         var levels = Ui.Button(content, "Levels", () => Map(app), Ui.ButtonStyle.GhostOnDark, 16);
-        Ui.Place(levels.GetComponent<RectTransform>(), 500, 592, 120, 48);
+        Ui.Place(levels.GetComponent<RectTransform>(), 500, 472, 120, 48);
     }
 
     void CloseMap()

@@ -83,7 +83,10 @@ action on the world and took the forms off the screens. All thirteen levels run 
    the settle and the last, or straight to the end (the pace is in the menu; "Skip ahead" is
    the main action). The world shows the learning: every attempt leaves its ghost line on the
    asphalt, each move's points rise off the car's roof on a thread, the fuel gauge drains with
-   the attempts, and at the first finish LUMA says how close the guess was. On the levels
+   the attempts. LUMA speaks only when something happens on the track: at the first crash
+   ("Nobody is steering.") and at the first finish (one finish proves nothing, then how close
+   the guess was); her other lines (the title's, the pit lane's, the training's and the race's)
+   are in the file, under "LUMA". On the levels
    whose lesson is the curve (1.2, 2.4, 2.5, 3.3) the points per attempt stand on a board by
    the grid. "Camera" swaps the chase for the whole track. The curve, the rule book, the
    readings and the seed are behind "Details", closed by default.
@@ -95,8 +98,8 @@ action on the world and took the forms off the screens. All thirteen levels run 
    decisions?"); the things to tap glow with a ring of light: the car, the track, its sensors'
    rays, its wheels, the points floating over the track, or the signs beside the grid carrying
    the answers (the rule book's situation stands on a board, the five moves on signs). A
-   question that wants a line of text gets the one text field. LUMA says nothing until the
-   answer, then "Right." or "Not quite."
+   question that wants a line of text gets the one text field. LUMA says nothing: the answer
+   flashes teal or red on the thing tapped, with a chime or a thud.
 7. **Debrief.** A podium of a single step on the pit lane up from the grid (one car races, so no
    second or third place), the car driven onto it with any medal (none: beside it), the medal
    dropping on its ribbon from the step's edge with
