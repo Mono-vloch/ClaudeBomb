@@ -285,8 +285,14 @@ public partial class Circuit : MonoBehaviour
             rays[i] = ray;
             rayRenderers[i] = beam.GetComponent<Renderer>();
         }
+        // The bend sensor's look ahead: a long faint line on the asphalt beyond the front ray.
+        bendRay = NoShadow(MeshKit.Part(carRoot, "bendray", MeshKit.Box, Look.Glass(new Color(Theme.Teal.r, Theme.Teal.g, Theme.Teal.b, 0.3f)), new Vector3(0, 0.02f, 1.6f), new Vector3(0.016f, 0.004f, 2.4f))).transform;
+        bendRay.gameObject.SetActive(false);
         carRoot.localScale = Vector3.one * 0.9f;
     }
+    Transform bendRay;
+    // The bend sensor's line shows while the sensors are the thing to set.
+    public void ShowBendRay(bool on) { if (bendRay != null) bendRay.gameObject.SetActive(on); }
 
     // The car where the simulation says, k of the way from its last cell. The
     // rays reach as far as the sensors read; a sensor that is off is dim.

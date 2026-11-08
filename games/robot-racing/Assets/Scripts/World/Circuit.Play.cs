@@ -20,18 +20,19 @@ public partial class Circuit
         this.frame = frame; Canvas.ForceUpdateCanvases();
         if (rig != null) rig.Release();
         // Low and close; from higher up when the track cards are out, so the gantry does not hide them.
-        bool cards = markers.Any(m => m.card), parts = markers.Any(m => m.attached) && !markers.Any(m => m.placeable);
-        cam.pitch = cards ? 38f : parts ? 12f : 22f; // lower still for the parts, so the gantry does not hide their names
+        bool cards = markers.Any(m => m.card), parts = markers.Any(m => m.attached) && !markers.Any(m => m.placeable), knobs = markers.Any(m => m.knob);
+        cam.pitch = cards ? 44f : parts ? 12f : knobs ? 30f : 22f; // low for the parts; higher over the console and the cards, so they read
         cam.yaw = Yaw(D(track.startHeading)) + 24f;
         cam.fov = 32f;
         var pts = new System.Collections.Generic.List<Vector3>();
         if (carRoot != null) pts.Add(carRoot.position);
-        float near = 7.5f;
+        float near = 3.0f; // the flag at a far finish stays out of the fit, so the console and the markers read big
         foreach (var m in markers)
         {
             if (m.parent != null) continue;
-            if (m.attached) { if (carRoot != null) { pts.Add(carRoot.position + carRoot.forward * 0.6f); pts.Add(carRoot.position - carRoot.forward * 0.6f); } continue; }
+            if (m.attached) { if (carRoot != null) { pts.Add(carRoot.position + carRoot.forward * 0.55f); pts.Add(carRoot.position - carRoot.forward * 0.55f); pts.Add(carRoot.TransformPoint(m.plateLocal)); } continue; }
             pts.Add(m.home); if (m.kind != "finish" || (m.spot - Cell(track.start)).magnitude < near) pts.Add(m.spot);
+            if (m.knob) { var along0 = D(track.startHeading); pts.Add(m.home - along0 * 1.0f); pts.Add(m.home + along0 * 0.4f); } // the whole console, clear of the screen's edge
         }
         pts.AddRange(also);
         if (pts.Count < 2)
@@ -42,8 +43,8 @@ public partial class Circuit
         }
         var b = new Bounds(pts[0], Vector3.zero);
         foreach (var p in pts) b.Encapsulate(p);
-        b.Expand(new Vector3(0.6f, 0f, 0.6f));
-        b.center = new Vector3(b.center.x, 0.9f, b.center.z); b.size = new Vector3(b.size.x, 2.0f, b.size.z); // headroom for the plates
+        b.Expand(new Vector3(parts ? 0.25f : 0.6f, 0f, parts ? 0.25f : 0.6f));
+        b.center = new Vector3(b.center.x, parts ? 0.7f : 0.9f, b.center.z); b.size = new Vector3(b.size.x, parts ? 1.5f : 2.0f, b.size.z); // headroom for the plates
         cam.Overview(frame, b);
     }
 
@@ -234,19 +235,54 @@ public partial class Circuit
         Destroy(go);
     }
 
-    // A label standing in the world: the quiz's three plates, a floating "+2".
-    public TextMeshPro WorldLabel(string text, Vector3 at, float size, Color colour, Transform parent = null)
+    // Every label in the world is the same dark plate: a slab of the barrier material tinted
+    // ink, white text, and a teal halo behind it when it is lit. The slab fits the text.
+    public Transform DarkPlate(Transform parent, string text, float fontSize, out TextMeshPro tmp, float minW = 0.26f)
     {
-        var go = new GameObject("Label " + text);
-        go.transform.SetParent(parent != null ? parent : transform, false);
-        go.transform.position = at;
-        var t = go.AddComponent<TextMeshPro>();
-        t.font = Theme.Bold; t.fontSize = size; t.color = colour; t.alignment = TextAlignmentOptions.Center;
-        t.rectTransform.sizeDelta = new Vector2(2.2f, 0.6f);
-        t.outlineWidth = 0.22f; t.outlineColor = new Color32(11, 21, 54, 255);
-        t.text = text;
-        go.AddComponent<Billboard>().cam = cam.transform;
-        return t;
+        var root = new GameObject("Plate").transform;
+        root.SetParent(parent, false);
+        var halo = Box(root, Vector3.one, new Vector3(0f, 0f, 0.012f), KitMaterial("Paint", "paint"), Theme.Teal);
+        halo.name = "Halo"; halo.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; halo.SetActive(false);
+        var slab = Box(root, Vector3.one, Vector3.zero, KitMaterial("Barrier", "barrier"), new Color(0.06f, 0.09f, 0.18f));
+        slab.name = "Slab"; slab.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        var go = new GameObject("Text");
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(0f, 0f, -0.016f);
+        tmp = go.AddComponent<TextMeshPro>();
+        tmp.font = Theme.Bold; tmp.fontSize = fontSize; tmp.color = Color.white; tmp.alignment = TextAlignmentOptions.Center;
+        tmp.rectTransform.sizeDelta = new Vector2(4f, 1f);
+        tmp.enableWordWrapping = false;
+        tmp.text = text;
+        root.gameObject.AddComponent<PlateFit>().minW = minW;
+        FitPlate(root);
+        return root;
+    }
+
+    // The slab and the halo sized to the text (called after the text changes).
+    public void FitPlate(Transform plateRoot)
+    {
+        var tmp = plateRoot.GetComponentInChildren<TextMeshPro>(true);
+        var fit = plateRoot.GetComponent<PlateFit>();
+        if (tmp == null) return;
+        tmp.ForceMeshUpdate();
+        var size = tmp.textBounds.size;
+        float minW = fit != null ? fit.minW : 0.26f, pad = fit != null ? fit.pad : 0.1f;
+        float w = Mathf.Max(minW, size.x + pad), h = Mathf.Max(0.08f, size.y + pad / 2f);
+        var slab = plateRoot.Find("Slab"); if (slab != null) slab.localScale = new Vector3(w, h, 0.02f);
+        var halo = plateRoot.Find("Halo"); if (halo != null) halo.localScale = new Vector3(w + 0.04f, h + 0.04f, 0.012f);
+    }
+
+    public class PlateFit : MonoBehaviour { public float minW = 0.26f, pad = 0.1f; }
+
+    // A label standing in the world, turned to the camera: the quiz's "+2".
+    public Transform WorldPlate(string text, Vector3 at, float size, Color colour)
+    {
+        var plate = DarkPlate(transform, text, size, out var tmp);
+        plate.name = "Label " + text;
+        plate.position = at;
+        tmp.color = colour;
+        plate.gameObject.AddComponent<Billboard>().cam = cam.transform;
+        return plate;
     }
 
     // A sign on a post, standing in the world, with a line of text: the quiz's answers. It
@@ -422,7 +458,7 @@ public partial class Circuit
     {
         floatsOut++;
         var from = carRoot.position + Vector3.up * 0.42f;
-        var label = WorldLabel(reward.ToString(Mathf.Abs(reward) >= 10 ? "+0;-0" : "+0.#;-0.#"), from, Mathf.Abs(reward) >= 10 ? 4.2f : 3.2f, colour);
+        var label = WorldPlate(reward.ToString(Mathf.Abs(reward) >= 10 ? "+0;-0" : "+0.#;-0.#"), from, Mathf.Abs(reward) >= 10 ? 2.6f : 2.2f, colour);
         var thread = Box(transform, new Vector3(0.012f, 1f, 0.012f), Vector3.zero, KitMaterial("Paint", "paint"), colour);
         thread.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         float t = 0, life = 0.85f, rise = 0.7f;
@@ -431,10 +467,9 @@ public partial class Circuit
             t += Time.unscaledDeltaTime;
             float k = t / life, e = 1f - (1f - k) * (1f - k);
             var top = from + Vector3.up * (rise * e);
-            label.transform.position = top + Vector3.up * 0.08f;
+            label.position = top + Vector3.up * 0.08f;
             float a = 1f - Mathf.Clamp01((k - 0.55f) / 0.45f);
-            label.color = new Color(colour.r, colour.g, colour.b, a);
-            label.transform.localScale = Vector3.one * (0.6f + 0.4f * Mathf.Min(1f, k * 4f));
+            label.localScale = Vector3.one * (0.6f + 0.4f * Mathf.Min(1f, k * 4f)) * (0.2f + 0.8f * a);
             thread.transform.position = (from + top) / 2f;
             thread.transform.localScale = new Vector3(1f, Mathf.Max(0.01f, (top - from).magnitude), 1f);
             Tint(thread.GetComponent<MeshRenderer>(), new Color(colour.r, colour.g, colour.b, 1f) * (0.3f + 0.7f * a));
@@ -447,66 +482,86 @@ public partial class Circuit
 
     // ---- the podium ----
 
-    // The debrief's podium beside the car where the race ended: three steps, and the medal
-    // rising on the step it earned (gold on 1, silver on 2, bronze on 3), its three stars
-    // along the ribbon lit as earned. No medal: an empty podium.
+    // The debrief's podium where the race ended: three steps numbered 1, 2, 3, the car driven
+    // onto the step it earned (gold on 1, silver on 2, bronze on 3; none: beside it), the medal
+    // hung on a ribbon from that step's front edge with its three stars on the ribbon, lit as
+    // earned. The step faces the debrief's camera.
     Transform podium;
+    Vector3 podiumFront;
     public Transform Podium(int medal, Color colour)
     {
         if (podium != null) Destroy(podium.gameObject);
         if (carRoot == null) return null;
         podium = new GameObject("Podium").transform;
         podium.SetParent(transform, false);
-        var side = -carRoot.right;
-        podium.position = carRoot.position + side * 1.35f + carRoot.forward * 0.15f;
-        // Its front toward where the debrief's camera stands: behind the car, on the podium's side.
-        var toCam = (-carRoot.forward * 1.0f + side * 0.9f).normalized;
-        podium.rotation = Quaternion.LookRotation(-toCam);
+        // On the pit lane up from the grid, where there is always room (a race can end against a
+        // wall), its steps across the lane and its front toward the grid: the camera stands behind
+        // the grid on the pit lane and looks along it, nothing between (the pit wall would hide the
+        // steps from across the track).
+        var along = D(track.startHeading);
+        var outward = D(PitSide == 1 ? (track.startHeading + 3) % 4 : (track.startHeading + 1) % 4);
+        podiumFront = -along;
+        podium.position = Cell(track.start) + outward * 1.75f + along * 2.4f;
+        podium.rotation = Quaternion.LookRotation(-podiumFront);
+        // The kit's trees, grass and cones round the podium give way to it and to its camera.
+        if (kit != null)
+            foreach (Transform child in kit)
+                if ((child.name.StartsWith("Tree") || child.name.StartsWith("Grass") || child.name.StartsWith("Cone") || child.name.StartsWith("PitBox")) && (child.position - podium.position).magnitude < 4.4f) child.gameObject.SetActive(false);
         var barrier = KitMaterial("Barrier", "barrier");
         var steel = KitMaterial("Floodlight", "steel");
-        var tops = new float[3];
-        float[] heights = { 0.42f, 0.3f, 0.2f };
-        float[] xs = { 0f, -0.44f, 0.44f };
+        var paint = KitMaterial("Paint", "paint");
+        float[] heights = { 0.36f, 0.24f, 0.15f };
+        float[] widths = { 0.9f, 0.55f, 0.55f }; // narrow enough for the pit lane between the wall and the stand
+        float[] xs = { 0f, -0.72f, 0.72f };
         var faceDark = new Color(0.1f, 0.14f, 0.26f);
         for (int i = 0; i < 3; i++)
         {
-            Box(podium, new Vector3(0.42f, heights[i], 0.42f), new Vector3(xs[i], heights[i] / 2f, 0f), barrier, faceDark);
-            Box(podium, new Vector3(0.42f, 0.02f, 0.42f), new Vector3(xs[i], heights[i] + 0.01f, 0f), steel, new Color(0.7f, 0.74f, 0.8f));
+            float w = widths[i], h = heights[i];
+            Box(podium, new Vector3(w, h, 1.0f), new Vector3(xs[i], h / 2f, 0f), barrier, faceDark);
+            Box(podium, new Vector3(w, 0.02f, 1.0f), new Vector3(xs[i], h + 0.01f, 0f), steel, new Color(0.7f, 0.74f, 0.8f));
             var num = new GameObject("Step").AddComponent<TextMeshPro>();
             num.transform.SetParent(podium, false);
-            num.transform.localPosition = new Vector3(xs[i], heights[i] * 0.55f, -0.215f);
-            num.font = Theme.Bold; num.fontSize = 2.2f; num.color = new Color(0.8f, 0.84f, 0.9f); num.alignment = TextAlignmentOptions.Center;
+            num.transform.localPosition = new Vector3(xs[i] + (i == 0 ? 0.3f : 0f), h * 0.5f, -0.51f);
+            num.font = Theme.Bold; num.fontSize = i == 0 ? 2.4f : 1.8f; num.color = new Color(0.8f, 0.84f, 0.9f); num.alignment = TextAlignmentOptions.Center;
             num.rectTransform.sizeDelta = new Vector2(0.4f, 0.3f);
             num.text = (i + 1).ToString();
-            tops[i] = heights[i];
         }
+        // The car on its step, nose toward the camera.
+        int step = medal > 0 ? 3 - medal : 0;
+        if (medal > 0) { carRoot.position = podium.position + podium.TransformDirection(new Vector3(xs[step], heights[step] + 0.005f, 0f)); carRoot.rotation = Quaternion.LookRotation(podiumFront); }
+        else { carRoot.position = podium.position + podium.TransformDirection(new Vector3(0f, 0f, -1.4f)); carRoot.rotation = Quaternion.LookRotation(podiumFront); }
         if (medal > 0)
         {
-            int step = 3 - medal; // gold on the first step
-            var at = new Vector3(xs[step], tops[step], 0f);
+            // The medal: a ribbon from the step's edge, the disc at its end, the stars on the ribbon.
             var m = new GameObject("Medal").transform;
             m.SetParent(podium, false);
-            m.localPosition = at;
-            // The ribbon post, the disc, the rim, and the stars on the ribbon.
-            Box(m, new Vector3(0.1f, 0.5f, 0.012f), new Vector3(0f, 0.25f, 0f), KitMaterial("Paint", "paint"), new Color(0.16f, 0.2f, 0.42f));
-            var rim = Disc(m, 0.19f, new Vector3(0f, 0.5f, -0.012f), steel, colour * 0.75f);
-            var disc = Disc(m, 0.16f, new Vector3(0f, 0.5f, -0.02f), steel, colour);
+            m.localPosition = new Vector3(xs[step] - (step == 0 ? 0.08f : 0f), heights[step] + 0.02f, -0.51f);
+            var ribbon = new Color(0.16f, 0.2f, 0.42f);
+            float drop = heights[step] * 0.55f;
+            foreach (float sx in new[] { -1f, 1f })
+            {
+                var strip = Box(m, new Vector3(0.05f, drop * 1.08f, 0.012f), new Vector3(sx * 0.06f, -drop / 2f, -0.012f), paint, ribbon);
+                strip.transform.localRotation = Quaternion.Euler(0f, 0f, sx * 12f);
+            }
+            float discY = -drop - 0.09f;
+            Disc(m, 0.115f, new Vector3(0f, discY, -0.02f), steel, colour * 0.72f);
+            Disc(m, 0.095f, new Vector3(0f, discY, -0.026f), steel, colour);
+            Star(m, 0.04f, new Vector3(0f, discY, -0.032f), colour * 1.25f);
             for (int i = 0; i < 3; i++)
             {
-                float a = (i - 1) * 0.6f;
-                var star = Star(m, 0.05f, new Vector3(Mathf.Sin(a) * 0.25f, 0.5f + Mathf.Cos(a) * 0.25f, -0.025f), i < medal ? Theme.Amber : new Color(0.3f, 0.33f, 0.4f));
+                var star = Star(m, 0.03f, new Vector3((i - 1) * 0.055f, -drop * 0.45f - Mathf.Abs(i - 1) * 0.02f, -0.03f), i < medal ? Theme.Amber : new Color(0.3f, 0.33f, 0.4f));
                 star.transform.localScale = Vector3.zero;
                 star.name = "Star" + i;
             }
             var lamp = new GameObject("Medal lamp").AddComponent<Light>();
-            lamp.transform.SetParent(m, false); lamp.transform.localPosition = new Vector3(0f, 0.55f, -0.5f);
-            lamp.type = LightType.Point; lamp.color = colour; lamp.intensity = 2.5f; lamp.range = 1.8f; lamp.shadows = LightShadows.None;
-            m.localScale = new Vector3(1f, 0f, 1f); // it rises
+            lamp.transform.SetParent(m, false); lamp.transform.localPosition = new Vector3(0f, discY, -0.5f);
+            lamp.type = LightType.Point; lamp.color = colour; lamp.intensity = 2f; lamp.range = 1.4f; lamp.shadows = LightShadows.None;
+            m.localScale = new Vector3(1f, 0f, 1f); // it drops into place
         }
         return podium;
     }
 
-    // The medal rises out of its step, then the stars pop one by one.
+    // The medal drops down its ribbon, then the stars pop one by one.
     public IEnumerator RaisePodium(int medal)
     {
         if (podium == null) yield break;
@@ -527,17 +582,15 @@ public partial class Circuit
         }
     }
 
-    // The debrief's view: the car and the podium beside it, from the podium's front quarter,
-    // swaying a little.
+    // The debrief's view: the podium's front, the car on it, from a little to the left, swaying.
     public void ShowPodiumView(RectTransform frame)
     {
         this.frame = frame; Canvas.ForceUpdateCanvases();
-        if (carRoot == null) return;
+        if (carRoot == null || podium == null) return;
         if (rig != null) rig.Release();
-        var centre = carRoot.position + (podium != null ? (podium.position - carRoot.position) * 0.5f : Vector3.zero) + Vector3.up * 0.5f;
-        cam.orbitDistance = 3.4f; cam.orbitPitch = 12f; cam.orbitSpeed = 3f; cam.orbitFov = 40f;
-        var from = (-carRoot.forward * 1.0f - carRoot.right * 0.9f).normalized;
-        cam.orbitArc = 8f; cam.orbitBase = Yaw(from) + 180f;
+        var centre = podium.position + Vector3.up * 0.42f;
+        cam.orbitDistance = 3.2f; cam.orbitPitch = 14f; cam.orbitSpeed = 3f; cam.orbitFov = 40f;
+        cam.orbitArc = 7f; cam.orbitBase = Yaw(podiumFront) + 180f + 18f;
         cam.Orbit(frame, centre);
         cam.Snap();
     }

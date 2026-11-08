@@ -1509,8 +1509,8 @@ eleven levels were built, and settled the open questions: race control's points 
 1.1 once the flag lands; computed-then-replayed training stays as long as the results and the
 platform report are identical; one big Continue and a small Levels on the title, the level map
 as a race calendar; buttons stay for the main actions; a guess on the fuel gauge before each
-training, LUMA reacting to how close it was. Everything below is on branch `game-feel-pass`,
-uncommitted.
+training, LUMA reacting to how close it was. Everything below is on branch `game-feel-pass`
+(the thirteen levels as `932b511`, the second four fixes as the commit after it).
 
 ## The four fixes
 
@@ -1562,8 +1562,8 @@ uncommitted.
 ## Words and controls, all thirteen levels
 
 The walk (`-screenshots`, all levels; `counts.jsonl` in
-`games/robot-racing/Builds/look-audit/game-feel/final2/`) counted the same way as the pilot's
-table. Briefings are within 50 everywhere (37 to 48); every play screen is within 30 but one,
+`games/robot-racing/Builds/look-audit/game-feel/final3/`, the rows of the second four fixes from
+`final5/` and `final6/`) counted the same way as the pilot's table. Briefings are within 50 everywhere (37 to 48); every play screen is within 30 but one,
 noted below; every screen has at most three controls plus the main action (the run screens'
 Camera, Details, the menu icon and Skip ahead / Debrief). Every one of the 106 LUMA lines on
 the walk's screens is whole and 15 words or fewer. The seed and the new-move chance appear
@@ -1572,18 +1572,18 @@ only behind Details (flagged there on purpose); no OPENS AT, ladder or coordinat
 | Level | Briefing | Pit lane (before / after the thing is set) | Training (first, a moment) | Race, race over | Questions | Debrief |
 |---|---|---|---|---|---|---|
 | 1.1 | 46 | 8 / 11 | 13, 22 | 19, 10 | 5 to 34 (seven questions; the seventh with the board) | 17 (Details: 122) |
-| 1.2 | 38 | 15 / 15 (the fuel can, its cap) | 15, 25 | 18, 9 | 23 (the rule book on the signpost) | 12 |
+| 1.2 | 38 | 20 / 20 (the tank knob, its cap, both named) | 15, 25 | 18, 9 | 23 (the rule book on the signpost) | 12 |
 | 1.3 | 46 | 14 | – | – | – | – |
-| 2.1 | 39 | 20 / 20 (five sensors, named) | – | – | – | – |
+| 2.1 | 39 | 20 / 20 (five sensor lamps, named, their rays) | – | – | – | – |
 | 2.2 | 42 | 26 / 26 (five moves, named, the limiter) | – | – | – | – |
 | 2.3 | 47 | 23 / 26 | 14, 23 (Details: 228) | 20, 11 | – | 18 |
 | 2.4 | 37 | 15 / 8 (the speed sign, the prediction field) | – | – | – | – |
-| 2.5 | 47 | 21 / 21 (the die, its cap, the fall, the floor) | 16, 25 | 19, 9 | – | 13 |
+| 2.5 | 47 | 29 / 29 (three knobs and the cap, all named) | 16, 27 | 19, 9 | – | 15 |
 | 2.6 | 45 | 23 (everything open; part names on tap) | – | – | – | – |
-| 3.1 | 48 | 28 / 30 (ten cards, the fuel can) | – | – | – | – |
+| 3.1 | 48 | 28 / 30 (ten cards named on their face, the tank knob quiet) | – | – | – | – |
 | 3.2 | 45 | 17 / 17 (the stopwatch) | – | – | – | – |
-| 3.3 | 40 | 23 / 23 (the rewrite dial, the seed, the fuel can, the die) | – | – | – | – |
-| 3.4 | 43 | 28 (everything, the prediction field) | 15, 24 | 21, 28 (THE REAL RUN) | 22 to 29 (a line of text, then the measure) | 13 (Details: 146) |
+| 3.3 | 40 | 27 / 27 (five knobs, three lit and named) | – | – | – | – |
+| 3.4 | 43 | 28 (everything: two rows of knobs, the tank lit; the prediction field) | 15, 24 | 21, 28 (THE REAL RUN) | 17 to 22 (a line of text, then the measure) | 15 (Details: 148) |
 
 The title is 40 words and 3 controls (Continue, Levels, the menu); the calendar 84 words and
 18 (thirteen cards, Close, the menu, and the title's buttons beneath); the menu 38 to 55 and
@@ -1593,18 +1593,24 @@ build the board shows only for the rule book or a prompt longer than twelve word
 takes that screen to 26. The pilot's before-and-after for 1.1 and 2.3 stands (above); the
 other levels' before counts were not inventoried.
 
-## What the last walk could not verify
+## The second four fixes (8 November 2026)
 
-The build on disk carries three small fixes after the walk whose frames are in `final2`: the
-question board left out when the objective line already asks it (1.1's seventh question), the
-floodlight mast beside the shelf hidden while placing (it cut through the plates on 2.3's and
-2.6's pit lanes), part levels viewed from 12° so the gantry's beam does not hide the top names
-(2.2), and the rule book's situation board moved clear of the signpost (1.2's question). A walk
-of those six levels (`-levels 1,2,5,6,9,10`) was started three times and drew nothing: the
-player's window was covered by other windows on the same screen, and macOS withholds a covered
-window's drawables (the walk resumes by itself when any part of the window shows). The player
-is still running and will write `final2-fix3/` when it gets its window; until then the frames
-of 02-1.2-8-question-1, 05-2.2-2, 06-2.3-3 and 09-2.6-2 show the state before those fixes.
+After the full report the owner asked for four more, all on the pit lane and the debrief, with
+the rule that no label in the world floats as white text: every one is the same dark plate.
+
+| Asked | Done |
+|---|---|
+| The dials on 2.5, 3.3 and 3.4 are unreadable: put the knobs on a small desk at the pit wall, close to the camera, each a real control with a short name plate and its value on its face, the level's knob lit, the rest dim; the seed number stays | A console at the pit wall behind the grid, nearest the camera and clear of the gantry (`Markers.BuildMarkers`): a dark base and a steel panel tipped 32° toward the camera, one row of knobs (two rows from five knobs, the capstone), each a round knob whose value sits on its face on a dark plate ("90%", "falls", "5%", "400", "0.3", the seed's number) and whose name lies on the panel below it ("Tank", "New moves", "Fall", "Floor", "Rewrite", "Seed", "Measure"), the names of neighbours staggered so none overlap. The knobs the level is about are teal with a halo on their plates; the rest stand grey and show their name for two seconds after a tap. The caps are red buttons on the panel above their knob with their own name ("Stop at first finish" on 1.2, "Lock after first finish" on 2.5), flat and grey when off. The placing camera stands 30° over the console and fits the whole desk. |
+| The sensors on 2.1: names floating over each other; show each as a lamp on the car with its ray on the track, its name on a plate beside the lamp, the camera closer | The five lamps on the car as before, their plates moved off the barrier walls (Left and Right stood behind them), the bend sensor's ray drawn on the asphalt ahead with the other rays; the gantry hidden while parts are placed, so no post stands in front of a name; the camera at 12°, close. The moves' plates (2.2) moved the same way, with headroom so "Speed up" is not cut at the top. |
+| No floating white 3D text anywhere | Every label is `Circuit.DarkPlate`: the knobs' values and names, the caps', the parts', the rewards' numbers, the quiz's "+2", the points rising off the car, the track cards' names (now a strip at the top of each card, where they stood over the cards before), the signpost's answers. |
+| The medal reads as a ball on a stick: a medal on a ribbon or a trophy cup, and the car on the podium step | The podium stands on the pit lane up from the grid, its steps across the lane and its front toward the grid, seen along the pit lane from behind the grid with nothing between (a race can end against a wall: 2.5's did, and a podium beside the car put its third step into the barrier; across the track the pit wall hid the steps), the car driven onto the step it earned, the medal hanging on a ribbon from the step's front edge: a disc in the medal's metal with a star in relief and the three stars on the ribbon, lit as earned, popping one by one. Trees, grass and cones round the podium hide. No model was bought: Higgsfield was not connected in this session; a trophy cup stays an option to quote. |
+
+Two walks under the screen lock verified them (`final5/`, six levels; `final6/`, 2.5, 3.1 and
+3.4 after the last tweaks). The earlier fixes that no frame showed (the question board, the
+floodlight mast, the 12° parts view, the rule book's board) are in those frames too. The count
+of 3.1's set pit lane came down to 30 by keeping the unlit tank's name quiet; 3.4's pit lane is
+29 with its prediction field moved to the right, over Train, where it no longer covers the
+console.
 
 ## Web
 
@@ -1667,16 +1673,14 @@ feed's labels showing through the calendar; the car's rear cut on the title.
 
 ## Where Robot Racing stands
 
-All thirteen levels run on the new screens and meet the brief's machine checks (one screen at
-34 words, fixed in the build on disk). The player test reads nine of eleven screens on 1.1 and
-every pit lane that puts parts or cards in the world; what it cannot read is what stays
-abstract: the dials (the die, the fall, the floor, the rewrite) on 2.5, 3.3 and 3.4, which are
-posts and cubes with a number, and the parts question, which asks without showing its answers.
-The Claude Bomb test prefers the new screens on five of seven and names the same two
-remaining distances as in round 2: the quiz is still a quiz, and the player watches more than
-operates. Both are the owner's calls beyond this pass: the dials could become readable
-instruments (a tank that fills, a die that rolls, a clock that runs) at the cost of a model
-pass; the parts question could show its five candidates as plates on the things themselves;
-the buttons and LUMA's bar are the next polish round, as agreed. The three fixes that no frame
-shows yet, and the two from this round (LUMA's line 16 px higher, the calendar opaque), need
-one walk of six levels when the screen is free.
+All thirteen levels run on the new screens and meet the brief's machine checks: every play
+screen within 30 words and three controls plus the main action, every briefing within 50, every
+LUMA line whole and 15 words or fewer, no OPENS AT, ladder, coordinates, seeds or probabilities
+on a play or briefing screen (the seed's number stands on its own knob on 3.3, as the owner
+asked). The second four fixes answer what the round-3 reviewers could not read: the knobs are
+instruments on a console with their names and values, the sensors are named lamps with rays,
+nothing floats, and the car stands on its podium step under its medal. What remains is the
+owner's call beyond this pass: the parts question could show its candidates as plates on the
+things themselves; the buttons and LUMA's bar are the next polish round, as agreed; a trophy
+cup from Higgsfield would need a quote and a yes. Committed on `game-feel-pass`; AI Arena and
+Tech Escape are built by their own sessions on their own branches.

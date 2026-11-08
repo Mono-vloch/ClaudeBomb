@@ -11,17 +11,20 @@ using UnityEngine.EventSystems;
 //   (a crash), teal chevrons along the way (each step toward), a red one pointing back (each
 //   step away), a clock post (each moment), an orange sign (the speed bonus). On the shelf a
 //   reward is worth zero; dragged onto its place it takes its first value; a tap turns it;
-// - the dials on the shelf, tapped to turn: the fuel can (the attempts), the die, the fall
-//   and the floor (the chance of a new move), the rewrite dial and the seed (the knobs), the
-//   stopwatch (the measure); a red cap on the fuel can (stop at the first finish) or on the die
-//   (never again after the first finish) comes off with a tap;
-// - the parts on the car: the five sensors and the five moves, fitted or removed with a tap,
-//   and the limiter at the tail (the top speed);
-// - the track cards on the board by the pit lane: off, training, or the test track.
+// - the knobs on a small desk at the pit wall, tapped to turn: the tank (the attempts), new
+//   moves (the chance of one), its fall and its floor, the rewrite, the seed, the measure. Each
+//   has its name on a plate on the desk and its value on a plate on its face; the knob the level
+//   is about is lit, the rest stand dim. A red cap on the tank (stop at the first finish) or on
+//   new moves (never again after the first finish) comes off with a tap;
+// - the parts on the car: five sensor lamps with their rays on the track and five move chevrons
+//   on the rear deck, each with its name on a plate beside it, fitted or removed with a tap, and
+//   the limiter at the tail (the top speed);
+// - the track cards on the pit lane, with the circuit drawn on each: off, training, or the test.
 //
-// Everything is made at run time from the kit's own pieces and materials. No physics: picking
-// by projection to the screen, dragging along the pointer's ray on the ground. Race control's
-// points (1.1, once the flag is on the finish) stand dim and cannot be touched.
+// Every label is the same dark plate (Circuit.DarkPlate). Everything is made at run time from
+// the kit's own pieces and materials. No physics: picking by projection to the screen, dragging
+// along the pointer's ray on the ground. Race control's points (1.1, once the flag is on the
+// finish) stand dim and cannot be touched.
 public partial class Circuit
 {
     public class Marker
@@ -30,12 +33,15 @@ public partial class Circuit
         public float[] options;      // for a reward the first is zero: on the shelf
         public string[] labels;      // the plate's text per option; null: the number
         public int index;
-        public Vector3 home, spot;   // shelf and track (rewards); the stand (dials, cards)
+        public Vector3 home, spot;   // shelf and track (rewards); the desk (knobs); the stand (cards)
         public float spotYaw;
+        public Quaternion pose = Quaternion.identity; // a knob or a cap: how it stands on the console's panel
+        public int column;           // a knob's place along its row of the console
         public Vector3 local;        // a part on the car: where it sits on it
-        public bool placeable, attached, card, dim;
+        public Vector3 plateLocal;   // a part's plate, beside it, in the car's space
+        public bool placeable, attached, card, knob, dim, lit;
         public Marker parent;        // a cap sits on its parent
-        public Transform root;
+        public Transform root, plateRoot, namePlate;
         public TextMeshPro plate;
         public Action<float> set;
         public float baseLift;       // the plate's height over the marker
@@ -53,11 +59,12 @@ public partial class Circuit
     Vector2 downAt;
     float downTime;
     bool pointerDown;
-    GameObject shelfLamp;
+    GameObject shelfLamp, desk;
     public bool MarkersActive { get; private set; }
     public IReadOnlyList<Marker> Markers => markers;
 
     public static readonly string[] Rewards = { "finish", "crash", "toward", "away", "moment", "bonus" };
+    public static readonly string[] Knobs = { "fuel", "die", "fall", "floor", "rewrite", "seed", "measure" };
 
     static readonly Dictionary<string, float[]> Options = new Dictionary<string, float[]>
     {
@@ -88,30 +95,51 @@ public partial class Circuit
         ["measure"] = new[] { "Finishes", "Crashes", "Touches", "Lap time" },
         ["limit"] = new[] { "2", "1" },
     };
+    // The knobs' names, on the console, and the caps'.
+    static readonly Dictionary<string, string> KnobNames = new Dictionary<string, string>
+    {
+        ["fuel"] = "Tank", ["die"] = "New moves", ["fall"] = "Fall", ["floor"] = "Floor", ["rewrite"] = "Rewrite", ["seed"] = "Seed", ["measure"] = "Measure",
+        ["stopcap"] = "Stop at first finish", ["nevercap"] = "Lock after first finish",
+    };
+    const float PanelTilt = 32f;   // the console's panel, tipped toward the pit lane's camera
+    const float KnobStep = 0.26f;  // one knob to the next along the panel
 
-    // kinds: which markers this level has; fixedKinds: race control's, dim and untouchable.
-    // nameParts: the parts on the car carry their names; false (the capstones, where every
-    // part is open) shows a name only for two seconds after a tap.
-    public void BuildMarkers(Settings s, IEnumerable<string> kindsIn, Action changed, IEnumerable<string> fixedKinds = null, bool nameParts = true)
+    // kinds: which markers this level has; fixedKinds: race control's, dim and untouchable;
+    // nameParts: the parts on the car carry their names (false on the capstones: a name shows
+    // for two seconds after a tap); litKinds: the knobs the level is about (null: all of them).
+    public void BuildMarkers(Settings s, IEnumerable<string> kindsIn, Action changed, IEnumerable<string> fixedKinds = null, bool nameParts = true, IEnumerable<string> litKinds = null)
     {
         ClearMarkers();
         if (!HasKit) return;
         markersChanged = changed;
         var kinds = kindsIn.ToList();
+        var lit = litKinds?.ToList();
         var t = track;
         var along = D(t.startHeading);
         var outward = D(PitSide == 1 ? (t.startHeading + 3) % 4 : (t.startHeading + 1) % 4);
-        // The shelf: up the pit lane from the grid, clear of the gantry, in two rows when long.
+        int knobCount = kinds.Count(k => Knobs.Contains(k));
+        bool parts = kinds.Any(k => k.StartsWith("sense") || k.StartsWith("move"));
+        // The console at the pit wall behind the grid, close to the pit lane's camera and clear of
+        // the gantry, long enough for its knobs: its panel tips toward the camera so the knobs'
+        // faces and names read. The shelf for the rewards stands further up the pit lane.
+        int perRow = knobCount > 4 ? Mathf.CeilToInt(knobCount / 2f) : knobCount, rows = knobCount > perRow ? 2 : 1;
+        float deskLen = Mathf.Max(0.6f, 0.16f + KnobStep * perRow), deskDepth = rows == 2 ? 1.0f : 0.7f;
+        var deskAt = Cell(t.start) + outward * (0.5f + 1.45f * M) - along * 0.9f;
+        var consoleRot = Quaternion.LookRotation(-along, Vector3.up);
+        var panelRot = consoleRot * Quaternion.Euler(PanelTilt, 0f, 0f);
+        var panelAt = deskAt + Vector3.up * 0.31f + consoleRot * new Vector3(0f, 0f, 0.02f);
         var shelf0 = Cell(t.start) + outward * (0.5f + 1.7f * M) + along * 0.9f;
         if (kit != null)
             foreach (Transform child in kit)
             {
-                // The kit's own cones and pit box give way to the shelf and the markers; the floodlight
-                // mast beside the shelf would stand between the camera and the plates.
+                // The kit's own cones and pit box give way to the shelf, the console and the markers; the
+                // floodlight mast beside them would stand between the camera and the plates, and the
+                // gantry's posts would stand in front of the parts' names.
                 if (child.name.StartsWith("Cone") || child.name.StartsWith("PitBox")) child.gameObject.SetActive(false);
                 if (child.name.StartsWith("Floodlight") && (child.position - shelf0).magnitude < 3f) child.gameObject.SetActive(false);
+                if (parts && child.name.StartsWith("Gantry")) child.gameObject.SetActive(false);
             }
-        int n = 0, cards = 0;
+        int n = 0, cards = 0, knobs = 0;
         Marker fuel = null, die = null;
         foreach (var kind in kinds.Concat(fixedKinds ?? Enumerable.Empty<string>()))
         {
@@ -124,7 +152,7 @@ public partial class Circuit
                 m.card = true; m.options = new[] { 0f, 1f, 2f }; m.labels = new[] { "", shortName, shortName };
                 m.index = s.test == id ? 2 : s.training.Contains(id) ? 1 : 0;
                 m.set = v => SetTrack(s, id, (int)v);
-                m.home = m.spot = Cell(t.start) + outward * (0.5f + 1.1f * M + (cards / 5) * 0.62f) + along * (1.5f + (cards % 5) * 0.64f);
+                m.home = m.spot = Cell(t.start) + outward * (0.5f + 1.1f * M + (cards / 5) * 0.95f) + along * (1.5f + (cards % 5) * 0.7f + (cards / 5) * 0.35f); // the back row staggered, seen between the front cards
                 m.spotYaw = Yaw(-outward);
                 cards++;
             }
@@ -132,10 +160,10 @@ public partial class Circuit
             {
                 m.attached = true;
                 int i = kind == "limit" ? 0 : kind[kind.Length - 1] - '0';
-                if (kind.StartsWith("sense")) { m.options = new[] { 1f, 0f }; m.index = s.sensors[i] ? 0 : 1; m.set = v => { s.sensors[i] = v > 0; SetSensors(s.sensors); }; m.local = SensorLocal(i); m.labels = new[] { Sensors.Names[i], Sensors.Names[i] }; }
-                else if (kind.StartsWith("move")) { m.options = new[] { 1f, 0f }; m.index = s.moves[i] ? 0 : 1; m.set = v => { s.moves[i] = v > 0; if (s.MovesOn == 0) s.moves[i] = true; }; m.local = MoveLocal(i); m.labels = new[] { Moves.Names[i], Moves.Names[i] }; }
-                else { m.options = Options["limit"]; m.labels = Labels["limit"]; m.index = s.topSpeed == 1 ? 1 : 0; m.set = v => { s.topSpeed = (int)v; s.constraintSet = true; }; m.local = new Vector3(0f, 0.3f, -0.4f); }
-                m.home = m.spot = carRoot != null ? carRoot.position : Cell(t.start);
+                if (kind.StartsWith("sense")) { m.options = new[] { 1f, 0f }; m.index = s.sensors[i] ? 0 : 1; m.set = v => { s.sensors[i] = v > 0; SetSensors(s.sensors); }; m.local = SensorLocal(i); m.plateLocal = SensorPlate(i); m.labels = new[] { Sensors.Names[i], Sensors.Names[i] }; }
+                else if (kind.StartsWith("move")) { m.options = new[] { 1f, 0f }; m.index = s.moves[i] ? 0 : 1; m.set = v => { s.moves[i] = v > 0; if (s.MovesOn == 0) s.moves[i] = true; }; m.local = MoveLocal(i); m.plateLocal = MovePlate(i); m.labels = new[] { Moves.Names[i], Moves.Names[i] }; }
+                else { m.options = Options["limit"]; m.labels = Labels["limit"]; m.index = s.topSpeed == 1 ? 1 : 0; m.set = v => { s.topSpeed = (int)v; s.constraintSet = true; }; m.local = new Vector3(0f, 0.3f, -0.4f); m.plateLocal = new Vector3(0f, 0.3f, -0.62f); }
+                m.home = m.spot = carRoot != null ? carRoot.TransformPoint(m.plateLocal) : Cell(t.start);
                 m.quiet = !nameParts && kind != "limit";
             }
             else if (kind == "stopcap" || kind == "nevercap")
@@ -145,7 +173,10 @@ public partial class Circuit
                 m.options = Options[kind];
                 m.index = kind == "stopcap" ? (s.stopAtFirstFinish ? 0 : 1) : (s.exploreOffAfterFinish ? 0 : 1);
                 m.set = kind == "stopcap" ? (Action<float>)(v => s.stopAtFirstFinish = v > 0) : v => s.exploreOffAfterFinish = v > 0;
-                m.home = m.spot = m.parent.home + Vector3.up * 0.42f;
+                m.lit = lit == null || lit.Contains(kind);
+                m.pose = m.parent.pose;
+                // Up the panel from its knob; beside it when the console has two rows.
+                m.home = m.spot = m.parent.home + m.parent.pose * (rows == 1 ? new Vector3(0f, 0.012f, -0.15f) : new Vector3(0.15f, 0.012f, 0f));
             }
             else
             {
@@ -153,6 +184,7 @@ public partial class Circuit
                 m.options = Options[kind];
                 Labels.TryGetValue(kind, out m.labels);
                 m.placeable = Rewards.Contains(kind);
+                m.knob = Knobs.Contains(kind);
                 // Race control's points stand at the ready robot's values and never write the settings.
                 var src = fixedOne ? Lesson.Fixed : s;
                 float current = kind switch
@@ -172,19 +204,33 @@ public partial class Circuit
                 };
                 if (kind == "seed") { m.labels = new[] { s.seed.ToString(), s.seed.ToString() }; m.set = v => { if (v > 0) { s.seed = new System.Random().Next(1, 1000); m.labels = new[] { s.seed.ToString(), s.seed.ToString() }; } }; }
                 if (fixedOne) m.set = v => { };
-                int row = n / 7;
-                m.home = shelf0 + along * (0.55f * (n % 7)) + outward * (row * 0.7f);
-                if (m.placeable) (m.spot, m.spotYaw) = Spot(kind); else { m.spot = m.home; m.spotYaw = Yaw(along) + 90f; }
-                if (kind == "fuel") fuel = m;
-                if (kind == "die") die = m;
-                n++;
+                if (m.knob)
+                {
+                    m.lit = lit == null || lit.Contains(kind);
+                    m.pose = panelRot;
+                    int row = knobs / perRow, inRow = row == 0 ? Mathf.Min(perRow, knobCount) : knobCount - perRow;
+                    float z = rows == 1 ? 0f : row == 0 ? 0.14f : -0.3f; // the front row nearer the camera
+                    m.column = knobs % perRow;
+                    m.home = m.spot = panelAt + panelRot * new Vector3(((inRow - 1) / 2f - m.column) * KnobStep, 0.01f, z);
+                    m.spotYaw = Yaw(along) + 90f;
+                    if (kind == "fuel") fuel = m;
+                    if (kind == "die") die = m;
+                    knobs++;
+                }
+                else
+                {
+                    int row = n / 7;
+                    m.home = shelf0 + along * (0.55f * (n % 7)) + outward * (row * 0.7f);
+                    if (m.placeable) (m.spot, m.spotYaw) = Spot(kind); else { m.spot = m.home; m.spotYaw = Yaw(along) + 90f; }
+                    n++;
+                }
             }
             m.root = MakeMarker(m);
-            m.plate = Plate(m.root, m.kind, out m.baseLift);
+            MakePlate(m);
             markers.Add(m);
             Settle(m, true);
             if (m.dim) Dim(m.root);
-            Debug.Log($"[Markers] {kind}: home {m.home} spot {m.spot} index {m.index}{(m.dim ? " dim" : "")}");
+            Debug.Log($"[Markers] {kind}: home {m.home} spot {m.spot} index {m.index}{(m.dim ? " dim" : "")}{(m.knob ? (m.lit ? " lit" : " unlit") : "")}");
         }
         MarkersActive = markers.Count > 0;
         if (n > 0)
@@ -195,9 +241,27 @@ public partial class Circuit
             lamp.type = LightType.Point; lamp.color = new Color(1f, 0.93f, 0.8f); lamp.intensity = 3f; lamp.range = 3.6f; lamp.shadows = LightShadows.None;
             shelfLamp = lamp.gameObject;
         }
+        if (knobCount > 0)
+        {
+            // The console: a dark base with a steel panel tipped toward the camera, lit from above.
+            var console = new GameObject("Desk").transform;
+            console.SetParent(transform, false);
+            console.SetPositionAndRotation(deskAt, consoleRot);
+            var baseBox = Box(console, new Vector3(deskLen, 0.18f, deskDepth * 0.5f), new Vector3(0f, 0.09f, -0.12f), KitMaterial("Barrier", "barrier"), new Color(0.1f, 0.12f, 0.2f)); // set back under the panel, never through it
+            baseBox.name = "Desk base";
+            var panel = new GameObject("Panel").transform;
+            panel.SetParent(console, false);
+            panel.localPosition = new Vector3(0f, 0.27f, 0.02f);
+            panel.localRotation = Quaternion.Euler(PanelTilt, 0f, 0f);
+            var top = Box(panel, new Vector3(deskLen + 0.04f, 0.02f, deskDepth), Vector3.zero, KitMaterial("Floodlight", "steel"), new Color(0.17f, 0.2f, 0.27f));
+            top.name = "Desk top";
+            var lamp = new GameObject("Desk lamp").AddComponent<Light>();
+            lamp.transform.SetParent(console, false); lamp.transform.localPosition = new Vector3(0f, 1.2f, 0.5f);
+            lamp.type = LightType.Point; lamp.color = new Color(1f, 0.93f, 0.8f); lamp.intensity = 3.2f; lamp.range = 3.4f; lamp.shadows = LightShadows.None;
+            desk = console.gameObject;
+        }
     }
 
-    // The seed's plate must read the seed as it is (the marker reads it back after a tap).
     // A track's name as the card carries it: two words at most.
     static string ShortName(string id) => id switch
     {
@@ -218,10 +282,11 @@ public partial class Circuit
 
     public void ClearMarkers()
     {
-        foreach (var m in markers) if (m.root != null) Destroy(m.root.gameObject);
+        foreach (var m in markers) { if (m.root != null) Destroy(m.root.gameObject); if (m.namePlate != null) Destroy(m.namePlate.gameObject); }
         markers.Clear();
         held = null;
         if (shelfLamp != null) { Destroy(shelfLamp); shelfLamp = null; }
+        if (desk != null) { Destroy(desk); desk = null; }
         if (beckon != null) { StopCoroutine(beckon); beckon = null; }
         if (beckonLight != null) { Destroy(beckonLight.gameObject); beckonLight = null; }
         beckoning = null;
@@ -231,7 +296,7 @@ public partial class Circuit
     public void FreezeMarkers(bool frozen) => MarkersActive = !frozen && markers.Count > 0;
 
     // Race control's points (1.1): shown once the flag is on the finish.
-    public void ShowDimMarkers(bool on) { foreach (var m in markers) if (m.dim && m.root != null) m.root.gameObject.SetActive(on); }
+    public void ShowDimMarkers(bool on) { foreach (var m in markers) if (m.dim && m.root != null) { m.root.gameObject.SetActive(on); if (m.plateRoot != null) m.plateRoot.gameObject.SetActive(on && m.Text != ""); } }
 
     // Where each reward stands once placed: all of them a few cells up the first straight,
     // where the pit lane's camera is, and the flag at the finish.
@@ -270,16 +335,27 @@ public partial class Circuit
         }
     }
 
-    // The sensors' and the moves' places on the car (the car is at half scale: its length is 0.78).
+    // The sensors' and the moves' places on the car (the car is at half scale: its length is
+    // 0.78), and where each one's name plate stands beside it.
     static Vector3 SensorLocal(int i) => i switch
     {
         Sensors.Front => new Vector3(0f, 0.17f, 0.36f), Sensors.Left => new Vector3(-0.2f, 0.14f, 0.22f), Sensors.Right => new Vector3(0.2f, 0.14f, 0.22f),
         Sensors.Speed => new Vector3(0f, 0.3f, -0.02f), _ => new Vector3(0f, 0.46f, -0.2f),
     };
+    static Vector3 SensorPlate(int i) => i switch
+    {
+        Sensors.Front => new Vector3(0.36f, 0.22f, 0.5f), Sensors.Left => new Vector3(-0.5f, 0.4f, 0.3f), Sensors.Right => new Vector3(0.5f, 0.36f, 0.1f),
+        Sensors.Speed => new Vector3(-0.42f, 0.6f, -0.15f), _ => new Vector3(0.42f, 0.62f, -0.35f),
+    };
     static Vector3 MoveLocal(int i) => i switch
     {
         Moves.SpeedUp => new Vector3(0f, 0.3f, -0.1f), Moves.Hold => new Vector3(0f, 0.3f, -0.24f), Moves.SlowDown => new Vector3(0f, 0.3f, -0.38f),
         Moves.Left => new Vector3(-0.17f, 0.3f, -0.24f), _ => new Vector3(0.17f, 0.3f, -0.24f),
+    };
+    static Vector3 MovePlate(int i) => i switch
+    {
+        Moves.SpeedUp => new Vector3(0f, 0.46f, 0.3f), Moves.Hold => new Vector3(0f, 0.6f, -0.2f), Moves.SlowDown => new Vector3(0f, 0.4f, -0.66f),
+        Moves.Left => new Vector3(-0.5f, 0.5f, -0.1f), _ => new Vector3(0.5f, 0.5f, -0.4f),
     };
 
     // ---- the pieces ----
@@ -290,8 +366,25 @@ public partial class Circuit
         root.SetParent(m.attached && carRoot != null ? carRoot : transform, false);
         var steel = KitMaterial("Floodlight", "steel");
         var paint = KitMaterial("Paint", "paint");
+        if (m.knob)
+        {
+            // A round knob standing on the console's panel, its pointer at the rim; its value sits on
+            // its face (MakePlate) and its name on the panel below it.
+            var body = Cylinder(root, 0.08f, 0.04f, Vector3.up * 0.02f, steel, new Color(0.2f, 0.22f, 0.26f));
+            body.name = "Body";
+            var pointer = Box(root, new Vector3(0.012f, 0.01f, 0.025f), new Vector3(0f, 0.045f, 0.07f), paint, Color.white);
+            pointer.name = "Pointer";
+            return root;
+        }
         switch (m.kind)
         {
+            case "stopcap": case "nevercap":
+            {
+                // A red cap on the panel above its knob: raised while it is on, flat and grey when off.
+                var cap = Cylinder(root, 0.04f, 0.025f, Vector3.up * 0.0125f, paint, Theme.Danger);
+                cap.name = "Cap";
+                break;
+            }
             case "finish": { var flag = Instantiate(Piece("FinishFlag"), root, false); flag.transform.localScale = Vector3.one * (M * 1.3f); flag.name = "MarkerFlag"; break; }
             case "crash":
                 for (int i = 0; i < 3; i++)
@@ -312,29 +405,17 @@ public partial class Circuit
                 break;
             }
             case "bonus": Post(root, 0.66f); Box(root, new Vector3(0.36f, 0.28f, 0.02f), Vector3.up * 0.82f, KitMaterial("Cone", "cone"), new Color(1f, 0.62f, 0.12f)); break;
-            case "fuel":
-                Box(root, new Vector3(0.3f, 0.36f, 0.16f), Vector3.up * 0.18f, steel, new Color(0.78f, 0.16f, 0.1f));
-                Box(root, new Vector3(0.12f, 0.04f, 0.06f), new Vector3(0f, 0.38f, 0f), steel, Color.black);
-                Box(root, new Vector3(0.04f, 0.05f, 0.04f), new Vector3(0.1f, 0.38f, 0f), steel, new Color(0.9f, 0.85f, 0.2f));
-                break;
-            case "die": Box(root, new Vector3(0.2f, 0.2f, 0.2f), Vector3.up * 0.1f, paint, Color.white); Pips(root); break;
-            case "seed": Box(root, new Vector3(0.18f, 0.18f, 0.18f), Vector3.up * 0.09f, paint, Theme.Teal); break;
-            case "fall": Post(root, 0.5f); Chevron(root, new Vector3(0f, 0.55f, 0f), Theme.Teal).transform.localRotation = Quaternion.Euler(-90f, 0f, 180f); break;
-            case "floor": Post(root, 0.4f); Box(root, new Vector3(0.3f, 0.02f, 0.14f), Vector3.up * 0.42f, steel, Theme.Teal); break;
-            case "rewrite": Post(root, 0.5f); Disc(root, 0.14f, Vector3.up * 0.62f, steel, new Color(0.25f, 0.28f, 0.32f)); Box(root, new Vector3(0.016f, 0.1f, 0.004f), new Vector3(0f, 0.66f, -0.016f), steel, Theme.Teal); break;
-            case "measure": Post(root, 0.6f); Disc(root, 0.17f, Vector3.up * 0.76f, paint, Color.white); Box(root, new Vector3(0.016f, 0.12f, 0.004f), new Vector3(0f, 0.8f, -0.018f), steel, Theme.Danger); Box(root, new Vector3(0.05f, 0.05f, 0.03f), new Vector3(0f, 0.96f, 0f), steel, null); break;
-            case "stopcap": case "nevercap": Disc(root, 0.1f, Vector3.zero, paint, Theme.Danger).transform.localRotation = Quaternion.Euler(90f, 0f, 0f); break;
             case "limit": Box(root, new Vector3(0.12f, 0.08f, 0.015f), Vector3.zero, steel, new Color(0.15f, 0.15f, 0.17f)); break;
             default:
                 if (m.card)
                 {
                     // The card turns to the camera, so its map reads from wherever the pit lane is seen.
                     root.gameObject.AddComponent<Billboard>().cam = cam.transform;
-                    Box(root, new Vector3(0.64f, 0.4f, 0.02f), Vector3.up * 0.56f, KitMaterial("Barrier", "barrier"), new Color(0.1f, 0.12f, 0.2f));
-                    Post(root, 0.36f);
+                    Box(root, new Vector3(0.64f, 0.46f, 0.02f), Vector3.up * 0.56f, KitMaterial("Barrier", "barrier"), new Color(0.1f, 0.12f, 0.2f));
+                    Post(root, 0.33f);
                     var tr = Track.Get(m.kind.Substring(6));
-                    float cell = Mathf.Min(0.54f / tr.W, 0.32f / tr.H);
-                    float ox = -cell * tr.W / 2f, oy = 0.56f + cell * tr.H / 2f;
+                    float cell = Mathf.Min(0.54f / tr.W, 0.27f / tr.H); // the map under the name strip at the card's top
+                    float ox = -cell * tr.W / 2f, oy = 0.50f + cell * tr.H / 2f;
                     for (int y = 0; y < tr.H; y++)
                         for (int x = 0; x < tr.W; x++)
                         {
@@ -361,31 +442,41 @@ public partial class Circuit
         return root;
     }
 
-    void Pips(Transform root)
+    // The marker's plate: the same dark plate as every label in the world. A knob's value sits
+    // on its face and its name on the panel below it; a cap's name on the panel above it; a
+    // card's name in a strip at its top. The rest stand over their marker, turned to the camera.
+    void MakePlate(Marker m)
     {
-        var steel = KitMaterial("Floodlight", "steel");
-        foreach (var (x, y) in new[] { (-0.05f, 0.15f), (0.05f, 0.05f), (0f, 0.1f), (-0.05f, 0.05f), (0.05f, 0.15f) })
-            Disc(root, 0.018f, new Vector3(x, y, -0.101f), steel, Color.black);
+        string kind = m.kind;
+        bool cap = kind.EndsWith("cap");
+        bool part = kind.StartsWith("sense") || kind.StartsWith("move") || kind == "limit";
+        if (!cap)
+        {
+            float size = m.card ? 1.1f : part ? 1.15f : m.knob ? (m.labels != null && m.labels.Max(l => l.Length) > 4 ? 0.6f : 0.8f) : Rewards.Contains(kind) ? 2.4f : 2f;
+            m.baseLift = kind == "finish" ? 1.95f : kind == "crash" ? 0.6f : kind == "toward" || kind == "away" ? 0.42f : part ? 0f : 1.05f;
+            m.plateRoot = DarkPlate(m.root, "", size, out m.plate, m.knob ? 0.1f : part ? 0.2f : 0.26f);
+            m.plateRoot.name = "Plate";
+            if (m.knob) { m.plateRoot.localPosition = Vector3.up * 0.058f; m.plateRoot.localRotation = OnPanel; m.plateRoot.GetComponent<PlateFit>().pad = 0.04f; }
+            else if (m.card) m.plateRoot.localPosition = new Vector3(0f, 0.73f, -0.012f);
+            else m.plateRoot.localPosition = part ? m.plateLocal - m.local : Vector3.up * m.baseLift;
+            m.plateRoot.gameObject.SetActive(false);
+        }
+        if (m.knob || cap)
+        {
+            // The name, flat on the panel, the halo lit when the level is about this control. A
+            // control the level is not about keeps its name for a moment after a tap only.
+            m.namePlate = DarkPlate(m.root, KnobNames[kind], 0.62f, out var nameText, 0.14f);
+            m.namePlate.name = "Name " + kind;
+            m.namePlate.localPosition = new Vector3(0f, 0.03f, cap ? -0.09f : m.column % 2 == 0 ? 0.15f : 0.27f); // the names staggered, so neighbours never overlap
+            m.namePlate.localRotation = OnPanel;
+            nameText.color = m.lit ? Color.white : new Color(0.62f, 0.66f, 0.72f);
+            var halo = m.namePlate.Find("Halo"); if (halo != null) halo.gameObject.SetActive(m.lit);
+            m.namePlate.gameObject.SetActive(m.lit);
+        }
     }
 
-    // The number or the word on a marker: a plate of text above it, turned to the camera.
-    TextMeshPro Plate(Transform root, string kind, out float lift)
-    {
-        lift = kind == "finish" ? 1.95f : kind == "crash" ? 0.6f : kind == "toward" || kind == "away" ? 0.42f : kind == "fuel" ? 0.62f : kind == "die" || kind == "seed" ? 0.42f
-             : kind == "measure" ? 1.15f : kind == "limit" ? 0.12f : kind.StartsWith("track:") ? 0.86f : kind.StartsWith("sense") || kind.StartsWith("move") ? 0.12f : kind.EndsWith("cap") ? -1f : 1.05f;
-        var go = new GameObject("Plate");
-        go.transform.SetParent(root, false);
-        go.transform.localPosition = Vector3.up * Mathf.Max(0f, lift);
-        var t = go.AddComponent<TextMeshPro>();
-        bool reward = Rewards.Contains(kind);
-        bool part = kind.StartsWith("sense") || kind.StartsWith("move") || kind == "limit";
-        t.font = Theme.Bold; t.fontSize = kind.StartsWith("track:") ? 1.9f : part ? 1.2f : reward ? 3.4f : 2.4f; t.color = Color.white; t.alignment = TextAlignmentOptions.Center;
-        t.rectTransform.sizeDelta = new Vector2(1.4f, 0.4f);
-        t.outlineWidth = 0.25f; t.outlineColor = new Color32(11, 21, 54, 255);
-        t.text = "";
-        if (lift < 0) go.SetActive(false);
-        return t;
-    }
+    // A plate lying on the console's panel: readable from above, its top up the slope.
+    static readonly Quaternion OnPanel = Quaternion.LookRotation(Vector3.down, Vector3.back);
 
     void Post(Transform root, float height) => Box(root, new Vector3(0.03f, height, 0.03f), Vector3.up * height / 2f, KitMaterial("Floodlight", "steel"), null);
 
@@ -455,6 +546,45 @@ public partial class Circuit
         return go;
     }
 
+    // A short cylinder standing on its base: the knobs.
+    GameObject Cylinder(Transform parent, float radius, float height, Vector3 at, Material mat, Color? tint)
+    {
+        var v = new List<Vector3>(); var nrm = new List<Vector3>(); var uv = new List<Vector2>(); var tris = new List<int>();
+        const int n = 18;
+        float h = height / 2f;
+        for (int i = 0; i <= n; i++)
+        {
+            float a = i / (float)n * Mathf.PI * 2f;
+            var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            v.Add(dir * radius - Vector3.up * h); v.Add(dir * radius + Vector3.up * h);
+            nrm.Add(dir); nrm.Add(dir);
+            uv.Add(new Vector2(i / (float)n, 0)); uv.Add(new Vector2(i / (float)n, 1));
+            if (i > 0) { int b = (i - 1) * 2; tris.AddRange(new[] { b, b + 1, b + 2, b + 1, b + 3, b + 2 }); }
+        }
+        foreach (float sign in new[] { 1f, -1f })
+        {
+            int c = v.Count;
+            v.Add(Vector3.up * h * sign); nrm.Add(Vector3.up * sign); uv.Add(new Vector2(0.5f, 0.5f));
+            for (int i = 0; i <= n; i++)
+            {
+                float a = i / (float)n * Mathf.PI * 2f;
+                v.Add(new Vector3(Mathf.Cos(a) * radius, h * sign, Mathf.Sin(a) * radius)); nrm.Add(Vector3.up * sign); uv.Add(new Vector2(0.5f + Mathf.Cos(a) * 0.5f, 0.5f + Mathf.Sin(a) * 0.5f));
+                if (i > 0) { if (sign > 0) tris.AddRange(new[] { c, c + i + 1, c + i }); else tris.AddRange(new[] { c, c + i, c + i + 1 }); }
+            }
+        }
+        var mesh = new Mesh { name = "cylinder" };
+        mesh.SetVertices(v); mesh.SetNormals(nrm); mesh.SetUVs(0, uv); mesh.SetTriangles(tris, 0);
+        mesh.RecalculateTangents(); mesh.RecalculateBounds();
+        var go = new GameObject("Cylinder");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = at;
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var r = go.AddComponent<MeshRenderer>();
+        r.sharedMaterial = mat;
+        if (tint.HasValue) Tint(r, tint.Value);
+        return go;
+    }
+
     GameObject Box(Transform parent, Vector3 size, Vector3 at, Material mat, Color? tint)
     {
         var go = new GameObject("Box");
@@ -467,8 +597,10 @@ public partial class Circuit
         return go;
     }
 
+    static Mesh unitBox;
     static Mesh BoxMesh(Vector3 s)
     {
+        if (s == Vector3.one && unitBox != null) return unitBox;
         var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var tris = new List<int>();
         void Face(Vector3 normal, Vector3 right, Vector3 up, float w, float h)
         {
@@ -486,6 +618,7 @@ public partial class Circuit
         var mesh = new Mesh { name = "box" };
         mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(tris, 0);
         mesh.RecalculateTangents(); mesh.RecalculateBounds();
+        if (s == Vector3.one) unitBox = mesh;
         return mesh;
     }
 
@@ -513,12 +646,12 @@ public partial class Circuit
         r.SetPropertyBlock(block);
     }
 
-    // Race control's: everything darkened, the plate grey.
+    // Race control's: everything darkened, the plate's text grey.
     void Dim(Transform root)
     {
         foreach (var r in root.GetComponentsInChildren<Renderer>())
         {
-            if (r.GetComponent<TextMeshPro>() != null) continue;
+            if (r.GetComponent<TextMeshPro>() != null || r.name == "Slab" || r.name == "Halo") continue;
             var block = new MaterialPropertyBlock();
             r.GetPropertyBlock(block);
             var c = block.GetColor("_BaseColor"); if (c == Color.clear || c.a == 0f) c = Color.white;
@@ -533,22 +666,30 @@ public partial class Circuit
 
     static string Number(float v) => Mathf.Abs(v) >= 10f ? v.ToString("+0;-0") : v.ToString("+0.#;-0.#");
 
+    void ShowPlate(Marker m, bool on)
+    {
+        if (m.plateRoot == null) return;
+        m.plateRoot.gameObject.SetActive(on && !string.IsNullOrEmpty(m.plate.text));
+        if (on) FitPlate(m.plateRoot);
+    }
+
     void Settle(Marker m, bool jump)
     {
         if (m.attached)
         {
             m.root.localPosition = m.local; m.root.localRotation = Quaternion.identity;
             // A part that is off is a ghost: there, faint, to be tapped back on.
-            foreach (var r in m.root.GetComponentsInChildren<Renderer>()) if (r.GetComponent<TextMeshPro>() == null && r.name != "Box") Tint(r, m.Value > 0 ? (m.kind == "limit" ? new Color(0.15f, 0.15f, 0.17f) : Theme.Teal) : new Color(0.35f, 0.38f, 0.42f, 1f));
-            if (m.plate != null) { m.plate.text = m.Text; m.plate.color = m.Value > 0 ? Color.white : new Color(0.62f, 0.66f, 0.72f); if (m.quiet) m.plate.gameObject.SetActive(Time.unscaledTime < m.namedUntil); }
+            foreach (var r in m.root.GetComponentsInChildren<Renderer>()) if (r.GetComponent<TextMeshPro>() == null && r.name != "Box" && r.name != "Slab" && r.name != "Halo") Tint(r, m.Value > 0 ? (m.kind == "limit" ? new Color(0.15f, 0.15f, 0.17f) : Theme.Teal) : new Color(0.35f, 0.38f, 0.42f, 1f));
+            if (m.plate != null) { m.plate.text = m.Text; m.plate.color = m.Value > 0 ? Color.white : new Color(0.62f, 0.66f, 0.72f); ShowPlate(m, !m.quiet || Time.unscaledTime < m.namedUntil); }
             m.set(m.Value);
             return;
         }
         if (m.parent != null)
         {
-            m.root.position = m.parent.root.position + Vector3.up * (m.kind == "stopcap" ? 0.42f : 0.22f);
-            m.root.rotation = Quaternion.identity;
-            m.root.gameObject.SetActive(m.Value > 0);
+            // The cap on the panel above its knob: raised and red while on, flat and grey when off.
+            m.root.position = m.home; m.root.rotation = m.pose;
+            var cap = m.root.Find("Cap");
+            if (cap != null) { cap.localScale = new Vector3(1f, m.Value > 0 ? 1f : 0.3f, 1f); Tint(cap.GetComponent<Renderer>(), m.Value > 0 ? Theme.Danger : new Color(0.35f, 0.38f, 0.42f)); }
             m.set(m.Value);
             return;
         }
@@ -557,17 +698,33 @@ public partial class Circuit
             m.root.position = m.spot;
             var plateColour = m.index == 2 ? Theme.Amber : m.index == 1 ? Theme.Teal : new Color(0.6f, 0.64f, 0.7f);
             foreach (var r in m.root.GetComponentsInChildren<Renderer>()) if (r.name == "Box" && Mathf.Abs(r.transform.localPosition.y - 0.56f) < 0.001f && r.transform.localPosition.z == 0f) Tint(r, m.index == 2 ? new Color(0.45f, 0.3f, 0.05f) : m.index == 1 ? new Color(0.05f, 0.3f, 0.28f) : new Color(0.1f, 0.12f, 0.2f));
-            m.plate.text = m.Text; m.plate.color = plateColour;
+            m.plate.text = m.Text; m.plate.color = plateColour; ShowPlate(m, true);
             m.set(m.Value);
+            return;
+        }
+        if (m.knob)
+        {
+            m.root.position = m.home; m.root.rotation = m.pose;
+            // The pointer turns with the value; a lit knob is teal, a dim one grey.
+            var pointer = m.root.Find("Pointer"); var body = m.root.Find("Body");
+            float turn = m.options.Length > 1 ? -135f + 270f * (m.index / (float)(m.options.Length - 1)) : 0f;
+            if (m.kind == "seed") turn = 0f;
+            if (pointer != null) { pointer.localRotation = Quaternion.Euler(0f, turn, 0f); pointer.localPosition = Quaternion.Euler(0f, turn, 0f) * new Vector3(0f, 0.045f, 0.07f); }
+            if (body != null) Tint(body.GetComponent<Renderer>(), m.lit ? new Color(0.09f, 0.42f, 0.38f) : new Color(0.2f, 0.22f, 0.26f));
+            if (pointer != null) Tint(pointer.GetComponent<Renderer>(), m.lit ? Theme.Teal : new Color(0.7f, 0.74f, 0.8f));
+            m.plate.text = m.Text; m.plate.color = m.lit ? Color.white : new Color(0.62f, 0.66f, 0.72f);
+            var halo = m.plateRoot.Find("Halo"); if (halo != null) halo.gameObject.SetActive(m.lit);
+            ShowPlate(m, true);
+            m.set(m.Value);
+            foreach (var cap in markers) if (cap.parent == m) Settle(cap, true);
             return;
         }
         var at = m.Placed ? m.spot : m.home;
         float yaw = m.kind == "finish" ? Yaw(D(track.startHeading)) : m.Placed ? m.spotYaw : Yaw(D(track.startHeading)) + 90f;
         if (jump) { m.root.position = at; m.root.rotation = Quaternion.Euler(0, yaw, 0); }
         else StartCoroutine(Glide(m, at, yaw));
-        m.plate.text = m.Text;
+        m.plate.text = m.Text; ShowPlate(m, true);
         m.set(m.Value);
-        foreach (var cap in markers) if (cap.parent == m) Settle(cap, true);
     }
 
     System.Collections.IEnumerator Glide(Marker m, Vector3 to, float yaw)
@@ -584,8 +741,8 @@ public partial class Circuit
         if (m.root != null) { m.root.position = to; m.root.rotation = r1; }
     }
 
-    // The walk and a test act on a marker by name: a reward placed with a value, a dial or a
-    // part set to an option's index.
+    // The walk and a test act on a marker by name: a reward placed with a value, a knob or a
+    // part set to an option's value.
     public void PlaceMarker(string kind, float? value = null)
     {
         var m = markers.FirstOrDefault(x => x.kind == kind && !x.dim);
@@ -621,8 +778,8 @@ public partial class Circuit
     System.Collections.IEnumerator DoBeckon(Marker m)
     {
         beckonLight = new GameObject("Beckon").AddComponent<Light>();
-        beckonLight.transform.SetParent(m.root, false); beckonLight.transform.localPosition = Vector3.up * 0.5f;
-        beckonLight.type = LightType.Point; beckonLight.color = Theme.Teal; beckonLight.range = 1.6f; beckonLight.shadows = LightShadows.None;
+        beckonLight.transform.SetParent(m.root, false); beckonLight.transform.localPosition = Vector3.up * (m.knob ? 0.25f : 0.5f);
+        beckonLight.type = LightType.Point; beckonLight.color = Theme.Teal; beckonLight.range = m.knob ? 0.9f : 1.6f; beckonLight.shadows = LightShadows.None;
         while (m.root != null)
         {
             float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
@@ -632,21 +789,21 @@ public partial class Circuit
         }
     }
 
-    // A tap: a reward on the shelf is placed, a placed one turns its number; a dial turns; a
+    // A tap: a reward on the shelf is placed, a placed one turns its number; a knob turns; a
     // part comes off or goes on; a cap comes off; a card changes its role.
     void Tap(Marker m)
     {
         if (m.dim) return;
-        if (m.quiet) m.namedUntil = Time.unscaledTime + 2f;
+        if (m.quiet || ((m.knob || m.parent != null) && !m.lit)) { m.namedUntil = Time.unscaledTime + 2.5f; if (m.namePlate != null) m.namePlate.gameObject.SetActive(true); }
         if (m.placeable) m.index = m.Placed ? 1 + (m.index % (m.options.Length - 1)) : 1;
-        else if (m.kind == "seed") { m.set(1f); m.plate.text = m.labels[0]; Pop(m); Sfx.Tick(); markersChanged?.Invoke(); return; }
+        else if (m.kind == "seed") { m.set(1f); m.plate.text = m.labels[0]; ShowPlate(m, true); Pop(m); Sfx.Tick(); markersChanged?.Invoke(); return; }
         else m.index = (m.index + 1) % m.options.Length;
         if (m.card)
         {
             // One test track at a time: the card that was the test becomes training.
             if (m.index == 2) foreach (var o in markers) if (o.card && o != m && o.index == 2) { o.index = 1; Settle(o, true); }
         }
-        Settle(m, false);
+        Settle(m, !m.placeable);
         Sfx.Tick();
         Pop(m);
         markersChanged?.Invoke();
@@ -659,9 +816,11 @@ public partial class Circuit
         if (cam == null || markers.Count == 0) return;
         foreach (var m in markers)
         {
-            if (m.plate == null) continue;
-            if (m.quiet && m.plate.gameObject.activeSelf && Time.unscaledTime >= m.namedUntil) m.plate.gameObject.SetActive(false);
-            if (m.plate.gameObject.activeSelf) m.plate.transform.rotation = Quaternion.LookRotation(m.plate.transform.position - cam.transform.position);
+            // A knob's or a cap's name shows for a moment after a tap when the level is not about it.
+            if ((m.knob || m.parent != null) && !m.lit && m.namePlate != null && m.namePlate.gameObject.activeSelf && Time.unscaledTime >= m.namedUntil) m.namePlate.gameObject.SetActive(false);
+            if (m.plateRoot == null || m.knob || m.card) continue; // the console's and the cards' plates lie where they are
+            if (m.quiet && m.plateRoot.gameObject.activeSelf && Time.unscaledTime >= m.namedUntil) m.plateRoot.gameObject.SetActive(false);
+            if (m.plateRoot.gameObject.activeSelf) m.plateRoot.rotation = Quaternion.LookRotation(m.plateRoot.position - cam.transform.position);
         }
         Unstack();
         if (!MarkersActive) return;
@@ -681,6 +840,7 @@ public partial class Circuit
                 var at = g + heldOffset; at.y = 0.12f;
                 held.root.position = at;
                 held.plate.text = Number(held.options[Mathf.Max(1, held.index)]);
+                ShowPlate(held, true);
             }
         }
         if (pointerDown && Input.GetMouseButtonUp(0))
@@ -703,30 +863,30 @@ public partial class Circuit
         }
     }
 
-    // Plates never sit on each other or on a marker: a plate whose box on the screen overlaps
-    // a lower one's is lifted until it is clear.
+    // Plates never sit on each other: the lowest on the screen settles first; each higher one
+    // lifts until it is clear of those below. A part's plate starts beside its part.
     void Unstack()
     {
-        var shown = markers.Where(m => m.plate != null && m.plate.gameObject.activeSelf && m.root != null && m.root.gameObject.activeInHierarchy && !string.IsNullOrEmpty(m.plate.text)).ToList();
+        var shown = markers.Where(m => m.plateRoot != null && !m.knob && !m.card && m.plateRoot.gameObject.activeSelf && m.root != null && m.root.gameObject.activeInHierarchy).ToList();
         if (shown.Count < 2) return;
         var rects = new List<Rect>();
-        // The lowest on the screen settles first; each higher one lifts until it is clear of those below.
         foreach (var m in shown.OrderBy(x => cam.ToScreen(x.root.position).y))
         {
-            float lift = m.baseLift;
-            // The plate's size on the screen, from its height in the world (the text is about a
-            // tenth of its font size tall, and roughly half as wide per character).
-            float worldH = m.plate.fontSize * 0.11f;
+            var start = m.attached ? m.plateLocal - m.local : Vector3.up * m.baseLift;
+            float lift = 0f;
+            var slab = m.plateRoot.Find("Slab");
+            float worldH = slab != null ? slab.localScale.y : 0.15f, worldW = slab != null ? slab.localScale.x : 0.4f;
             for (int guard = 0; guard < 10; guard++)
             {
-                m.plate.transform.localPosition = Vector3.up * lift;
-                var s = cam.ToScreen(m.plate.transform.position);
-                var top = cam.ToScreen(m.plate.transform.position + Vector3.up * worldH);
-                float h = Mathf.Max(6f, Mathf.Abs(top.y - s.y)) * 1.2f;
-                float w = Mathf.Max(1, m.plate.text.Length) * h * 0.55f;
+                m.plateRoot.localPosition = start + Vector3.up * lift;
+                var s = cam.ToScreen(m.plateRoot.position);
+                var top = cam.ToScreen(m.plateRoot.position + Vector3.up * worldH);
+                var side = cam.ToScreen(m.plateRoot.position + m.plateRoot.right * worldW);
+                float h = Mathf.Max(6f, Mathf.Abs(top.y - s.y)) * 1.1f;
+                float w = Mathf.Max(6f, Mathf.Abs(side.x - s.x)) * 1.05f;
                 var r = new Rect(s.x - w / 2, s.y - h / 2, w, h);
                 if (!rects.Any(o => o.Overlaps(r))) { rects.Add(r); break; }
-                lift += worldH * 0.9f;
+                lift += worldH * 1.1f;
             }
         }
     }
@@ -737,10 +897,16 @@ public partial class Circuit
         foreach (var m in markers)
         {
             if (m.dim || m.root == null || !m.root.gameObject.activeInHierarchy) continue;
-            var s = cam.ToScreen(m.root.position + Vector3.up * (m.attached ? 0f : m.parent != null ? 0f : 0.35f));
+            var s = cam.ToScreen(m.root.position + Vector3.up * (m.attached || m.parent != null || m.knob ? 0f : 0.35f));
             if (s.z < 0) continue;
             float d = Vector2.Distance(new Vector2(s.x, s.y), screen);
-            float reach = m.attached || m.parent != null ? 40f : 70f;
+            float reach = m.attached || m.parent != null ? 40f : m.knob ? 50f : 70f;
+            // A part's plate counts as the part: it is the thing the player sees to tap.
+            if (m.attached && m.plateRoot != null && m.plateRoot.gameObject.activeSelf)
+            {
+                var ps = cam.ToScreen(m.plateRoot.position);
+                if (ps.z > 0) d = Mathf.Min(d, Vector2.Distance(new Vector2(ps.x, ps.y), screen));
+            }
             if (d < reach && d < bestD) { bestD = d; best = m; }
         }
         return best;

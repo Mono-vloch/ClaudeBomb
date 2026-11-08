@@ -40,7 +40,8 @@ public class PitScreen
         if (l == null || l.sensors) app.world.ShowSensors(true); // the beams, long, while the sensors are the thing to set
 
         var (kinds, fixedKinds) = Kinds(l, s);
-        app.world.BuildMarkers(s, kinds, Changed, fixedKinds, nameParts: l == null || !(l.sensors && l.moves));
+        app.world.BuildMarkers(s, kinds, Changed, fixedKinds, nameParts: l == null || !(l.sensors && l.moves), litKinds: Lit(l));
+        if (l == null || l.sensors) app.world.ShowBendRay(true);
         app.world.ShowDimMarkers(s.finish > 0);
 
         objective = Hud.Objective(root, Objective(l, s));
@@ -57,7 +58,7 @@ public class PitScreen
         if (l != null && l.prediction)
         {
             prediction = Ui.DarkInput(root, l.predictionPrompt, true, 16);
-            Ui.Place(prediction.GetComponent<RectTransform>(), 40, 856, 620, 84); // clear of LUMA's line below it
+            Ui.Place(prediction.GetComponent<RectTransform>(), Ui.W - 40 - 620, 856, 620, 84); // on the right, over the Train button, clear of the console and LUMA's line
             prediction.text = app.session.prediction ?? "";
         }
         Hud.Main(root, "Train", Train);
@@ -82,6 +83,12 @@ public class PitScreen
         if (free || l.tracks) foreach (var t in Track.All) kinds.Add("track:" + t.id);
         return (kinds, fixedKinds);
     }
+
+    // The knobs the level is about, lit on the desk; the rest stand dim. Null: all of them.
+    static IEnumerable<string> Lit(Lesson l) => l == null ? null : l.number switch
+    {
+        2 => new[] { "fuel", "stopcap" }, 8 => new[] { "die", "nevercap", "fall", "floor" }, 10 => new string[0], 11 => new[] { "measure" }, 12 => new[] { "rewrite", "die", "fuel" }, 13 => new[] { "fuel" }, _ => null,
+    };
 
     // The level's one line of what to do here, at most eight words.
     static string Objective(Lesson l, Settings s)

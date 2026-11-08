@@ -63,12 +63,17 @@ action on the world and took the forms off the screens. All thirteen levels run 
    a thing in the world (`World/Markers.cs`): the rewards on the shelf by the pit wall, to
    drag onto the track and tap to turn their number (on 1.1 the chequered flag alone; on the
    finish it turns the points on, and race control's other points show dim on the track, to
-   be edited from 2.3); the dials on the shelf, tapped to turn: the fuel can (the attempts,
-   with a red cap on 1.2 that stops at the first finish), the die, the fall and the floor
-   (the chance of a new move, with the "never again" cap on 2.5), the rewrite dial and the
-   seed (the knobs), the stopwatch (the measure); the sensors and the moves as parts on the
-   car, tapped off and on, and the limiter at its tail (the top speed); the track cards on the
-   board by the pit lane, each tapped through off, training and the test track. The fuel
+   be edited from 2.3); the knobs on a console at the pit wall behind the grid, its panel
+   tipped toward the camera, each knob with its value on its face and its name on a plate
+   below it, tapped to turn: the tank (the attempts, with a red "Stop at first finish" cap on
+   1.2), new moves, the fall and the floor (the chance of a new move, with the "Lock after
+   first finish" cap on 2.5), the rewrite and the seed (3.3; a tap draws a new seed), the
+   measure (3.2); the knobs the level is about are lit teal, the rest stand dim and show their
+   name only for a moment after a tap. The sensors are lamps on the car with their rays on
+   the track and their names on plates beside them, the moves chevrons on its rear deck,
+   tapped off and on, and the limiter at its tail (the top speed); the track cards on the
+   board by the pit lane carry their circuit and their name, each tapped through off,
+   training and the test track. The fuel
    gauge at the top right carries the player's guess for the first finish: a notch dragged
    round the rim. One line says what to do; "Train" is the main action. No physics: the
    markers are picked by projecting them to the screen and dragged along the pointer's ray;
@@ -92,9 +97,10 @@ action on the world and took the forms off the screens. All thirteen levels run 
    the answers (the rule book's situation stands on a board, the five moves on signs). A
    question that wants a line of text gets the one text field. LUMA says nothing until the
    answer, then "Right." or "Not quite."
-7. **Debrief.** The car where the race left it, a podium beside it, the medal rising on its
-   step (gold on 1, silver on 2, bronze on 3) with its three stars along the ribbon, LUMA's one
-   line, "Next" and a quiet "Again". The curve of every run, the checks, the runs' numbers,
+7. **Debrief.** A podium on the pit lane up from the grid, the car driven onto the step it earned (gold
+   on 1, silver on 2, bronze on 3), the medal dropping on its ribbon from the step's edge with
+   its three stars lit as earned, LUMA's one line, "Next" and a quiet "Again". Every label in
+   the world is the same dark plate (`Circuit.DarkPlate`): no floating text anywhere. The curve of every run, the checks, the runs' numbers,
    the stars in all and the rank, the takeaway and the question for work, and on a capstone
    the two if-then plans, are behind "Details". The platform is told the result in the
    curriculum's form (`2.3:complete`, `:partial` or `:incomplete`, with the checks).

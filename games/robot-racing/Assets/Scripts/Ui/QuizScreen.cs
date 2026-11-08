@@ -24,7 +24,7 @@ public class QuizScreen
     readonly List<Transform> signs = new List<Transform>();
     readonly TextMeshProUGUI objective;
     Transform board;
-    TextMeshPro points;
+    Transform points;
     TMP_InputField input;
     Button done;
     int at;
@@ -119,14 +119,14 @@ public class QuizScreen
             if (IsParts(q))
             {
                 app.world.ShowSensors(true);
-                if (points == null) points = app.world.WorldLabel("+2", Vector3.zero, 3f, Theme.Teal);
+                if (points == null) points = app.world.WorldPlate("+2", Vector3.zero, 2.6f, Theme.Teal);
                 var t = app.world.track; var along = D(t.startHeading);
-                points.transform.position = app.world.Cell(t.start) + along * 1.6f + Vector3.up * 0.5f;
+                points.position = app.world.Cell(t.start) + along * 1.6f + Vector3.up * 0.5f;
                 points.gameObject.SetActive(true);
-                app.world.candidatePoints = points.transform.position;
+                app.world.candidatePoints = points.position;
                 app.world.LightCandidates(true);
                 // Close on the car and the stretch of track ahead of it.
-                app.world.ShowPlacing(frame, app.world.Car.position - along * 0.6f, points.transform.position, app.world.Cell(t.start) + along * 2.4f);
+                app.world.ShowPlacing(frame, app.world.Car.position - along * 0.6f, points.position, app.world.Cell(t.start) + along * 2.4f);
                 app.world.cam.Snap();
             }
             else if (q.IsText)
@@ -205,7 +205,7 @@ public class QuizScreen
         {
             if (points != null && points.gameObject.activeSelf)
             {
-                var s = app.world.ScreenOf(points.transform.position);
+                var s = app.world.ScreenOf(points.position);
                 if (s.z > 0 && Vector2.Distance(screen, s) < 70f) picked = 4;
             }
             if (picked < 0) picked = System.Array.IndexOf(PartTargets, app.world.PartAt(screen));
