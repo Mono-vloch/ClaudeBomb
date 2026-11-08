@@ -63,7 +63,7 @@ from the ladder on a briefing. Free play keeps every dial open with any message.
 
 ## How a run goes
 
-Since the game-feel pass (`Docs/game-feel/ai-arena.md`, report in `Docs/game-feel/ai-arena-report.md`)
+Since the game-feel pass (`Docs/game-feel/ai-arena.md`, report in `Docs/look-audit.md`, Phase 7c)
 every decision is an action on a thing in the world, and the screens carry one objective line, the
 menu icon and at most three small controls besides the main action.
 

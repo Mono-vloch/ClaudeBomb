@@ -97,8 +97,9 @@ action on the world and took the forms off the screens. All thirteen levels run 
    the answers (the rule book's situation stands on a board, the five moves on signs). A
    question that wants a line of text gets the one text field. LUMA says nothing until the
    answer, then "Right." or "Not quite."
-7. **Debrief.** A podium on the pit lane up from the grid, the car driven onto the step it earned (gold
-   on 1, silver on 2, bronze on 3), the medal dropping on its ribbon from the step's edge with
+7. **Debrief.** A podium of a single step on the pit lane up from the grid (one car races, so no
+   second or third place), the car driven onto it with any medal (none: beside it), the medal
+   dropping on its ribbon from the step's edge with
    its three stars lit as earned, LUMA's one line, "Next" and a quiet "Again". Every label in
    the world is the same dark plate (`Circuit.DarkPlate`): no floating text anywhere. The curve of every run, the checks, the runs' numbers,
    the stars in all and the rank, the takeaway and the question for work, and on a capstone

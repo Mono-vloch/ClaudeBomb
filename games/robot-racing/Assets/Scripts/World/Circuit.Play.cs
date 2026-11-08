@@ -482,10 +482,10 @@ public partial class Circuit
 
     // ---- the podium ----
 
-    // The debrief's podium where the race ended: three steps numbered 1, 2, 3, the car driven
-    // onto the step it earned (gold on 1, silver on 2, bronze on 3; none: beside it), the medal
-    // hung on a ribbon from that step's front edge with its three stars on the ribbon, lit as
-    // earned. The step faces the debrief's camera.
+    // The debrief's podium: a single step (one car races, so there is no second or third place),
+    // the car driven onto it with any medal (none: beside it), the medal hung on a ribbon from
+    // the step's front edge with its three stars on the ribbon, lit as earned. The step faces
+    // the debrief's camera.
     Transform podium;
     Vector3 podiumFront;
     public Transform Podium(int medal, Color colour)
@@ -510,34 +510,21 @@ public partial class Circuit
         var barrier = KitMaterial("Barrier", "barrier");
         var steel = KitMaterial("Floodlight", "steel");
         var paint = KitMaterial("Paint", "paint");
-        float[] heights = { 0.36f, 0.24f, 0.15f };
-        float[] widths = { 0.9f, 0.55f, 0.55f }; // narrow enough for the pit lane between the wall and the stand
-        float[] xs = { 0f, -0.72f, 0.72f };
+        const float StepH = 0.36f, StepW = 0.9f; // narrow enough for the pit lane between the wall and the stand
         var faceDark = new Color(0.1f, 0.14f, 0.26f);
-        for (int i = 0; i < 3; i++)
-        {
-            float w = widths[i], h = heights[i];
-            Box(podium, new Vector3(w, h, 1.0f), new Vector3(xs[i], h / 2f, 0f), barrier, faceDark);
-            Box(podium, new Vector3(w, 0.02f, 1.0f), new Vector3(xs[i], h + 0.01f, 0f), steel, new Color(0.7f, 0.74f, 0.8f));
-            var num = new GameObject("Step").AddComponent<TextMeshPro>();
-            num.transform.SetParent(podium, false);
-            num.transform.localPosition = new Vector3(xs[i] + (i == 0 ? 0.3f : 0f), h * 0.5f, -0.51f);
-            num.font = Theme.Bold; num.fontSize = i == 0 ? 2.4f : 1.8f; num.color = new Color(0.8f, 0.84f, 0.9f); num.alignment = TextAlignmentOptions.Center;
-            num.rectTransform.sizeDelta = new Vector2(0.4f, 0.3f);
-            num.text = (i + 1).ToString();
-        }
-        // The car on its step, nose toward the camera.
-        int step = medal > 0 ? 3 - medal : 0;
-        if (medal > 0) { carRoot.position = podium.position + podium.TransformDirection(new Vector3(xs[step], heights[step] + 0.005f, 0f)); carRoot.rotation = Quaternion.LookRotation(podiumFront); }
+        Box(podium, new Vector3(StepW, StepH, 1.0f), new Vector3(0f, StepH / 2f, 0f), barrier, faceDark);
+        Box(podium, new Vector3(StepW, 0.02f, 1.0f), new Vector3(0f, StepH + 0.01f, 0f), steel, new Color(0.7f, 0.74f, 0.8f));
+        // The car on the step, nose toward the camera.
+        if (medal > 0) { carRoot.position = podium.position + podium.TransformDirection(new Vector3(0f, StepH + 0.005f, 0f)); carRoot.rotation = Quaternion.LookRotation(podiumFront); }
         else { carRoot.position = podium.position + podium.TransformDirection(new Vector3(0f, 0f, -1.4f)); carRoot.rotation = Quaternion.LookRotation(podiumFront); }
         if (medal > 0)
         {
             // The medal: a ribbon from the step's edge, the disc at its end, the stars on the ribbon.
             var m = new GameObject("Medal").transform;
             m.SetParent(podium, false);
-            m.localPosition = new Vector3(xs[step] - (step == 0 ? 0.08f : 0f), heights[step] + 0.02f, -0.51f);
+            m.localPosition = new Vector3(0f, StepH + 0.02f, -0.51f);
             var ribbon = new Color(0.16f, 0.2f, 0.42f);
-            float drop = heights[step] * 0.55f;
+            float drop = StepH * 0.55f;
             foreach (float sx in new[] { -1f, 1f })
             {
                 var strip = Box(m, new Vector3(0.05f, drop * 1.08f, 0.012f), new Vector3(sx * 0.06f, -drop / 2f, -0.012f), paint, ribbon);

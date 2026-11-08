@@ -157,7 +157,9 @@ public class Luma : MonoBehaviour
     public RectTransform Line(Transform parent, float x, float y, float w, string text, bool dark, bool stay = false, float size = 17, bool type = true)
     {
         if (current != null) { Destroy(current.gameObject); current = null; }
-        var card = Ui.Box(parent, "Luma line", dark ? new Color(Theme.Ink.r, Theme.Ink.g, Theme.Ink.b, 0.84f) : Theme.Panel);
+        // Opaque, both ways: the scene never shows through her strip.
+        var fill = dark ? Theme.Ink : Theme.Panel; fill.a = 1f;
+        var card = Ui.Box(parent, "Luma line", fill);
         card.raycastTarget = false;
         var t = card.transform;
         var body = Ui.Text(t, "", size, dark ? Color.white : Theme.Ink);

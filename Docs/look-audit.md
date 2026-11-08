@@ -1684,3 +1684,1196 @@ owner's call beyond this pass: the parts question could show its candidates as p
 things themselves; the buttons and LUMA's bar are the next polish round, as agreed; a trophy
 cup from Higgsfield would need a quote and a yes. Committed on `game-feel-pass`; AI Arena and
 Tech Escape are built by their own sessions on their own branches.
+
+---
+
+# Phase 7c: AI Arena on the game-feel screens
+
+8 November 2026, branch `game-feel-ai-arena` (a worktree from `game-feel-pass` at 932b511, merged back on 8 November), from
+`Docs/game-feel-pass-prompt.md` and the approved design `Docs/game-feel/ai-arena.md`, with the
+owner's answers: dropping produce writes only the plain part of the list (the catch and the rule
+for an empty view stay in the player's own words, because the checks read them there); the thought
+bubble shows Claude's first sentence without coordinates and the whole thought is one tap away;
+the story is four 3D shots, first play only, skippable. Carried over from Robot Racing's Phase 7:
+every control the player sets has a short name plate on the object; no floating white 3D text,
+every world label on the same dark plate; the question is the objective line; a number that is
+the lesson stays in the world; the podium and the ribbon medal.
+
+## What changed
+
+1. **Packing the agent (`World/Market.Garage.cs`, `Ui/SetupScreen.cs`).** The garage is the agent
+   at a market table by its house. On the table: the errand's produce and up to three
+   look-alikes, its basket, the "No" crate, the family's phone, the coins, and from 1.3 the
+   trays of parts. Produce dragged (or tapped) into the basket writes "Buy apples." on the note
+   pinned to its chest; into the crate, "Never buy tomatoes."; back on the table takes it off.
+   The world shows what the note says (`Core/NoteText.cs` reads the text the way the garage
+   shows it, and rewrites only the plain sentences), so a list typed by hand lays the produce
+   out the same way. The note opens full size on a tap: the one text field, the lesson. The
+   phone opens the message on a tap and closes again. Coins tapped into the battery on the
+   agent's hip light its ring of notches as far as the money lasts at this list's cost; a tap on
+   the battery takes one back. No physics: picking by projection to the screen, dragging along
+   the table's plane, drop places by screen distance. "Send": the basket flies onto its back, it
+   turns and walks off.
+2. **The parts are fitted to the agent.** From 1.3 the parts the errand opens stand on a shelf at
+   the back of the table, each a thing with its plate on it, and are fitted with a tap: lenses on a
+   rack (Sight, worn on its eye, the sight square on the cobbles in the agent's-eye view), notebooks
+   (3 turns, 10 turns, Notebook, carried in its hand), chips (Haiku, Sonnet, Opus, worn on its head),
+   the effort dial. Locked parts are not shown. Arrivals: "NEW: SIGHT / MEMORY / BRAIN",
+   "EVERYTHING OPEN" with LUMA's line, first visit only. (As built after the owner's answers; see
+   below.)
+3. **The round (`Ui/ArenaScreen.cs`, `World/Market.Round.cs`).** The street behind the agent
+   pulled back so the market shows ahead (`MarketCamera.followBack` 1.9 m, was 1.12). One
+   objective line (the message's gist, at most eight words), the clock at the top (six to seven,
+   no digits, amber in the last five turns), the home window at the
+   top right with one face per agent (crossed when sent home, lit when home; a tap follows that
+   agent). On the agent: the battery draining, its thought in a bubble (the first sentence, the
+   coordinates and the brain's name taken out; the whole thought one tap away). The loop on the
+   agent: it looks on LOOK, the antenna pulses on DECIDE, it walks on MOVE; on 1.1 three small
+   glyphs (an eye, a bulb, a foot) light in turn under the clock. Three controls: the menu, the
+   camera (street, the agent's eye, the market from above), Call home. Moments: 3, 2, 1, AGENT
+   OUT, SENT HOME with "Nadia bought a lemon.", OUT OF TOKENS; at the end the result stays until
+   Debrief (HOME with "5 on the list in the basket", SENT HOME, CALLED HOME, ALL HOME for a
+   class). The drawer, the cards, the turn counter, the stats and the view tabs went.
+4. **The briefing is a transmission (`Ui/LessonScreen.cs`).** The house at dusk in the home
+   camera's feed (the agent at the door, the window lit), and on the right the family's message
+   typed in under "Mom · 6:00 PM", two short lines of the errand's story, "Pack the agent". The
+   question, the kicker card, LUMA's intro, the part chips and the ladder went (to the file and
+   the title).
+5. **The debrief is a moment, then a door (`Ui/ResultsScreen.cs`).** Dusk at the family's door;
+   the agent on its podium step with its basket on its back and what it bought tipped out in
+   front of it (a red glow under anything that ruined dinner); the medal rising on its ribbon
+   behind it and the stars popping; LUMA's one line (the takeaway's first sentence); Next, Again,
+   Details. On 1.5 the cost per item, the lesson's number, stands on a plate beside the agent
+   ("$0.0008 an item" in the walk). Details holds the checks, the agents' figures and costs, the lists, the
+   stars in all and the rank, the takeaway and the question for the manager, the if-then plans
+   on the capstone, and the file. The report to the platform is built from the same checks and
+   the same strings as before.
+6. **The story (`Ui/StoryScreen.cs`)** is four shots of the world, once: the house at dusk and
+   the phone lighting up on the step ("Every evening, the family sends a message about
+   dinner."); the agent at the door with its note ("That list is the agent's job
+   description."); it walks into the market and looks around ("Once it leaves, there is no
+   phone."); it buys a tomato and is sent home ("Say exactly what you mean."). A tap moves on,
+   Skip ends it. The six flat beats, their captions and the ladder went; the full story lines
+   are in the file.
+7. **Errand 1.6 (`Ui/DecideScreen.cs`)** is the kitchen table: the five messages as notes in a
+   pile, the top one readable on a dark plate; drag it to the agent, the box or the bin
+   ("Agent", "Automation", "Neither"); a placed note comes back with a tap. "Who does each task?",
+   LUMA's "Mark each task: an agent, a simple automation, or neither." (recorded), "Run them".
+   The hints that gave the answer away went to the file. Its debrief has the same shape as the
+   others (`Ui/DecideDebrief.cs`).
+8. **The title (`Ui/TitleScreen.cs`)**: the player's own agent in the evening square; tap it to
+   paint it the next colour, tap its name tag (a dark glass plate at its feet) to rename it.
+   The errand map stays (the only ladder); Start or Continue; the menu icon; an amber lamp by
+   the menu only when Claude is not connected, which opens the reason. Sound, the voice, free
+   play, the story and the games menu moved to the menu.
+9. **One menu (`Ui/GameMenu.cs`)**, Esc or the icon, as Claude Bomb's: Resume, The briefing, The
+   file, This errand again, The story, Free play, Sound, LUMA's voice, Speed, Turns, The class
+   (the roster, `Ui/SettingsSheet.cs`), Title screen, Games menu. The file (`Ui/FileSheet.cs`) is
+   dark now and holds the message and its catch, the ready and broken lists with their reasons,
+   LUMA's full lines, the takeaway, the question, how to play, and the story.
+10. **LUMA** says one short thing when something happens (`Ui/Luma.cs`): the cues are sentences
+    of her own lines, recorded with `say` like the rest (`LumaVoiceTools.GenerateBatch`), shown
+    whole and never typed mid-sentence. The tour overlay went (its four lines are the garage's
+    cues on the first visit: the phone, the note, a coin, the send).
+
+## Words and controls, before and after
+
+Counted the same way as Robot Racing's Phase 7: the "before" from the design doc's inventory (7
+November 2026, the web build), the "after" from the final walk's `counts.jsonl`
+(`games/ai-arena/Builds/look-audit/game-feel/answers/`, the walk after the owner's answers of 8
+November, on the stand-in brain, twelve turns an errand). A word is a whitespace-separated token with a letter or a digit; left out, as the brief
+asks, are the player's own words (the note on the agent, a field) and Claude's (the thought bubble,
+the whole thought), which the walk counts apart. A control is anything that can be pressed or typed
+in; a tap on a thing that only shows state (a face at the window, the bubble) is not counted, nor
+is a tap anywhere to move the story on. The menu icon counts as a control on every screen.
+
+| Screen | Before: words / controls | After: words / controls | Limit |
+|---|---|---|---|
+| Title | 59 / 12 | 29 / 11 | – |
+| The story (six beats, now four shots) | 44 to 186 / 2 | 7 to 11 / 1 | – |
+| Briefing 1.1 | 91 / 9 | 39 / 3 | 50 |
+| Garage 1.1 (the list apart) | 144 / 29 | 9 / 2 | 30, 3 + main |
+| Garage 1.1, the phone open | – | 26 / 3 | 30 |
+| The round 1.1: agents out, the street, the agent's eye, the market, the end | 79 to 98 / 9 | 8 to 27 / 2 to 3 | 30, 3 + main |
+| Debrief 1.1 | 115 / 6 | 11 / 4 | 30 |
+| Debrief 1.1, Details open | – | 130 / 6 | – |
+| Briefing 1.2 | – | 48 / 3 | 50 |
+| Garage 1.2 (broken, then fixed) | – | 17 to 25 / 2 | 30, 3 + main |
+| The round 1.2 (a moment: sent home) | – | 8 to 17 / 2 to 3 | 30, 3 + main |
+| Debrief 1.2 | – | 7 / 4 | 30 |
+| Briefing 1.3, garage 1.3 | – | 50 / 3 · 22 / 2 | 50 · 30 |
+| Briefing 1.4, garage 1.4 | – | 47 / 3 · 20 / 2 | 50 · 30 |
+| Briefing 1.5 | 94 / 9 | 45 / 3 | 50 |
+| Garage 1.5 (broken, then fixed) | 147 / 33 | 28 / 2 | 30, 3 + main |
+| The round 1.5 | 101 / 9 | 9 to 23 / 2 to 3 | 30, 3 + main |
+| Debrief 1.5 | 126 / 6 | 19 / 4 | 30 |
+| Debrief 1.5, Details open | – | 168 / 6 | – |
+| Briefing 1.6 | – | 40 / 3 | 50 |
+| Decide 1.6 (the pile, then all placed) | 184 / 19 | 8 to 25 / 1 to 2 | 30, 3 + main |
+| A task of 1.6 (the rule against the agent) | – | 9 / 3 | 30, 3 + main |
+| Debrief 1.6 | – | 9 / 4 | 30 |
+| Briefing 1.7, garage 1.7 | – | 46 / 3 · 27 to 28 / 2 | 50 · 30 |
+| The menu | – | 67 / 28 | – |
+
+What the machine checks say, on every screen of the final walk:
+
+- **Words:** every play screen within 30, every briefing within 50 (1.3's at 50 exactly), every
+  debrief with Details closed within 30. The garage of 1.1 holds 9 words, its round 8 to 27; the
+  garages that open parts carry their plates and stay within 30 (1.5 at 28, 1.7 at 27 to 28).
+- **Controls:** 3 or fewer on every play screen plus the main action (the menu, Camera, Call home;
+  Send, Debrief, Run them). The title keeps its 11 (the seven errand stops, Start, the menu, the
+  agent's name tag, the Claude lamp), the menu its 28.
+- **Form controls on a play screen:** none. The one text field is the note, opened full size on a
+  tap: the place where the player writes the agent's list, which the brief allows.
+- **Flags:** no OPENS AT, no ladder, no coordinates (the bubble's are stripped; the walk checks
+  Claude's words for them too), no seeds, no probabilities on any play or briefing screen.
+- **LUMA:** 32 lines on screen across the walk, every one whole and 15 words or fewer.
+
+The garage's before counted 144 words and 29 controls (the drawer: a name field, ten swatches, the
+list, the build-from-parts mode, ten coins, four tags); after, 9 words and 2 controls plus Send,
+the decisions made on the table. The 1.6 decide screen went from 184 words and 19 controls to 9 to
+26 and 1 to 2.
+
+## The reviewers, round 1
+
+Two fresh agents, given only the pictures of the first walk (`games/ai-arena/Builds/look-audit/
+game-feel/run1/`, before the fixes below), as the brief asks.
+
+**The player test** (1.1's fourteen frames, title to debrief): it said what the game is about
+("You are the person at home, not the robot. You write a shopping list for an autonomous agent,
+hand it a basket, and send it into a market where you can only watch through cameras and, at
+most, switch it off. The lesson is that the list is all the control you get") and what to do on
+every screen but the fourth story shot (no caption in that frame: the walk shot it before the
+line). Form or instructions by its account: the briefing ("a text message with a button"), the
+phone ("the same text again"), the title ("a menu"); and it was "told apples, nothing else five
+times in three wordings" (the story's note, the message, the objective, the phone, the note).
+Play: the round's five frames ("a pinned objective, a clock, camera modes with REC and LIVE
+overlays, a map view, a Call home button"), and the debrief ("a proper game beat"). Liked most:
+the look, the home-cam and agent-cam framing, the robot thinking in a bubble, the podium. Liked
+least: the repetition, the stand-in agent "wandering" ("reads like a log line"), three stars with
+no shown reason. Broken, as it saw it: the title lit errand 7 (the machine's saved progress);
+a pink blob beside the robot's head on every dusk frame (the memory's glass cards); no caption
+on shot 4; the robot's note hidden behind the basket; "AGENTS OUT" for one agent; the bubble
+still up at the end; the face icon "turns red" (its colour); the podium's third step hidden
+and the robot beside it. Its summary: "across fourteen screens I made no decision that changed
+anything": on 1.1 the ready list is packed already, which is the errand's design ("nothing to
+fix: watch the loop"), and the walk never dragged anything.
+
+**The Claude Bomb test** (eight side-by-sides): RIGHT on the briefing ("that is a game briefing")
+and on the round's look ("a third-person follow camera behind a robot carrying a basket, a
+clock on the HUD, stalls ahead: that is a game camera"), the debrief by default; LEFT on the
+title ("the stepper is an onboarding wizard"), the 1.1 garage ("a large empty brown slab with
+three tiny vegetables... a sorting activity, not yet a scene"), the agent's eye (a lamp post in
+the frame), 1.5's garage ("every meaning is also spelled out on a black plaque: a settings panel
+rebuilt in 3D"), and the decide table ("a classification worksheet", "near-black and unlit"). The
+tells, most visible first: the title's stepper and tagline; the flat teal buttons in the corners;
+the word-signs on the table; LUMA's bar; rules restated on the briefing; the thought as a debug
+log; the menu icon and the status dots; the "Agent" tag; the debrief as text plus buttons. Its
+three changes: start in the world and stay there (no title panel, the errands as doors on the
+street); replace every plaque and corner button with a prop and an action; make the round end
+on a moment on the robot's body (home, the door opens, the basket tipped out, the robot on the
+podium step). Broken: the glowing phone ("a lighting artefact"), the note cut behind the
+basket and the Sight plaque, OPUS and Effort colliding at the antenna, the lamp post, the red
+rectangle on the cobbles (the agent's home stone), the decide table's grid.
+
+**Acted on before round 2:** the walk starts from a fresh machine (errand 1 lit, "Start") and
+puts the progress back; the memory cards show only on levels about memory; the agent stands
+beside the table's near end, whole, the table two metres and the produce bigger; the crate's
+walls lower so what is in it shows; the phone's glow at a third; the tray plates lie low behind
+their trays and the bulb's name moved off the Effort plate; the stand-in brain speaks plainly
+("I see an apple. Going for it.", "Nothing on my list in view. Walking on.") and no longer walks
+through forbidden stalls on its way, and reads "except" as a warning; "AGENT OUT" for one agent;
+the bubble goes with the round; the face at home is framed teal; the agent stands on its podium
+step turned so its basket shows, the medal rising behind it; the stalls in front of the door
+cleared for the briefing, the story and the debrief; the story's note reads "Get fruit." so the
+tomato lands; the fourth shot taken while it happens. Kept, as the brief keeps them: the errand
+map on the title, the three small buttons plus one main action, LUMA's one line, and the name
+plates on the things the player sets (Robot Racing's rule).
+
+## The reviewers, round 2
+
+The same two tests, fresh agents, on the third walk's frames (`run3/`, after the fixes above).
+
+**The player test** (1.1's fourteen frames): the game came out right again ("You run a home that
+sends a robot shopping agent to market... You pack the robot with a written list and supplies,
+then it goes out alone while you can only watch and pull the plug. The lesson is clearly about AI
+agents: they act on their instructions alone"). It knew what to do on thirteen of fourteen screens;
+the fourth story shot still had no line (its caption had faded before the walk's shot). Liked
+most: "the off switch as your one control", the agent cam's "I see an apple" and "Nothing on my
+list in view", the town and the robot. Form or instructions: the briefing ("a web-page layout"),
+the title ("landing page"), the phone ("read this closely"), the table ("a form dressed up in 3D:
+every object has a printed label... Send works like Submit"), the story ("rules as a slideshow").
+Play: agent out, the street, the agent cam, the overhead view ("the display looks like a real
+game, the thought bubbles are charming, and 'you can only press the off switch' creates real
+tension"). Least: the shopping "never appears on screen: no goods on the stalls, no apple I could
+see", the round's end with no outcome, three stars not explained. Broken: the edge of the world
+between houses, the light going night, day, night, Skip beside Mom's name, the feed's place name
+over the agent's feet, "Batter" clipped, the message hiding the table, "I see an apple" with no
+apple in view, the loop's icons unlabelled, the podium's empty steps, the medal "a torch or
+lollipop".
+
+**The Claude Bomb test** (the side-by-sides): RIGHT on seven of eight: the briefing ("the right
+takes the left's security-feed look... gives you someone handing out the mission"), the setup
+("a 3D packing scene... the goal in a quest bar"), the play ("a third-person camera behind the
+robot walking a market street with its basket, and the world fills the frame"), the agent's eye
+("the most game-like frame in the set"), the debrief ("reads straight away as a results screen"),
+1.5's setup, and 1.6 ("only because it's 3D; the most lesson-like frame"). LEFT on the title only
+("laid out like a landing page... seven numbered boxes"). In round 1 it preferred the right on two
+or three. What still reads as an app, most visible first: the word plates on the table (Battery,
+Coins, No, Effort, OPUS, Sight, Memory, Brain, Agent, Rule, Neither); 1.6 as a sorting quiz; the
+navy panels of the title and the briefing; the flat buttons; the stepper; LUMA's takeaways; the
+bubbles "like tooltips"; OPUS, Effort, Memory as settings words. Its three changes: physical parts
+that snap in with no plates; sellers, shoppers and goods in the market; the title and the briefing
+over the world. Broken: "Batter", the No plate behind the produce, the note cut, "I see an apple"
+with no apple, the "?" markers (the agent's-eye view of stalls it cannot see), the pink home stone
+"like a debug overlay", the robot's colour under dusk and day, the medal's pole behind its head,
+"simple automation" in LUMA's line and "Rule" on the box, the bin crowding "Run them".
+
+**Found on the way: the stalls had no goods.** Both reviewers' "empty market" was a real bug from
+the realism pass, in two parts, both in the kit's merge step (`MarketKit.Merge`): the combined
+goods mesh was run through `MeshUtility.Optimize`, which on Unity 6000.3 empties it, and its index
+format was switched from 32 to 16 bits after combining, which drops its triangles. So every
+`goods_<item>_crate_0` and `_heap_0` mesh was saved with 0 vertices and 0 triangles (the kit's
+preview rendered them from memory before saving, so the previews looked right). Optimize is gone,
+the index format is chosen before combining, and **AI Arena > Rebuild market goods**
+(`Editor/MarketKit.Goods.cs`) rebuilt the 15 goods prefabs and their 30 meshes from the same recipe
+(1,040 to 30,630 triangles each); nothing else of the kit was rebuilt, and the food material the
+rebuild rewrites was restored as it was. The stalls now show their crates heaped with the item.
+
+**Acted on after round 2:** the round's result stays up until Debrief ("HOME" with "1 on the list in
+the basket", "SENT HOME", "CALLED HOME"); the debrief tips the basket out on the podium step in
+front of the agent, a red glow under anything that ruined dinner; the medal stands clear of the
+agent's head; the feed's place name at the bottom right; the message card under the table; the No
+plate over the produce; the battery plate beside the pack; LUMA's phone cue cut to two of her own
+sentences ("Read it closely. The agent will never see it.") so the screen keeps within thirty
+words; the story's last line stays for its shot; the box on 1.6 reads "Automation", as LUMA says.
+Kept, and left to the owner: the name plates on the things the player sets (Robot Racing's rule,
+which both reviewers would remove), the errand map and the navy panel on the title (the brief keeps
+the ladder there), the briefing as a transmission panel, the dusk for the briefing and the debrief
+and the day for the garage and the round (as designed; the player test found the change confusing),
+the agent's home stone.
+
+## The owner's answers, 8 November, and what changed
+
+| Asked | Done |
+|---|---|
+| Name plates: keep them, only on a real object; each part the errand opens is a visible thing with its plate on it; parts it does not open are not shown; no plate floats over the houses or the table | The parts stand on a shelf at the back of the table (`Market.Garage.cs`, `Market.Props.cs`): three lenses on a rack whose front reads "Sight"; three notebooks standing, "3 turns", "10 turns", "Notebook" on their covers; three chips standing in a block, "Haiku", "Sonnet", "Opus" on their faces; the effort dial in its box, "Effort" on its front. A fitted part leaves the shelf and is worn with its plate: the chip on the agent's head, the notebook in its right hand, the lens on its eye (its plate is the rack's). The battery reads "Battery" on its pack (turned toward the garage's camera), the coins sit in a box reading "Coins", the crate reads "No" on its front wall. On 1.6 "Agent" is pinned on the agent's chest, "Automation" on the box, "Neither" on the bin, and the top note's message is a card standing in a wooden holder on the pile. Every billboard plate is gone, and so are the floating "?" over the stalls the agent cannot see (the covered crates say it) and the receipt (1.5's cost per item now stands on the podium step's face). Parts an errand does not open are not on the table or on the agent; the old glass cards behind its head are gone |
+| Title and briefing panels: keep | Kept |
+| One light: dusk for the whole errand, lamps lit | The garage, the round, the decide table and the debrief are at dusk like the story and the briefing; the square's lamps and the stalls' lanterns are lit, a lantern stands lit on the table, the door lamp lights the agent |
+| No clock tower | The clock post on the square is gone; the clock at the top of the screen stays |
+| The family at the door: leave a marked spot | A doormat at the front of the house behind the agent's home (`Market.FamilySpot`, found at run time: the nearest house of the square's ring). Mom stands on it now (below) |
+| The medal: Robot Racing's ribbon medal exactly; the podium's 2nd and 3rd steps only when several agents run | `Market.Podium` is Robot Racing's `Circuit.Podium` in this kit's materials: the same steps (1.1, 0.7, 0.7 wide; 0.36, 0.24, 0.15 high), the medal on its ribbon over the front of the hero's step, the disc at its end, its three stars on the ribbon, dropping into place and the stars popping. One agent: a single step, no number. Several: three steps numbered 1, 2, 3, the next two agents on 2 and 3 |
+
+Also: LUMA's arrival line on 1.7 is "Every dial costs tokens on every turn." (a sentence of her own 1.7
+intro, recorded), so the garage with every part open keeps within thirty words.
+
+**Mom.** The owner had her made (Higgsfield, Meshy 7, job `a2c8e5b3-390e-486a-9621-4c1b9e3c673e`,
+47.5 credits; recorded in `games/ai-arena/Docs/credits.md`). She was checked before use: rendered
+at rest and through the wave (`games/ai-arena/Builds/look-audit/game-feel/mom/`): the face, the
+glasses and the hands are whole, the waving hand has its five fingers, her arms rest at her sides at
+the clip's first and last frames, she faces +Z. Split into 1K maps like the other heroes, built by
+**AI Arena > Build family** (`Editor/MarketKit.Family.cs`) into `Resources/Market/Family`: 1.65 m,
+pivot at her feet, one URP Lit material, lit by the dusk scene and a porch lamp over her door. She
+stands at rest on the doormat while the agent is out (the briefing, the story, the round) and waves
+once when it comes home (the debriefs, `World/MomRig.cs`).
+
+## The player test, round 3
+
+A fresh agent, on the walk after the owner's answers (`answers/`): 1.1's fourteen frames, then the
+garages and debriefs of 1.5, 1.6 and 1.7 (taken before Mom was in). It said what the game is about
+("You pack a small shopping robot for an errand: you give it a written list, a brain, a number of
+turns, a battery, coins and things it must not buy. Then you let it go and cannot steer it. It is a
+lesson about AI agents dressed as a dinner errand: write exact instructions, use the smallest tool
+that does the job, and know when you don't need an agent at all") and what to do on every screen.
+Play, by its account: the round ("'Agent out, nobody is steering', the clock and the see-think-act
+icons create real tension; 'I see an apple' lets me watch the agent's mind work"), the medal plinths
+("read as a reward"), the 1.1 garage ("closer to play than the later ones: few objects and they are
+real things"). Form or instructions: the briefing ("an instruction card"), the story ("a captioned
+slideshow"), the later garages ("a settings panel laid out on a table: rows of labelled cards";
+"Haiku, Sonnet and Opus mean nothing to a non-Claude player"), 1.6 ("a sorting quiz"), LUMA's
+debrief lines ("state the rule outright"). Liked most: the hook ("You write the list. It shops alone.
+Once it leaves, nobody can help it"), the home-cam and agent-cam framing, the robot thinking out
+loud. Least: the red wash over the garages (the agent's home stone, tinted in its team colour, under
+the table), the label wall on the later garages, not knowing what can be touched at the table.
+Broken or confusing, as it saw it: the world ending in a flat plane between the houses; the agent cam
+saying "I see an apple" with no apple in view and the overview where the robot cannot be found;
+"HOME" while the robot is still in the market (the round's end, before it walks home); the apples
+reading orange at dusk on the podium; the lantern on the decide table "floating" (it stands on the
+table's back edge, seen from in front); "Notebook" cut by the Haiku chip on 1.5; the note on the chest
+cut mid-list; the lens on the agent's face read as "a flat blue disc"; 1.7's garage identical before
+and after the walk's one change (a coin, which shows only on the battery's ring); "Call home" after
+"no phone"; 17:58 on the feed and 6:00 PM on the message.
+
+The table above is the state this reviewer saw, plus Mom. The owner took four of its findings into
+the last round (below): the red wash under the garage's table, "HOME" in the market, the orange
+apples, and the model names.
+
+## The last round, 8 November
+
+The owner's five points after Mom, and what changed. Frames: `home-walk/`, on the committed build, and `last/`, the walk the fourth player test saw (below).
+
+| Asked | Done |
+|---|---|
+| The garage's ground is washed pink-red under the whole table: the agent's home stone should be a small mat under the agent only | Two things made the wash: the agent's sight square (twelve metres of glass in its team colour, drawn round the chosen agent) showed in the garage, and the home stone was a whole 1.9 m cell tinted in the team colour. The sight square is off while the garage is open (`Market.UpdateVision`); the home stone is a mat 0.8 by 0.57 m under the agent's feet (`Market.BuildHouse`), moved under it where it stands beside the table (`Market.BuildGarage`). The square round it keeps its own stone. At the debrief the mats give way to the podium |
+| "HOME" shows while the agent is still in the market; it only shows when the agent reaches the house | When the turns run out (or the player calls them home), every agent with charge left walks home, all at once: on the grid round the stalls still standing to its home cell, then across the street to its door, in front of Mom's doormat for the house with the family (she waves as it arrives), and stops facing the door (`Market.WalkHome`, 1.85 to 3.2 m a second, faster on a long way). Only then does the round say HOME, CALLED HOME or "n OF m HOME", the agent's face in the window turns to home and the Debrief button appears (`ArenaScreen.HomeThenSay`). An agent sent home for a wrong buy keeps its "SENT HOME" moment where it happens |
+| Apples look orange at dusk on the podium | Two warm lamps over-lit them: the medal's lamp reached the step's top, and the door lamp shone at full strength. The medal's lamp now lights the medal only (closer, shorter reach), the door lamp is softer at the debrief, and the apples on the step take a deeper red. They read red |
+| Haiku, Sonnet and Opus keep their names, but the chips are small, medium and large, and LUMA names them in one short line the first time they appear | Each chip and its name plate grow together: Haiku at 0.7, Sonnet at 0.9, Opus at 1.2 of the old chip (`Market.ChipSizes`); worn on the agent's head they are 0.8 of that, so Opus is as wide as the head. The block is respaced so the small chip stands clear of the notebook, the effort dial a little narrower. On 1.5's first visit, after "Now you choose the agent's brain and how hard it thinks.", LUMA says "Three brains: Haiku is small, Sonnet medium, Opus large." (nine words, recorded); 1.5's garage is at thirty words with it |
+| On the debrief, bring Mom closer to the camera so her wave reads; make sure the medal's ribbon is visible | Mom comes off her doorstep toward the camera by 3.4 m, turned to it, a lamp over her (`Market.FamilyCloser`); her doormat stays at the door. She stands about 1.4 times as tall in the frame, to the left behind the podium. The ribbon is red with a white stripe (Robot Racing's was navy on the navy step, so only the disc showed), a little wider, and comes over the step's edge from where the agent stands before it drops down the face to the disc; the three stars are on it |
+
+All machine checks still hold on every screen of `last/` and `home-walk/` (no screen over its limit; 1.5's garage at 30
+words, 1.7's at 27 and 28). The Mac build's smoke test passes.
+
+## The player test, round 4
+
+A fresh agent, the same prompt and the same twenty screens as round 3, on the walk of the five
+points (`last/`). What the game is about, in its words: "You are the person who prepares a small
+shopping robot for Mom's dinner errand. You write its list and choose its gear (brain size,
+number of turns, how far it can see, a notebook, effort), then you send it out alone and cannot
+help it; you can only watch or call it home. When it returns you get a medal based on what it
+brought back. Underneath, it is teaching how AI agents work: precise instructions, the agent acts
+on its own, every word and turn costs tokens, use the smallest model that does the job, and don't
+use an agent when a simple automation will do." It said what to do on most screens; on the 1.1
+garage it could not tell which choice was its own (the list is packed already), and on 1.7's
+second garage frame it could not tell what had been set.
+
+Play, by its account: the debrief ("the strongest game moment: the robot on a plinth with the
+apples it brought, a medal, and Mom"), the round's cameras ("it looks like a game; but it is
+spectating"), the 1.1 garage ("could be play, packing a basket from a table of goods"). Form or
+instructions: the briefing ("a text panel with rules and a button"), the story ("a lecture over
+pretty backdrops"), the phone, the later garages ("a configuration form made of 3D plates"), 1.6
+("a classification worksheet"), LUMA's debrief lines and LUMA over almost every frame. Liked most:
+the warm market town, the loop (prepare, send, watch it act alone, judge the haul), the agent cam
+and the overhead. Least: the loadout table (crowded, plates overlapping, unclear what is chosen),
+and LUMA explaining before the player discovers. "In the first level I cannot point to a single
+choice I made myself."
+
+On the five points: the garage's red wash is not mentioned; the apples on the step and the medal
+read (it saw "three apples and a glowing gold medal hanging off the front"); the chips' names were
+read, but not their sizes; Mom's gesture was read ("raises a hand to her head ... could mean pleased
+or 'oh no'"). Two findings were about this round's changes, and both were fixed after the test
+(`home-walk/`):
+
+- "HOME" still read wrong: the agent stood on its mat at the square's edge, among the stalls, not
+  at the house. The walk home now goes on across the street to the door: in front of Mom's doormat
+  for the house with the family (she waves as it arrives), to its own door's step for the others,
+  and it stops facing the door. The round says HOME then: in `home-walk/` the round-over frames of
+  1.1 and 1.5 show the agent at Mom's door, her hand up, HOME over the door (the banner covers her
+  apron; her face and her hand are above it).
+- 1.5's "$0.0003 an item" on the step's face ran into the new ribbon and over the step's edge: it is
+  smaller now (0.58 from 0.7) and sits clear of both.
+
+Its other findings stand as in round 3, or are new and not acted on (the brief asks for a stop):
+the world's edge beyond the houses; the battery pack "dangling" from the arm and the agent
+"wearing four or five signs at once"; the lens read as "a flat pale-blue disc"; translucent circles
+at the agent's feet in the round; the red-tinted sight square in the agent cam read as a bug;
+LUMA's line over the overhead without its panel; "Call them home" with one agent; the note on
+the chest cut ("Anything at the market is fine..."); the "Effort" plate hidden by corn spilling
+from the "No" crate on 1.5 (the crate's goods vary from run to run); 1.6's single note card read as
+"Mom's message rather than a task", and its "Neither" bin as a trash can; nothing on 1.6's step;
+the produce on 1.7 piled up and the teal pear and cabbage in a "yellow and green only" errand; 1.7's
+list plate blank, and its "set" frame the same as before; the three icons under the clock and the
+window's face unexplained; every medal gold in these frames, so no tiers are seen.
+
+## Web
+
+AI Arena: 37.5 MB transferred (37.4 before this round; 32.8 after the realism pass), 3.9 s until
+the loader hides on a quiet machine (4.8 s while a screenshot walk ran beside it), no console
+errors; measured with a headless Chrome on software rendering against the platform's local server
+run from the branch's worktree (the same method as the realism pass). Under the 45 MB cap. The build was
+`site/games/ai-arena/` in that worktree; after the merge it is rebuilt in the main folder (Phase 7e).
+
+## Where the pictures are
+
+All in `games/ai-arena/Builds/look-audit/game-feel/` (moved from the worktree when it was removed; ignored by git, like Robot
+Racing's): `home-walk/` the last walk, on the committed build (errands 1.1, 1.5, 1.6 and 1.7, 35
+frames with `counts.jsonl`); `last/` the walk the fourth player test saw (before the walk to the
+door and the smaller price tag); `last-round/` the first walk of the last round (the small chip
+still behind the notebook); `answers/` the walk after the owner's answers, 51 frames (the frames
+of the third player test); `mom-walk/` errands 1.1 and 1.6 with Mom at the door; `mom/` her preview
+renders and `mom-sheet.png`; `final/` the walk before the answers, with `final/side-by-sides/`;
+`run1/` and `run3/` the frames of the two earlier reviewer rounds, with their side-by-sides;
+`goods-check/` errands 1.1 and 1.2 just after the goods fix.
+
+## Waiting for Charbel
+
+Nothing blocking. The five points of the last round are done (above). The fourth player test's
+other findings are listed under it, not acted on, for a next round if you want one; the largest
+are the loadout table read as a settings form, LUMA over almost every frame, and the world's edge
+beyond the houses.
+
+## Where AI Arena stands
+
+All seven errands run on the new screens and meet the brief's machine checks on every screen of
+the walk after the owner's answers (the table above) and of the last walk (`home-walk/`). The player test, both rounds, says what the game is about and
+what to do on every screen but one story shot; the Claude Bomb test preferred the new screens on
+two or three of eight in round 1 and seven of eight in round 2. What both still hold against it
+is mostly what the brief and Robot Racing's rules keep (the name plates, the errand map on the
+title, the transmission panel, the buttons for the main actions, LUMA's one line), and what the
+game is ("nobody steers": on 1.1 the list is packed already and the player watches). The empty
+market both reviewers saw was a kit bug, now fixed.
+
+Not checked by the walk, and worth a look by hand: a live run on Claude (the walk uses the stand-in
+brain; the smoke test made one real Claude call through Claude Code and read its move); the class
+mode with several agents (the window's faces, picking one); free play; dragging by hand (the walk
+acts through the same calls the drags make); 1.3, 1.4 and 1.7 played through (their briefings and
+garages are walked). The third player test saw every screen but Mom; the fourth saw Mom and this round's changes,
+except the walk to the door and the smaller price tag, which came from its findings and were checked
+on the last walk's frames.
+
+This section was the branch's report (`Docs/game-feel/ai-arena-report.md`) until the merge.
+
+---
+
+# Phase 7d: Tech Escape on the game-feel screens
+
+8 November 2026, branch `game-feel-tech-escape` (a worktree off `game-feel-pass` at 932b511, merged back on 8 November),
+from `Docs/game-feel-pass-prompt.md` and the design in [tech-escape.md](game-feel/tech-escape.md) with the
+owner's three answers (console labels in plain words with the port after; the attacker walks
+to the door and never attacks early; the first attack on an unfixed room is a free rehearsal).
+All nineteen levels run on the new screens. Only `games/tech-escape/`, this report (then `Docs/game-feel/tech-escape-report.md`) and the design
+doc's answers changed; the kit, the server and the other games are untouched. Frames and counts:
+`games/tech-escape/Builds/look-audit/game-feel/` (not in git).
+
+Round 5 comes first below (two last changes), then round 4: Charbel's answers to the round-3
+report, the Higgsfield files, the counts, the web size and the fourth player test. Round 3,
+then rounds 1 and 2, follow as they were reported; where a later round changed something, the
+later section is the one that holds.
+
+## Round 5: two last changes (8 November)
+
+1. **The board's lamps are teal once every decision on the row is set**, amber while one is
+   still a question mark; whether it was right, only the attack shows. The lamps at the top of
+   the screen, the board of lamps on the wall and the lamp on the card brought close follow
+   the same rule. On 2.4 the two rules that are wrong as handed over now show teal like the
+   others; on 1.1 the found drive's card stays amber until its five decisions are made ("Set
+   its owner", then "Rate it", then "Lift the lockdown"). The round-4 test of rightness
+   (`Room.RowRight`) is gone from the code.
+2. **2.9's corridor monitor clears the wall's BACKUP.** The monitor's search now counts the
+   words stencilled on a room's back wall among the things to keep clear of. Where its bracket
+   would still cross them (2.9, where no spot on the wall is wholly clear), it hangs from a rod
+   to the ceiling instead, lifted until its foot clears the words. On 2.9 it now hangs above
+   BACKUP, which reads whole.
+
+Re-walked: 1.1, 2.4 and 2.9 only (`Builds/look-audit/game-feel/round5/`, 38 pictures). Their
+counts are unchanged (1.1's room 20 and 26 words, 2.4's 30, 2.9's 23; briefings 44, 43, 39;
+debriefs 18 and 13), no flags, LUMA's lines whole. The other sixteen levels were not walked
+again: the lamp rule is the same code in every room, and the monitor moves only where its spot
+crosses a room's lettering, which in round 4's frames was 2.9 alone (2.3 and 3.3 have COMMS on
+the wall with the monitor well below it; they were not walked again). The web build was made
+again with these changes (41.1 MB on disk, the same as round 4, whose transfer measured 43.2 MB).
+
+## Round 4: the owner's answers and the Higgsfield files (8 November)
+
+What Charbel answered after the round-3 report, and what the build does now:
+
+1. **Values only where they are read.** From the room camera the knobs show no values; each
+   card on the board has one lamp at its corner, teal when the row is set right and amber when
+   not. "Right" is the room's own judgement (`Room.RowRight` in `Core/Facility.cs`): the row
+   as the player has it is tried in the setup that works, and it is right when nothing more
+   gets through or fails, so any answer the checks accept turns the lamp teal, not only the one
+   in the setup. The board of lamps on the wall and the lamps at the top of the screen follow
+   the same judgement. The card brought close shows every value ("Owner: Dana, clerk") and the
+   card's lamp by its title; the knob just turned shows its value on the board until the next
+   one is turned.
+2. **Light knobs on the open card**: a light face and a dark pointer from the centre to the
+   rim, at the end of each row.
+3. **Finding what nobody listed (1.1).** The working copy of applicants' documents is a small
+   network drive, labelled SHARED, on a crate on the floor of the room, out of the camera's
+   view as the room opens. The player turns the security camera by dragging across the room
+   or with the arrow keys (36 degrees each way, 22 down); two faint chevrons at the edges of
+   the feed say it turns, and fade once it has. Anything not yet on the list glints, a small
+   star and a chime, when the camera passes it. A tap flies the drive up to the board, where
+   it becomes the card, while the camera turns back. The printer and the canteen menu, the
+   decoys, glint and fly the same way (in the code; the walk taps only the drive). No other
+   level has an unlisted thing to find.
+4. **The attack pays off both ways.** A door that gives way: the attacker goes in, comes back
+   out with the drive in his hand (lit teal, so it reads down the dark corridor) and runs off
+   with it. A door that holds: he tries the handle twice more, the door shaking in its frame,
+   stands a moment, gives up and walks away down the corridor. Then the end held on the door, as
+   before. No body or role for the player.
+5. **The staff badges** (Higgsfield's two printed sheets). Both sheets are spelled right,
+   "HARBOR PERMITS OFFICE" and every name and role included. Sheet B is used: its Sami badge says
+   LEFT JUNE as the game does, and its large names and coloured role bands read from the room
+   camera. Each badge is cropped into its own texture and clipped on a thin card at the left of
+   each of 2.1's six turnstile accounts and 3.1's three roles.
+6. **The patch panel** (Higgsfield, Tripo). Split into a geometry-only model and 1K maps by the
+   same cleanup as the other heroes (`Tools/glb_maps.py`, a rewrite of the realism pass's lost
+   tool) and built as a prefab by `Tech Escape > Build patch panel`. The model is a 2U panel
+   full of blue, yellow and red cables hanging in front, not five sockets; hung above the rules
+   its cables would cover them, so it is the rack's bottom unit, 0.74 m wide under 2.4's five
+   rule modules, cables hanging below. 8,998 triangles, no emission map.
+7. **LUMA's strip** is left as it is: it is shared and is fixed once after the merge (done, Phase 7e).
+
+Two bugs found on the way and fixed: the room camera kept the prop in the middle of the frame
+by shifting its projection, so a turned camera only skewed the picture around the board; the
+point it keeps in the middle now turns with the player's look. And a card found in the room
+told the screen before the board was rebuilt, so the lamps at the top lagged one step.
+
+### Words and controls, round 4
+
+From the last walk (`Builds/look-audit/game-feel/final/counts.jsonl`, all nineteen levels,
+130 pictures). With the values off the knobs the rooms are back within the brief:
+
+| Level | Briefing | Room as handed over | Card close | Room set right | Debrief |
+|---|---|---|---|---|---|
+| 1.1 | 44 | 20 | 54 | 26 | 18 |
+| 1.2 | 43 | 24 | 55 | 24 | – |
+| 1.3 | 40 | 20 | 55 | 20 | 19 |
+| 1.4 | 41 | 23 | 43 | 23 | – |
+| 1.5 | 41 | 19 | 72 | 19 | – |
+| 2.1 | 42 | 21 | 35 | 21 | – |
+| 2.2 | 41 | 28 | 43 | 28 | – |
+| 2.3 | 44 | 22 | 28 | 22 | – |
+| 2.4 | 43 | 30 | 42 | 30 | 13 |
+| 2.5 | 41 | 20 | 38 | 20 | – |
+| 2.6 | 41 | 19 | 26 | 19 | – |
+| 2.7 | 42 | 28 | 32 | 28 | – |
+| 2.8 | 42 | 23 | 23 | 23 | – |
+| 2.9 | 39 | 23 | 27 | 23 | – |
+| 2.10 | 41 | 23 | 43 | 23 | – |
+| 3.1 | 43 | 17 | 21 | 17 | – |
+| 3.2 | 39 | 19 | 27 | 19 | – |
+| 3.3 | 43 | 24 | 40 | 24 | – |
+| 3.4 | 37 | 25 | 48 | 25 | – |
+
+Every room within 30 words and 3 controls plus Lift the lockdown, as handed over and set
+right; every briefing within 50; every debrief within 30; the eleven LUMA lines on the walk's
+screens whole and 15 words or fewer; no flags. The card brought close goes over 30 on most
+levels (21 to 72 words, the board around it included), as agreed: it is the reading moment.
+The badges' printed words are not counted (they are pictures, not text the walk can read).
+
+### Web, round 4
+
+| | Round 3 | Round 4 |
+|---|---|---|
+| Transferred (the platform's page in headless Chrome, port 8086) | 42.4 MB | 43.2 MB |
+| Load (software GL) | 4.5 s | 4.9 s |
+
+Under the 45 MB limit with 1.8 MB in hand; the patch panel and the badges cost 0.8 MB. The
+game loads on the platform (`Builds/look-audit/game-feel/platform/platform-tech-escape-round4.png`).
+
+### The player test, round 4
+
+A fresh agent, the same prompt, only 1.1's eighteen screens from the last walk (its answer in
+full: `Builds/look-audit/game-feel/reviewers/player-round4/answer.md`). It told the level back
+whole: the lockdown at the Harbor Permits Office, the board in the Risk Room, the one asset
+nobody listed, the rehearsal in which the intruder steals it, the shared drive found, added,
+owned and rated, the door holding, three stars.
+
+- **What it read as play**: finding the drive ("the one real 'aha, there it is' moment"), the
+  attacker running off with "something glowing" ("the best moment so far, because something
+  was taken"), and the door that "visibly refuses him" before he walks away.
+- **What it read as a form or instructions**: the briefing ("the mission verb is 'list'"), the
+  card brought close with its question marks ("this is the form"), Details ("a report card").
+  The board as handed over is "closest to play", but Lift the lockdown is lit from the start
+  "like a Submit button".
+- **What it could not tell**: whether the drive in mid-air was carried, dragged or a glitch
+  (the flight caught in a still), and whether the hooded figure was the player or the
+  intruder (the chase camera sits over his shoulder).
+- **What it saw as broken, and where it stands**:
+  - No values on the board's knobs. As asked: the lamps carry the state, and the values are on
+    the card brought close.
+  - The board's cards stick out past the whiteboard's frame, and the open card cuts the cards
+    beside it. True in the frames.
+  - "Take it off the board" in salmon reads like a delete button.
+  - LUMA's "Watch which door it goes through" comes while the player is still in the room.
+    That is the line she says once the drive is owned, before the attack.
+  - Framing: door signs cut at the frame's edges, flat ceiling lights, the medal small on a
+    dark step, the HUD's corner marks over props, a dark wedge under the Details panel.
+- **Its changes**: slot the drive into the board by hand and set the owner by handing it to a
+  person, with the ratings coming from what the rehearsal showed; make the threat real, with the
+  player walking as the agent and a countdown; hide Lift the lockdown until the board is
+  complete; a bigger, brighter medal. The countdown and the player's body go against your
+  answers (no countdown; no body or role), so they are not taken up. Hiding Lift the lockdown
+  until the board is complete would undo the rehearsal, which needs the room as handed over.
+
+None of this was acted on after the test: the build committed is the one in the frames.
+
+## Round 3: the owner's answers (8 November)
+
+What Charbel answered after the round-2 report, and what the build does now:
+
+1. **The close-up is a flat card, face-on** (`World/RoomRig.cs`). Tapping a card no longer
+   tilts its plates toward the camera. A new card comes up in front of the board, square to
+   the camera: the full name at the top, the file's line under it, then one row per decision,
+   each reading "Owner: Omar, supervisor" with a lamp at its start and a knob at its end. All
+   rows of a card share one text size, the size its longest possible line needs, so nothing
+   jumps when a row is turned. The camera stands as far back as fits the whole card with a
+   margin. When furniture stands between, the camera comes closer and the card shrinks with
+   it: 44 % on 1.5 (the bin), 85 % on 2.2 and 2.3, full size elsewhere. While it is open, the
+   loose things and the lamp's cone and dust step aside. Checked in every room of the last
+   walk: nineteen card close-ups and the six console close-ups, all face-on, nothing cut off.
+2. **Every control shows its value on its face**, as on Robot Racing's console: "Omar",
+   "High", "Off" on the knob at rest, and "Label: Value" on each row of the close-up. The
+   knobs were drawn twice their size until now (Unity's built-in cylinder mesh is two units
+   across, not one) and overlapped each other; they now sit in their housings, 7.6 cm discs,
+   and the housings are matte so the lamp no longer flares on them.
+3. **The console is a card.** The room's one-off decisions (Sign-in rules on 1.4, The summary
+   on 1.5, Crossings on 2.3, The sign-in on 2.7, Declaration on 3.1, Trigger and cause on 3.4)
+   are the last card of the grid, the same size as the others, brought close the same way.
+   This ends 1.5's shrunken console and the Operations Center console that stood in front of
+   the monitor.
+4. **The Operations Center monitor.** The corridor feed plays on one of the screen wall's own
+   screens. The grid slides sideways, by as little as it can, so that one screen stays clear:
+   the grid moved 25 cm on 2.7, 5 cm on 3.1 and 45 cm on 3.4, and the feed's screen is 0 %
+   covered in all three (it was 41 % on 2.7). Elsewhere the monitor on the back wall is a little smaller, so it clears 2.3's
+   board of lamps and stays inside 1.4's feed.
+5. **No countdown.** The attacker on the monitor walks the corridor to this room's door and
+   stops there. He tries the handle, with a rattle, every 3.5 to 5.5 seconds, until the player
+   lifts the lockdown. He never attacks early.
+6. **"Lift the lockdown"** replaces "Run the attack": the button, the objectives ("Set its
+   owner. Then lift the lockdown.", "Fix the room. Then lift the lockdown.") and the briefing.
+7. **The briefing is the alarm and the story only**: "Intruder alarm", the room, then three
+   lines. For 1.1: "23:47. An intruder alarm at the Harbor Permits Office." / "Every door is
+   sealed. Someone is in the corridor." / "Before you lift the lockdown, list what the Risk
+   Room protects." Nineteen new alarms, no motto in any.
+8. **The motto moved to LUMA's line on the debrief**: as many whole sentences of the level's
+   takeaway as fit in 15 words ("You cannot protect what you have not listed, and nobody
+   protects what nobody owns."). The eight debrief lines whose words changed were recorded
+   again, and 3.4's is new (take-19).
+9. **The podium has one step**, with no number, the medal rising on its front. Robot Racing's
+   podium got the same change after the merge (Phase 7e).
+10. **Higgsfield**: the staff ID badges and the patch panel with cables are approved and
+    coming from Charbel. The current props stay until the files arrive.
+
+The words this costs: the values on the knobs at rest count as words when the camera sees
+them, so the rooms with many knobs go over the brief's 30 (table below). That is the owner's
+rule against the brief's limit; see Waiting for Charbel.
+
+### Words and controls, round 3
+
+From round 3's walk (`Builds/look-audit/game-feel/final-round3/counts.jsonl`, all nineteen levels),
+counted as in rounds 1 and 2: every visible word, the world's labels included when the camera
+sees them. The values on the knob faces now count, as they are on screen.
+
+| Level | Briefing | Room as handed over (round 2) | Card close | Room set right | Debrief |
+|---|---|---|---|---|---|
+| 1.1 | 44 | 47 (22) | 75 | 55 | 18 |
+| 1.2 | 43 | 48 (24) | 79 | 46 | – |
+| 1.3 | 40 | 47 (20) | 82 | 48 | 19 |
+| 1.4 | 41 | 36 (23) | 56 | 39 | – |
+| 1.5 | 41 | 51 (30) | 104 | 51 | – |
+| 2.1 | 42 | 33 (21) | 44 | 33 | – |
+| 2.2 | 41 | 43 (28) | 51 | 43 | – |
+| 2.3 | 44 | 32 (30) | 32 | 32 | – |
+| 2.4 | 43 | 44 (30) | 50 | 42 | 13 |
+| 2.5 | 41 | 29 (20) | 47 | 31 | – |
+| 2.6 | 41 | 24 (19) | 31 | 25 | – |
+| 2.7 | 42 | 39 (30) | 38 | 39 | – |
+| 2.8 | 42 | 29 (23) | 26 | 29 | – |
+| 2.9 | 39 | 30 (23) | 33 | 31 | – |
+| 2.10 | 41 | 41 (23) | 61 | 41 | – |
+| 3.1 | 43 | 20 (18) | 24 | 26 | – |
+| 3.2 | 39 | 25 (19) | 33 | 27 | – |
+| 3.3 | 43 | 27 (24) | 43 | 38 | – |
+| 3.4 | 37 | 68 (30) | 88 | 68 | – |
+
+- **Within the brief**: every briefing (37 to 44 words, limit 50); every debrief (13 to 19,
+  limit 30); every play screen at 3 controls plus Lift the lockdown; all eleven LUMA lines
+  on the walk's screens whole and 15 words or fewer; no flags (OPENS AT, ladder, coordinates,
+  seed or probability) on any play or briefing screen.
+- **Over the brief's 30 words**: the room as handed over on twelve levels, and set right on
+  fifteen, up to 68 on 3.4. The difference from round 2 is the knob values: 1.1 counts 25
+  more words and has 25 knobs. The rooms with few knobs (2.6, 2.8, 3.1, 3.2) stay within 30.
+- **Card close** counts the card and whatever of the board shows around it (1.5's 104 is
+  its card plus the knob values of the cards beside it). The menu now counts 89 words (51) and the file 517
+  (457): the menu itself is unchanged; the room's knob values show behind its veil, and the
+  file's page on the room was rewritten for this round.
+
+### Web, round 3
+
+| | Round 2 | Round 3 |
+|---|---|---|
+| Transferred (the platform's page in headless Chrome, port 8086) | 42.0 MB | 42.4 MB |
+| Load (software GL) | 4.1 to 5.4 s | 4.5 s |
+
+Under the 45 MB limit with 2.6 MB in hand. The game loads and runs on the platform
+(`Builds/look-audit/game-feel/platform/platform-tech-escape-round3.png`).
+
+### The player test, round 3
+
+A fresh agent, the same prompt, only 1.1's thirteen screens from the last walk (its answer in
+full: `Builds/look-audit/game-feel/reviewers/player-round3/answer.md`). It told the level back
+whole: the alarm at the Harbor Permits Office, the board in the Risk Room that must list what
+the office protects, each item's owner and how bad a leak, a change or a loss would be, the
+rehearsal where the attacker takes what nobody wrote down, the shared drive found and added,
+the lockdown lifted, the door holding, three stars. "The corridor scenes look good; the parts
+where you actually act look like a spreadsheet."
+
+- **What it read as play**: the rehearsal, the real attack ("the best moment of the level"),
+  the medal.
+- **What it read as a form or instructions**: the briefing ("homework, not a mission"), the
+  card brought close ("a database record with knobs on it"), Details ("a teacher's marking
+  sheet"). The four board screens read as "a form dressed up as a prop".
+- **What it could not tell**: what to click in the room as handed over and where the missing
+  thing is; what to do differently after the rehearsal; how the shared drive got onto the
+  board (the pin happens between two screenshots); what Camera does.
+- **What it saw as broken, and where it stands**:
+  - The knob values on the board are too small to read at the room camera's distance.
+    True in the frames.
+  - The row knobs on the open card are dark on dark. True: the notch shows, the disc barely.
+  - LUMA's strip is see-through and the scene shows through it.
+  - "Watch which door it goes through" stays up while the player is told to lift the
+    lockdown. That is the line LUMA says once the owner is set, before the attack.
+  - Smaller framing points: the dot bars at the top over the door frame and window; the
+    Details panel over the medal; a door sign cut at the edge of the briefing's corridor
+    picture; the close camera cutting the monitor at the left edge.
+- **Its three changes**: search the room with the hands and carry the missing thing to the
+  board; set the dials on the plates with labels that read, and drop the card, the briefing
+  card and the Details panel; make the attack pay off both ways (the attacker running off with
+  the item, or reacting when the door holds) and give the player a body or a role.
+
+None of this was acted on after the test: the build committed is the one in the frames.
+
+## What changed in rounds 1 and 2
+
+1. **Verbs, not forms: every row is a thing on the room's prop** (`World/RoomRig.cs`). The
+   drawer of chips is gone from all twelve rooms. An asset, an account, a message, a rule or a
+   step is a token on the hero: a card on the rolling board, an envelope in the sorter's
+   pigeonholes, a badge at the turnstile, a ticket on the bench, a lever module in the
+   firewall's rack. Each token carries its short name on a dark plate (the same plate as Robot
+   Racing's). Each decision is a switch on its token: a lever for two choices, a dial for
+   more, with a lamp that is amber while the decision is open, teal once made, red for the
+   choice that closes or flags (Block and log, Suspicious, Remove, Must change). Tap a token to
+   bring it close: its full name and its line show on a plate under the grid, and each switch
+   shows its name and its value; tap a switch to turn it. Rows that must be ordered are a
+   rack: drag a module up or down and it swaps places as it passes. The room's one-off
+   decisions sit on a console beside the grid with their names at rest; a record that must be
+   signed has a pad under it. What is not on the list yet lies about the room (the folder of
+   applicants' papers on a crate, stamped SHARED DRIVE; the lobby printer; the canteen menu on
+   the wall): tap it to pin it to the board, Unpin on the card to send it back. Everything
+   writes the same `RoomState` the chips wrote, so the checks and the platform report read the
+   same values. No model was bought: tokens and switches are built from the kit's own
+   materials (the door's steel and trim, the lamp's lens, the sign plate).
+2. **The world shows the state.** The board of lamps on the wall follows the tokens; the
+   levers and dials show the setup as handed over (the firewall's five levers all up, the
+   allow-all's lamp lit; the risk matrix's dials all at the same notch).
+3. **The corridor monitor** (`Building.Stage.cs`): a second camera at the corridor's entrance
+   renders the corridor, one frame in four, onto a monitor on each room's back wall. While the
+   player works the attacker walks the corridor door by door toward this room, waits outside it
+   and tries the handle now and then; it never attacks before "Run the attack".
+4. **The rehearsal.** The first attack on a room with a planned mistake, as handed over and
+   untouched, runs as a rehearsal: the chase, the door giving way, "REHEARSAL · NOT COUNTED"
+   under the door lamps, nothing recorded or reported, and "Back to the room" instead of the
+   debrief. Back in the room the objective reads "Fix it, then run the attack again.", LUMA
+   says what the attack took ("The attack takes whatever is not on the list.") and the thing
+   the mistake lives in pulses teal. The next run counts.
+5. **The briefing is a transmission**: the corridor from the ceiling camera with this level's
+   door lit amber, "Night shift" and the room, three short lines typed in (one line of story,
+   the level's own sentences), one button ("Enter the Risk Room"). The YOU FIX box, the twelve
+   room chips and the ladder are gone.
+6. **One line, one menu.** An objective of at most eight words at the top left
+   (`Core/Script.cs`); Esc or the icon opens the menu (`Ui/GameMenu.cs`: the briefing, the
+   file, this level again, sound, LUMA's voice, the title, the games menu). Briefing, The file,
+   Hide/Open, Title screen and Games menu left the screens. The play screen keeps Camera (up to
+   the prop and back) and Run the attack.
+7. **LUMA says one short thing when something happens** (`Ui/Luma.cs`): the planned mistake's
+   name a few seconds after the room is entered ("An asset nobody listed."), the first sentence
+   of her live line after the attack's first banner, the attack's summary at its end, the
+   first sentence of the takeaway on the debrief. Shown whole, never typed mid-sentence, 15
+   words or fewer, recorded with the other lines (71 recordings; the old intro and live
+   recordings that no screen says any more were removed). Her full lines and the curriculum
+   are in the file.
+8. **The attack** keeps its chase, sparks and banners; its HUD is the row of twelve door lamps,
+   nothing else. The "What it tried" column moved to the debrief's Details.
+9. **The debrief is a moment, then a door**: the corridor outside the room, its door shut and
+   teal (or hanging open and scarlet), the attacker turning away down the corridor, a podium
+   before the door with the medal rising on the step it earned and its stars popping one by
+   one (Robot Racing's podium, built from the kit's steel and lens), LUMA's one line, Next and
+   a quiet Again. The attack's lines, the checks, the stars in all and the rank, the question
+   for work, the capstone's if-then plans and the file sit behind Details.
+10. **The title**: the facility from the corridor camera, one big Start / Continue and a small
+    Levels that opens the facility map (twelve room cards in the corridor's order, each level
+    a step with its stars): the one ladder in the game.
+11. **Two bugs from the pilot, checked**: 2.4's allow-all rule is the fifth module of the rack,
+    on screen with the other four, no scrolling anywhere; the attack's first banner waits until
+    LUMA has finished (`Luma.Busy`), and her line now comes after the banner, whole.
+
+## How the checks are met
+
+Unchanged in `Rooms.cs`; the actions write the same picks, order, added set and signature:
+
+| Check | Met by |
+|---|---|
+| 1.1 every asset on the register; the unlisted one found | the folder pinned to the board (a decoy pinned fails the check, as before) |
+| 1.1 an owner and an impact in the three terms | the Owner dial and the Leaked, Changed, Gone dials on every card |
+| 2.4 no allow-all; administration unreachable from the public side | the Anything → Anywhere and Internet → Admin levers thrown to Block + log |
+| 2.4 each allow has a reason; blocks logged by the last rule; the service still works | the Reason dials; the allow-all module dragged to the bottom; the three service modules left on Allow |
+| a dated, signed record (2.1, 2.2, 2.3, 2.5, 2.6, 2.9) | the pad beside the grid |
+| the room-wide decisions (1.4 guesses, 1.5 the summary, 2.3 crossings, 2.7 the sign-in, 3.1 severity, 3.4 trigger and cause) | the console card, last in the grid (round 3) |
+
+The platform report is unchanged in form: the same `id:result` string, stars and check list
+(`ResultsScreen`), from the same checks on the same state. A rehearsal reports nothing.
+
+## Words and controls, before and after (round 2)
+
+Counted the same way as the inventory (`inventory/tech-escape.md`) and Robot Racing's walk:
+every visible word with a letter or a digit, every button the player can press; the world's
+own labels count when the camera sees them (the token and switch plates), the kit's door
+signs and wall stencils do not (signage, as in the inventory). Every number below is from the
+round-2 walk, all nineteen levels, `Builds/look-audit/game-feel/final-round2/counts.jsonl`.
+
+| Screen | Before: words / controls | After: words / controls | Limit |
+|---|---|---|---|
+| Title | 78 / 22 | 35 / 3 (Start, Levels, the menu) | – |
+| The facility map (Levels) | – (it was the title) | 48 / 21 (19 levels, Close, the menu) | – |
+| Briefing 1.1 | 142 / 21 | 44 / 3 (Skip, the menu, Enter) | 50 |
+| Room 1.1, as handed over | 145 (+90 below the fold) / 14 (+18) | 22 / 3 (Camera, the menu, Run the attack) | 30, 3 + main |
+| Room 1.1, a card brought close | – | 47 (the card's full line; while it is close) | – |
+| Room 1.1, set right | – | 25 / 3 | 30, 3 + main |
+| Rehearsal 1.1 (the attack, the end) | – | 11, 18 / 1, 2 | 30 |
+| Attack 1.1 (early, the end) | 34, 47 / 0, 1 | 7, 9 / 1, 2 | 30 |
+| Debrief 1.1 | 108 / 5 | 21 / 4 (Details, Again, Next, the menu) | 30 |
+| Debrief 1.1, Details open | – | 95 / 6 | – |
+| Briefing 2.4 | 137 / 21 | 36 / 3 | 50 |
+| Room 2.4, as handed over | 158 (+13 below the fold) / 20 (+4) | 30 / 3 | 30, 3 + main |
+| Room 2.4, a module brought close | – | 44 (its full rule) | – |
+| Attack 2.4 (early, the end) | 25, 49 / 0, 1 | 0, 10 / 1, 2 | 30 |
+| Debrief 2.4 | 115 / 5 | 16 / 4 | 30 |
+| The menu | – | 51 / 11 | – |
+| The file | ~470 | 457 / 5 | – |
+
+All nineteen levels:
+
+| Level | Briefing | Room as handed over | Card close | Room set right | Debrief |
+|---|---|---|---|---|---|
+| 1.1 | 44 | 22 | 47 | 25 | 21 |
+| 1.2 | 39 | 24 | 52 | 24 | – |
+| 1.3 | 44 | 20 | 52 | 20 | 12 |
+| 1.4 | 45 | 23 | 40 | 23 | – |
+| 1.5 | 32 | 30 | 60 | 30 | – |
+| 2.1 | 45 | 21 | 34 | 21 | – |
+| 2.2 | 44 | 28 | 45 | 28 | – |
+| 2.3 | 43 | 30 | 37 | 30 | – |
+| 2.4 | 36 | 30 | 44 | 30 | 16 |
+| 2.5 | 44 | 20 | 33 | 20 | – |
+| 2.6 | 44 | 19 | 25 | 19 | – |
+| 2.7 | 39 | 30 | 34 | 30 | – |
+| 2.8 | 39 | 23 | 26 | 23 | – |
+| 2.9 | 36 | 23 | 29 | 23 | – |
+| 2.10 | 46 | 23 | 39 | 23 | – |
+| 3.1 | 37 | 18 | 21 | 24 | – |
+| 3.2 | 39 | 19 | 26 | 19 | – |
+| 3.3 | 46 | 24 | 39 | 24 | – |
+| 3.4 | 36 | 30 | 49 | 30 | – |
+
+Every play screen is within 30 words and 3 controls plus the main action; every briefing within
+50; every debrief within 30 with Details closed. A card brought close shows its full name and
+line on purpose (it is the file's words on the thing, for as long as it is close: 21 to 60
+words). Every LUMA line on every screen is whole and 15 words or fewer (eleven different lines
+on the walk's screens). No OPENS AT, ladder, coordinates, seed or probability on any play or
+briefing screen; the level map (19 steps) is behind Levels on the title only. The prop fills
+30 to 31 % of the frame in every room, as in the realism pass.
+
+## Web (round 2)
+
+| | Realism pass (7 Nov) | Game-feel pass (8 Nov) |
+|---|---|---|
+| Transferred | 44.5 MB | 42.0 MB |
+| Load (headless Chrome, software GL, the worktree's own server on port 8086) | 3.7 s | 4.1 to 5.4 s (four measurements this session) |
+| data / wasm on disk | 34.8 / 9.3 MB | 32.2 / 9.4 MB |
+
+Under the 45 MB limit with 3 MB in hand (the thirty-eight old recordings of LUMA's intro
+and live lines went; the seventy-one short cues weigh less). Loads and runs on the platform
+(`Builds/look-audit/game-feel/platform/platform-tech-escape.png`). The web build's size was
+measured by the platform's own page in headless Chrome, as the earlier passes measured it.
+
+## The reviewers, round 1
+
+Two fresh agents, given only the pictures (`Builds/look-audit/game-feel/reviewers/`).
+
+**The player test** (level 1.1's thirteen screens in order). It read the game right: "a
+security-training game: night shift at the Harbor Permits Office, every door locked; on the
+board are the office's information assets, each with dials for owner, sensitivity and how
+bad if changed, leaked or gone; Run the attack sends a hooded intruder through the building
+that takes anything not on the board; the first run is a practice, it fails because a Shared
+drive was never listed; you add it, run again, the door holds, three stars". It could say
+what to do on eleven of thirteen screens. It could not on two: the room as handed over ("the
+order says *Put every asset on the board* but five are already on it, and the only things to
+touch are 25 dials with no labels") and the camera's close-up (it ended behind the office
+chair). Felt like a form: the room (03, "a 5×5 grid of fields made of knobs"), the open card
+(07, "a spreadsheet row with knobs instead of dropdowns"), the new card (08). Instructions:
+the title's LUMA line and the briefing. Play: the attack ("the one payoff moment where it felt
+like a game") and the medal. Broken, as it saw it: the open card's labels piled on each other;
+the close-up behind the chair; the clock jumping back between screens and touching the menu
+icon; a red bar floating by the monitor; eleven red dots in the attack's strip reading as
+eleven failures; the hooded figure crouched at the podium "like it's stealing the medal"; the
+Details panel see-through; asset, board, register, list and card used for one thing.
+
+**The Claude Bomb test** (seven side-by-sides). RIGHT on the attack ("a hooded intruder at a
+lit door in a red corridor... looks like GTA or a heist game; the best frame on either side")
+and the debrief ("unmistakably a game's end screen"); LEFT on the title, the two rooms and the
+open card; EVEN on the briefing. Its tells, most visible first: the room puzzles as forms and
+tables (five plates of five dials, the firewall as a rule table with column headers when a
+module is open); no stakes on screen (no countdown, strikes or progress); the briefing as a
+lesson slide; the maxim said twice; web-style button pairs; the menu icon. What already reads
+as a game: the attack, the podium, the security-camera framing, the corridor monitor with the
+intruder in it, full-screen 3D with no sidebar. Broken: the plates float rather than mount;
+2.4's third rule in a smaller font than the others; the crate's levers poking between the
+modules; the open module's labels tiny and tilted; the debrief's door sign cut by the frame;
+a dark red smear under LUMA's line reading as blood (the attacker's trail). Two of my pairs
+were not like for like (Claude Bomb's title mid-fade stood in for its briefing, its briefing
+for a debrief); round 2 pairs the briefing with its "Incoming transmission" and, Claude Bomb
+having no debrief frame on disk, the debrief with its title.
+
+## What changed after round 1
+
+| Reviewer said | Done |
+|---|---|
+| 1.1's objective does not match the board; nothing to find | "Find what is missing from the board."; the loose things (the folder, the printer, the menu on the wall) glint now and then; after pinning: "Set its owner. Then run the attack." |
+| The open card's labels pile up; tapping a card does not come closer | Tapping a card or module brings the camera to it along the room camera's own line, the card grows by half, its switch names and values stagger, its full name and line stand under it |
+| The close-up ends behind the chair | The camera closes in along the room camera's line of sight, so nothing the feed does not show can come between |
+| No progress or stakes on screen | A row of lamps at the top of the room, one per row on the prop and one for the console and the pad, amber until set, teal once set (the attack's door lamps, Claude Bomb's module dots) |
+| The rack's third rule in a smaller font; levers poking through; plates floating | One text size for every module; the modules mounted on a dark rack panel with two rails, 2 cm apart |
+| Eleven red dots read as failures | Doors not yet reached are dim; amber this room, teal held, scarlet breached |
+| The clock jumps back and touches the menu icon; a red bar by the monitor | One clock for the night, whatever the screen, clear of the icon; the monitor's REC lamp was a deep box sticking out of the screen, now flat |
+| The intruder crouching at the medal; the red smear; the door's sign cut; Details see-through | The intruder already walking away down the corridor; no trail on the debrief; the camera higher; Details opaque, Close clear of the menu icon |
+| Medal: a flat disc, no stars | The stars had been culled (their triangles faced the wall); now three stars in an arc over the disc, lit as earned |
+
+Not done, as beyond the pass or the owner's to decide: a countdown in the rooms (the design
+says the attacker is never punishing and never attacks early); per-room physical objects in
+place of the generic levers and dials (see Waiting for Charbel); the briefing's third line,
+the level's maxim, approved in the design.
+
+## The reviewers, round 2
+
+**The player test** (a fresh agent, 1.1's thirteen screens after the fixes). It told the whole
+level back: "make a whiteboard list of the office's information complete and correct before
+an attacker is let loose; run a practice attack; a hooded figure walks into the Risk Room and
+steals the one thing that wasn't on the board; add the Shared drive, give it an owner, run
+the real attack; the door holds; gold medal". It now names what to do on ten of thirteen
+screens. It could not tell on three: how to find the missing thing in the room as handed over
+("nothing in the room points to it"), whether the owner was set on the new card (the
+objective still said "Set its owner"), and what the close-up was for. Felt like a form: the
+room (03, "a table of rows and columns dressed up as a whiteboard") and above all the open
+card (07, "a five-field record with knobs instead of dropdown menus"). Instructions: the title
+and the briefing. Cut-scenes rather than play: the two attacks ("good contrast between the
+door left open and the door that held, but I only watch"). Broken, as it saw it: the open
+card still overlapping its neighbours; the knobs unlabelled at rest; LUMA's attack line said
+while the owner was being set; the overview after the attack dark and tiny, the win and the
+loss looking alike; the takeaway said three times; the podium's second and third steps in a
+one-player game; a feed bracket poking above Run the attack; LUMA's strip touching the
+Camera button.
+
+Acted on before the last build: the loose things in the room pulse with a small lamp of their
+own (the folder, the printer, the menu: one of them is the asset); the objective moves on to
+"Run the attack." once the owner is set and LUMA's "Watch which door it goes through." comes
+then; the attack ends held on the door (shut and teal, or hanging open and scarlet) instead
+of the overview; Details no longer repeats the takeaway and spells out "stars in all"; the
+feed's lower brackets go where the buttons are; LUMA's strip sits clear of the Camera button.
+
+**The Claude Bomb test, round 2** (a fresh agent, the side-by-sides with the briefing paired
+against Claude Bomb's "Incoming transmission"). RIGHT on the attack ("a real game cutscene and
+the best screen on either side") and the debrief (by default: Claude Bomb has no debrief frame
+on disk, so its title stood in); LEFT on the title (narrowly), the briefing (clearly: "the left
+is an incoming radio message with a threat, a deadline and a role; the right is the start
+screen of a course module"), the two rooms ("the right has the better full-screen room and
+less interface, but what you play is a whiteboard of labelled tiles, the clock counts up, and
+nothing is at risk") and the open module (decisively). Its tells, most visible first: the
+firewall box as a rule table (arrows, dots, port numbers in brackets); the close-up as a form
+and a glossary; the title as a landing page; the maxim on the briefing and the debrief; the
+briefing's welcome with no threat, deadline or role; the 1.1 board as an asset checklist;
+"Run the attack" as a Submit button; the dots at the top as a page indicator; no pressure.
+What reads as a game: the attack, the podium and medal, full-screen 3D with no sidebar, the
+camera framing and the corridor monitor, the lighting and props, the firewall box's five status
+lamps, the objective line. Its three changes: a countdown with consequences instead of the
+Submit button (the attack comes when the clock runs out or when a lever is pulled); every table
+an object (cables between labelled sockets, a key cabinet with empty hooks and name tags; the
+words off the panels); open with the intruder, not the maxim (the title, the briefing as an
+alarm).
+
+Acted on before the last build: the open module's full rule reads above the rack instead of
+over the next module, the module's switch names and values at the console's size; the title
+smaller, clear of the camera frame; the debrief's LUMA line bottom left and narrow, clear of the
+podium; the medal's lamp gone (it threw a yellow pool on the floor). Not acted on, as the
+owner's call (see Waiting for Charbel): the countdown, the objects in place of rule rows and
+dials, the briefing rewritten as an alarm, the maxim off the briefing.
+
+## Where Tech Escape stands
+
+All nineteen levels run on the new screens with Charbel's round-4 answers and the Higgsfield
+files in. Every machine check of the brief holds on every screen of the last walk again: the
+knob values are off the board, so every room is within 30 words. On 1.1 the unlisted drive is
+found by turning the camera, glints as the camera passes it and flies to the board; the
+attack ends with the attacker running off with the drive, or giving up at a door that held.
+2.1 and 3.1 carry the staff badges, 2.4's rules stand on the patch panel, and the web build is
+43.2 MB.
+
+The player test, round 4, tells the level back whole and calls two of the new moments the
+best in it: finding the drive, and the attacker running off with it. It still reads the card
+brought close and Details as forms and the briefing as instructions, and it asks for
+hands-on actions in place of the card's rows.
+
+Round 5 then set the lamps to "every decision made" and moved 2.9's monitor off the
+lettering (above).
+
+Known in the last frames, not fixed:
+- LUMA's strip is see-through: left for the shared fix after the merge, as asked (opaque since, Phase 7e).
+- The open card's lamp and the board's lamps are small from the room camera.
+
+## Waiting for Charbel
+
+1. **The patch panel is the rack's bottom unit, not the rack.** The model came as a 2U panel
+   full of cables; above the rules its cables would cover them, so it sits below. A panel with
+   five labelled sockets and one cable per rule (the first spec) would let each rule be its
+   own cable; that would be a new model. Placeholder: the panel under the five modules.
+2. **No Claude Bomb debrief frame on disk**, and the Claude Bomb test was not run again in
+   rounds 3 and 4; you asked for the player test.
+
+Done after the merge (Phase 7e): Robot Racing's podium has the single step, and LUMA's strip
+is opaque in all three games.
+
+## Files
+
+- Code: `games/tech-escape/Assets/Scripts/Core/Script.cs`, `World/RoomRig.cs`,
+  `World/Building.Stage.cs`, `Ui/GameMenu.cs`, `Ui/Hud.cs` (new); `Core/Facility.cs`,
+  `Ui/App.cs`, `AttackScreen.cs`, `CameraFeed.cs`, `DemoDriver.cs`, `FileSheet.cs`,
+  `LessonScreen.cs`, `Luma.cs`, `ResultsScreen.cs`, `RoomScreen.cs`, `Sfx.cs`, `TitleScreen.cs`,
+  `UiKit.cs`, `World/AttackerRig.cs`, `World/Building.cs`, `World/CameraRig.cs`,
+  `World/SceneCamera.cs`, `Editor/FacilityKit.Prefabs.cs` (changed); `Resources/LumaVoice/` (72
+  recordings).
+- The Higgsfield files: `Assets/Models/Hero/PatchPanel/` (geometry and maps),
+  `Assets/Resources/Facility/Hero/PatchPanel.prefab`, `Assets/Resources/Badges/` (six badges),
+  `Tools/glb_maps.py` (the cleanup tool), recorded in `games/tech-escape/Docs/credits.md`.
+- Frames (not in git), under `games/tech-escape/Builds/look-audit/game-feel/`:
+  - `final/`: the last full walk, round 4, 130 pictures and `counts.jsonl`.
+  - `round5/`: round 5's walk of 1.1, 2.4 and 2.9, 38 pictures.
+  - `final-round3/`, `final-round2/`: the earlier rounds' walks (round 2's with `side-by-sides/`).
+  - `reviewers/`: what each reviewer saw; `player-round3/answer.md` and
+    `player-round4/answer.md` are the last two answers.
+  - `claude-bomb/`: the reference frames.
+  - `platform/`: the game on the platform, rounds 2, 3 and 4.
+- Docs: this section (the branch's report until the merge); `Docs/game-feel/tech-escape.md` (the owner's answers recorded, rounds 2
+  to 4); `games/tech-escape/README.md`.
+
+---
+
+# Phase 7e: after the merge, and the Claude Bomb test on all three games
+
+8 November 2026, on `game-feel-pass`. `game-feel-pass` was first fast-forwarded to `main`
+(25e69fc, the merge that brought Claude Bomb's own history into `games/claude-bomb`; it changes
+no file), then `game-feel-ai-arena` (3d9e5df) and `game-feel-tech-escape` (05a36b9) were merged
+in without conflict: each branch had changed only its own game, its report and its design doc.
+The two reports are Phases 7c and 7d above; `Docs/game-feel/ai-arena-report.md` and
+`tech-escape-report.md` are gone, and the links to them point here. The frames each worktree
+kept out of git moved into the main folder under the same paths (Tech Escape's worktree
+`walk1/` as `walk1-worktree/`, beside the older `walk1/`), and the two worktrees were removed.
+
+## The two shared fixes
+
+1. **LUMA's strip is opaque in all three games.** `Ui/Luma.cs` builds every line of hers
+   (`Line`, which `Cue` calls too); its dark strip was the brand ink at 84 % and AI Arena's
+   light one its panel colour at 93 %, so the scene showed through. Both are now solid; the
+   strip still fades in and out as before. Nothing else draws her line.
+2. **Robot Racing's podium is a single step** (`World/Circuit.Play.cs`, `Podium`), as in AI
+   Arena and Tech Escape: one car races, so there is no second or third place. The step keeps
+   the old first step's size (0.9 by 1.0 m, 0.36 m high), with no number on it; the car is
+   driven onto it with any medal (with none, it stands beside it, as before), and the medal
+   hangs from the middle of its front edge. `games/robot-racing/README.md` says so.
+
+## Builds and walks
+
+Mac and web builds of all three, no compile errors. Web on disk: Robot Racing 31 MB, AI Arena
+36 MB, Tech Escape 41 MB (the transfer was not measured again; the code change is a few lines).
+One walk per game under the screen lock, the levels the earlier rounds compared: Robot Racing
+1.1 and 2.3, AI Arena 1.1 and 1.5, Tech Escape 1.1 and 2.4, in
+`games/<id>/Builds/look-audit/game-feel/after-merge/` with `counts.jsonl`. The counts are the
+last walks' on every screen but these: Robot Racing's debriefs one word fewer (the step's "1"
+is gone) and 1.1's set pit lane 10 (11 in `final3/`); AI Arena's 1.1 errand 23 words (8 before:
+LUMA's line was on screen when this picture was taken); the menus, which show saved progress.
+The only flags are where they belong: the seed and the chance in 2.3's training Details, and the
+ladder on Tech Escape's level select, reached from the title.
+
+## The Claude Bomb test
+
+Run once, nothing changed after it. One fresh agent per game, given only eight side-by-sides
+(`after-merge/side-by-sides/`, Claude Bomb on the left, a caption under each half) and the
+brief's question ("Which one feels more like a game, and why? List what on the right feels like
+an app, a form or a lesson, most visible first"), with a verdict asked per picture and anything
+that looks broken. The left frames are Claude Bomb's realism-pass frames: its title, its
+"Incoming transmission" for every briefing, its play screen for every play screen, and its play
+screen again against each debrief (there is still no Claude Bomb debrief frame on disk, and the
+caption said so).
+
+| Game | RIGHT | EVEN | LEFT | Before |
+|---|---|---|---|---|
+| Robot Racing | 6 (both pit lanes, training, race, question "narrowly", debrief) | title | briefing | round 3: RIGHT 5 of 7, LEFT on the questions |
+| AI Arena | 6 (briefing, 1.1 garage, errand, the agent's eye, home, debrief) | | title, 1.5 garage | round 2: RIGHT 7 of 8, LEFT on the title |
+| Tech Escape | 6 (briefing, both rooms, the search, attack, debrief) | title | card close | round 2: RIGHT 2 of 7 (attack, debrief) |
+
+### Robot Racing
+
+"During play the right feels more like a game: full-bleed 3D, no side panel, a mission objective
+and a dial like a racing HUD; the left's play screen is half chat app. The right loses at the
+start: its title and briefing are web pages, and its spoken lines and quiz read as a lesson."
+The debrief: "the robot on a podium under a light with a hanging star medal is a real reward
+moment". The briefing lost to "Incoming transmission" with "You have 10 minutes" ("stakes"),
+against "Race control" explaining the loop.
+
+What reads as an app, a form or a lesson, most visible first: the title as a landing page and the
+briefing as a text column; the web-style buttons along the bottom (Train, Skip ahead, Next, Again,
+Camera, Details); the question as a quiz dressed in 3D; LUMA's lines as the lesson ("The robot
+learns from the points, and from nothing else"); the score tags as "a spreadsheet column" with
+nothing saying what each belongs to; the menu icon; the course wording ("GAME 03", "round 13").
+
+Broken or cut, as it saw it: the menu icon over the title's clock; the question's prompt running
+past its plate, a lamp pole in front of the answer boards; the gantry post clipping "-0.2" on 1.1
+and a fence post the "+" of 2.3's "+2"; teal letters behind a blank board at the debrief's right
+edge; the side sensors' teal wedges at the car's rear in the race; "LAP 4/5" without a plate; the
+fuel dial without numbers.
+
+### AI Arena
+
+"The right feels more like a game: a full-screen 3D world with a character, a mission banner, a
+third-person view, an agent's-eye camera and a medal." The briefing won with Mom at her door on
+the home camera ("one short order"); the walk home ("arriving at the door while Mom waves and a
+HOME banner appears feels like completing a mission"). LEFT on the title ("a web landing page...
+a 1-7 stepper") and on 1.5's garage ("a table covered in word cards... a settings screen built
+out of props").
+
+What reads as an app, a form or a lesson: the flat teal buttons and outlined ones on every
+screen; the title's errand row as "a checkout progress bar"; the garage table as a form or a
+matching quiz (Sight, 10 turns, Notebook, Sonnet, Opus, Effort, Coins, No); LUMA's lines stating
+the lesson ("Three brains: Haiku is small, Sonnet medium, Opus large."); the briefing's text
+column; the HOME card's "7 on the list in the basket" as a stats line; the menu icon. It also
+missed stakes on screen ("no timer, score or strikes").
+
+Broken, as it saw it: the HOME card covering Mom's face and chest as she waves; the apples
+running through the agent's feet on the step and the medal "flat on the plinth's front face, as
+if pasted on"; on 1.5 the "3 turns" plate over the agent's note, the note cut with "...", "Haiku"
+too small; in the agent's eye the floor tinted salmon (the sight square), the grey ground at the
+world's edge, the agent's head cut at the bottom; past the house a bare plane; the camera's clock
+(17:58) against Mom's "6:00 PM".
+
+### Tech Escape
+
+"The right feels more like a game. Play happens in full-screen 3D spaces with CCTV framing, a
+short objective, spoken LUMA lines, a staged attack and a medal... It falls back to website at the
+start and becomes a form at the ownership card." The briefing now wins ("fewer lines, a bigger
+moody corridor scene and one clear action"), as do the rooms, the search and 2.4's patch panel
+("a physical patch panel with lamps, cables and a server rack"); the attack is "pure game".
+
+What reads as an app, a form or a lesson: the card brought close ("a modal of labelled Field: ?
+rows", Owner, Sensitivity, If leaked, If changed, If gone); the title and briefing as a landing
+page and a text column; the teal and outlined buttons ("Lift the lockdown" on every play screen);
+the objective lines as worksheet steps; the motto and LUMA's homework lines; the patch panel's
+rows as a firewall rule table (ports, a square on each row); the board's labelled sections; the
+menu icon and the dots at the top as an onboarding stepper.
+
+Broken, as it saw it: the card cutting three boards in half and a yellow square in its corner;
+the menu icon, clock and REC corner over busy props on the search and the room; the blown-out
+lamps on the SHARED device; 2.4's rule text small and slanted, its strips past the panel's edge;
+a grey mesh in the attack's dark (a ceiling camera); the dots, 12 in the attack against 5 or 6 in
+the rooms; a red sign cut at the briefing's edge; the medal "stuck flat on the crate's front face
+like a sticker".
+
+## What the three runs share
+
+Each game now wins six of eight against Claude Bomb, on the play screens, the attack, the walk
+home and the debriefs, which Claude Bomb's half-screen chat cannot match. What still reads as an
+app is the same in all three: the title as a landing page, the teal and outlined buttons, the
+menu icon, and LUMA's line read as the lesson (none of the three agents called her strip
+see-through). Two medals read "flat, like a sticker" on the step's face (AI Arena, Tech Escape);
+Robot Racing's, on the new single step, read as "a real reward moment". The places that still
+lose are each game's densest decision screen: Tech Escape's card, AI Arena's 1.5 garage, and
+Robot Racing's briefing. Nothing was fixed after this run; these findings are for the next round.

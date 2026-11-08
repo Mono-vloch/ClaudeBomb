@@ -259,4 +259,4 @@ Again, Details.
     still "?". Whether it was right is only shown by the attack.
 18. **2.9's corridor monitor** no longer covers the "C" of the wall's BACKUP.
 
-The builds that follow these answers are reported in [tech-escape-report.md](tech-escape-report.md).
+The builds that follow these answers are reported in the look audit, [Phase 7d](../look-audit.md#phase-7d-tech-escape-on-the-game-feel-screens).
